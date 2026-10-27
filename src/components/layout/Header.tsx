@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
-import { ShieldAlert, Bell, User } from "lucide-react";
+import Image from "next/image";
+import { Bell, User } from "lucide-react";
 
 export function Header() {
   return (
@@ -9,13 +10,21 @@ export function Header() {
         {/* Brand Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2.5 font-bold text-lg md:text-xl text-ink focus-visible:outline-primary"
+          className="flex items-center gap-2.5 font-bold text-lg md:text-xl text-ink focus-visible:outline-primary group"
         >
-          <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center text-white">
-            <ShieldAlert className="w-5 h-5" />
+          <div className="relative w-8 h-8 md:w-9 md:h-9 shrink-0 flex items-center justify-center">
+            <Image
+              src="/logo_sigapbumi.png"
+              alt="Logo SigapBumi"
+              width={36}
+              height={36}
+              style={{ width: "auto" }}
+              className="object-contain h-8 md:h-9 transition-transform group-hover:scale-105"
+              priority
+            />
           </div>
           <span>
-            Sigap<span className="text-primary">Lapor</span>
+            Sigap<span className="text-primary">Bumi</span>
           </span>
         </Link>
 

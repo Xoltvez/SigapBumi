@@ -12,9 +12,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SigapLapor - Website Pelaporan Bencana Terpadu",
+  title: "SigapBumi - Website Pelaporan Bencana Terpadu",
   description:
     "Platform pelaporan bencana berbasis masyarakat. Cepat, terverifikasi, dan transparan.",
+  icons: {
+    icon: "/logo_sigapbumi.png",
+    apple: "/logo_sigapbumi.png",
+  },
 };
 
 export default function RootLayout({
