@@ -10,6 +10,8 @@ import {
 import { MapFilter } from "@/components/peta/MapFilter";
 import type { MapPoint } from "@/components/peta/DisasterMap";
 import type { DisasterType, ReportStatus } from "@/types";
+import { supabase } from "@/lib/supabase/client";
+import { fetchLiveReports, reportsToMapPoints } from "@/lib/services/reports";
 
 // Dynamic import for Leaflet client component (avoid SSR window error)
 const DisasterMap = dynamic(() => import("@/components/peta/DisasterMap"), {
@@ -23,7 +25,7 @@ const DisasterMap = dynamic(() => import("@/components/peta/DisasterMap"), {
   ),
 });
 
-const INITIAL_POINTS: MapPoint[] = [
+const STATIC_FALLBACK_POINTS: MapPoint[] = [
   {
     id: "p1",
     tracking_code: "LPR-8F3K2Q",
@@ -112,14 +114,55 @@ const INITIAL_POINTS: MapPoint[] = [
 ];
 
 export default function PetaPage() {
+  const [points, setPoints] = useState<MapPoint[]>(STATIC_FALLBACK_POINTS);
+  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<DisasterType | "semua">("semua");
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | "semua">("semua");
   const [showSos, setShowSos] = useState<boolean>(true);
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
 
+  // Ambil data live dari Supabase dan pasang realtime subscription
+  React.useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      try {
+        const liveReports = await fetchLiveReports();
+        if (isMounted && liveReports && liveReports.length > 0) {
+          const mapPoints = reportsToMapPoints(liveReports);
+          // Tambahkan titik SOS darurat aktif
+          const sosPoints = STATIC_FALLBACK_POINTS.filter((p) => p.is_sos);
+          setPoints([...sosPoints, ...mapPoints]);
+          setIsLiveConnected(true);
+        }
+      } catch (err) {
+        console.warn("Gagal memuat data live peta:", err);
+      }
+    }
+
+    loadData();
+
+    // Pasang listener realtime Supabase
+    const channel = supabase
+      .channel("public_peta_reports")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reports" },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   // Filter points based on category, status, and SOS toggle
   const filteredPoints = useMemo(() => {
-    return INITIAL_POINTS.filter((pt) => {
+    return points.filter((pt) => {
       if (pt.is_sos && !showSos) return false;
       if (!pt.is_sos) {
         if (selectedCategory !== "semua" && pt.disaster_type !== selectedCategory) {
@@ -131,17 +174,25 @@ export default function PetaPage() {
       }
       return true;
     });
-  }, [selectedCategory, selectedStatus, showSos]);
+  }, [points, selectedCategory, selectedStatus, showSos]);
 
   return (
     <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 md:px-8 py-4 md:py-6 flex flex-col space-y-4">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-line">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-ink flex items-center gap-2">
-            <Layers className="w-6 h-6 text-primary" />
-            <span>Peta Bencana Publik Terbuka</span>
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl md:text-2xl font-bold text-ink flex items-center gap-2">
+              <Layers className="w-6 h-6 text-primary" />
+              <span>Peta Bencana Publik Terbuka</span>
+            </h1>
+            {isLiveConnected && (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-success-soft text-success-text border border-success/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-success animate-ping" />
+                Live Sync Supabase
+              </span>
+            )}
+          </div>
           <p className="text-xs text-ink-soft mt-0.5">
             Peta sebaran laporan kebencanaan dan titik panggilan darurat SOS terverifikasi di seluruh wilayah.
           </p>

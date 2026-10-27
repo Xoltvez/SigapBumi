@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import type { ReportStatus, DisasterType, SosAssistanceType } from "@/types";
+import { supabase } from "@/lib/supabase/client";
+import { fetchLiveReports, updateReportStatusLive } from "@/lib/services/reports";
 
 interface AdminReportItem {
   id: string;
@@ -129,6 +131,68 @@ export default function AdminDashboardPage() {
   const { activeUnit, activeUnitName } = useAdmin();
   const [reports, setReports] = useState<AdminReportItem[]>(INITIAL_REPORTS);
   const [sosAlerts, setSosAlerts] = useState<SosAlertItem[]>(INITIAL_SOS_ALERTS);
+  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
+  const [newReportNotice, setNewReportNotice] = useState<string | null>(null);
+
+  // Muat data live dari Supabase dan pasang realtime subscription
+  React.useEffect(() => {
+    let isMounted = true;
+
+    async function loadReports() {
+      try {
+        const live = await fetchLiveReports();
+        if (isMounted && live && live.length > 0) {
+          const formatted: AdminReportItem[] = live.map((r) => ({
+            id: r.id,
+            tracking_code: r.tracking_code,
+            disaster_type: r.disaster_type,
+            target_agency: r.target_agency,
+            title: r.title,
+            location: r.address,
+            time: r.created_at,
+            status: r.status,
+            priority: r.priority,
+            confirmation_count: r.confirmation_count,
+          }));
+          setReports(formatted);
+          setIsLiveConnected(true);
+        }
+      } catch (err) {
+        console.warn("Gagal memuat data live admin:", err);
+      }
+    }
+
+    loadReports();
+
+    // Pasang realtime subscription
+    const channel = supabase
+      .channel("admin_reports_realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "reports" },
+        (payload) => {
+          const newRow = payload.new as { tracking_code?: string; title?: string };
+          setNewReportNotice(
+            `Laporan baru masuk: [${newRow.tracking_code || "LPR"}] ${newRow.title || "Kejadian Bencana"}`
+          );
+          setTimeout(() => setNewReportNotice(null), 6000);
+          loadReports();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "reports" },
+        () => {
+          loadReports();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Filter reports and SOS by active agency unit
   const filteredReports = reports.filter((r) => {
@@ -141,10 +205,18 @@ export default function AdminDashboardPage() {
     return s.assistance_type === activeUnit;
   });
 
-  const handleUpdateStatus = (id: string, newStatus: ReportStatus) => {
+  const handleUpdateStatus = async (id: string, newStatus: ReportStatus) => {
+    // 1. Optimistic update
     setReports((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
     );
+
+    // 2. Simpan ke Supabase jika ada ID valid
+    try {
+      await updateReportStatusLive(id, newStatus, `Status diverifikasi oleh petugas ${activeUnitName}`);
+    } catch (err) {
+      console.warn("Gagal update status di database:", err);
+    }
   };
 
   const handleHandleSos = (id: string) => {
@@ -168,6 +240,23 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
+      {/* Realtime Notification Banner if a new report arrives */}
+      {newReportNotice && (
+        <div className="p-4 rounded-lg bg-info-soft border-2 border-info text-info-text font-semibold text-sm flex items-center justify-between shadow-sm animate-bounce">
+          <div className="flex items-center gap-2">
+            <Radio className="w-5 h-5 text-info animate-pulse" />
+            <span>{newReportNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNewReportNotice(null)}
+            className="text-xs px-2 py-1 rounded bg-info text-white font-bold"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
       {/* Top Welcome & Agency Context Banner */}
       <div className="bg-surface border border-line rounded-lg p-5 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -176,6 +265,12 @@ export default function AdminDashboardPage() {
             <h1 className="text-xl md:text-2xl font-bold text-ink">
               Pusat Komando & Kendali Bencana Terpadu
             </h1>
+            {isLiveConnected && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-success-soft text-success-text border border-success/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-success animate-ping" />
+                Live Sync Supabase
+              </span>
+            )}
           </div>
           <p className="text-xs text-ink-soft mt-1">
             Menampilkan data operasional untuk unit: <strong className="text-primary">{activeUnitName}</strong>.

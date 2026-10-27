@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   MapPin,
   Clock,
-  ShieldCheck,
   AlertCircle,
   Copy,
   Check,
@@ -15,11 +15,16 @@ import {
   Flame,
   AlertTriangle,
   ExternalLink,
+  ThumbsUp,
+  Radio,
 } from "lucide-react";
 import { TimelineStatus, type TimelineStep } from "@/components/laporan/TimelineStatus";
 import type { DisasterType, ReportStatus } from "@/types";
+import { fetchReportDetail } from "@/lib/services/reports";
+import { supabase } from "@/lib/supabase/client";
 
 interface ReportDetail {
+  id?: string;
   tracking_code: string;
   disaster_type: DisasterType;
   title: string;
@@ -130,37 +135,118 @@ const SAMPLE_REPORTS: Record<string, ReportDetail> = {
   },
 };
 
-export default function LacakPage() {
-  const [searchInput, setSearchInput] = useState("LPR-8F3K2Q");
+function LacakContent() {
+  const searchParams = useSearchParams();
+  const urlKode = searchParams.get("kode") || "";
+
+  const [searchInput, setSearchInput] = useState(urlKode || "LPR-8F3K2Q");
   const [activeReport, setActiveReport] = useState<ReportDetail | null>(
-    SAMPLE_REPORTS["LPR-8F3K2Q"]
+    urlKode ? null : SAMPLE_REPORTS["LPR-8F3K2Q"]
   );
   const [hasSearched, setHasSearched] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isVouched, setIsVouched] = useState(false);
+
+  const performSearch = useCallback(async (codeToSearch: string) => {
+    const cleanCode = codeToSearch.trim().toUpperCase();
+    if (!cleanCode) return;
+
+    setIsLoading(true);
+    setHasSearched(true);
+
+    try {
+      // 1. Coba ambil dari Supabase
+      const liveData = await fetchReportDetail(cleanCode);
+      if (liveData) {
+        setActiveReport({
+          id: liveData.id,
+          tracking_code: liveData.tracking_code,
+          disaster_type: liveData.disaster_type,
+          title: liveData.title,
+          description: liveData.description,
+          location: liveData.address,
+          created_at: liveData.created_at,
+          status: liveData.status,
+          confirmation_count: liveData.confirmation_count,
+          timeline: liveData.timeline || [],
+        });
+        return;
+      }
+
+      // 2. Fallback ke preset demo statis
+      if (SAMPLE_REPORTS[cleanCode]) {
+        setActiveReport(SAMPLE_REPORTS[cleanCode]);
+      } else {
+        setActiveReport(null);
+      }
+    } catch (err) {
+      console.warn("Gagal mencari detail laporan:", err);
+      if (SAMPLE_REPORTS[cleanCode]) {
+        setActiveReport(SAMPLE_REPORTS[cleanCode]);
+      } else {
+        setActiveReport(null);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!urlKode) return;
+    const timer = setTimeout(() => {
+      performSearch(urlKode);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [urlKode, performSearch]);
+
+  // Realtime subscription untuk laporan aktif
+  useEffect(() => {
+    if (!activeReport?.tracking_code) return;
+
+    const channel = supabase
+      .channel(`lacak_${activeReport.tracking_code}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "reports",
+          filter: `tracking_code=eq.${activeReport.tracking_code}`,
+        },
+        () => {
+          performSearch(activeReport.tracking_code);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeReport?.tracking_code, performSearch]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanCode = searchInput.trim().toUpperCase();
-    if (!cleanCode) return;
-
-    setHasSearched(true);
-    if (SAMPLE_REPORTS[cleanCode]) {
-      setActiveReport(SAMPLE_REPORTS[cleanCode]);
-    } else {
-      setActiveReport(null);
-    }
+    performSearch(searchInput);
   };
 
   const selectPreset = (code: string) => {
     setSearchInput(code);
-    setActiveReport(SAMPLE_REPORTS[code] || null);
-    setHasSearched(true);
+    performSearch(code);
   };
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleVouch = () => {
+    if (isVouched || !activeReport) return;
+    setIsVouched(true);
+    setActiveReport((prev) =>
+      prev ? { ...prev, confirmation_count: prev.confirmation_count + 1 } : null
+    );
   };
 
   const getDisasterIcon = (type: DisasterType) => {
@@ -219,7 +305,7 @@ export default function LacakPage() {
           Lacak Perkembangan Laporan
         </h1>
         <p className="text-sm text-ink-soft mb-6">
-          Masukkan kode tracking unik yang Anda peroleh saat mengirim laporan untuk melihat tahapan tindak lanjut petugas di lapangan.
+          Masukkan kode tracking unik yang Anda peroleh saat mengirim laporan untuk melihat tahapan tindak lanjut petugas di lapangan secara transparan.
         </p>
 
         {/* Search Input Form */}
@@ -236,9 +322,10 @@ export default function LacakPage() {
           </div>
           <button
             type="submit"
-            className="h-12 px-6 rounded-md bg-primary hover:bg-primary-hover text-white font-semibold text-base transition-colors shadow-sm focus-visible:outline-primary shrink-0"
+            disabled={isLoading}
+            className="h-12 px-6 rounded-md bg-primary hover:bg-primary-hover disabled:opacity-50 text-white font-semibold text-base transition-colors shadow-sm focus-visible:outline-primary shrink-0"
           >
-            Lacak
+            {isLoading ? "Mencari..." : "Lacak"}
           </button>
         </form>
 
@@ -270,7 +357,13 @@ export default function LacakPage() {
       </section>
 
       {/* Result Section */}
-      {hasSearched && activeReport ? (
+      {isLoading ? (
+        <section className="bg-surface border border-line rounded-lg p-10 text-center shadow-card animate-pulse space-y-3">
+          <Radio className="w-8 h-8 text-primary mx-auto animate-spin" />
+          <p className="text-sm font-semibold text-ink">Menghubungkan ke Database Supabase...</p>
+          <p className="text-xs text-ink-muted">Mengambil data status dan catatan tindak lanjut terkini</p>
+        </section>
+      ) : hasSearched && activeReport ? (
         <section className="bg-surface border border-line rounded-lg p-6 md:p-8 shadow-card space-y-6">
           {/* Top Info Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-line">
@@ -331,10 +424,21 @@ export default function LacakPage() {
                   {getDisasterIcon(activeReport.disaster_type)}
                   {activeReport.disaster_type}
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded bg-surface border border-line text-ink font-semibold flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                  {activeReport.confirmation_count} Warga Mengonfirmasi
-                </span>
+                <button
+                  type="button"
+                  onClick={handleVouch}
+                  disabled={isVouched}
+                  title="Konfirmasi bahwa kejadian ini benar terjadi"
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors flex items-center gap-1 font-semibold ${
+                    isVouched
+                      ? "bg-success-soft text-success-text border-success/30"
+                      : "bg-surface border-line text-ink hover:border-primary"
+                  }`}
+                >
+                  <ThumbsUp className="w-3.5 h-3.5 text-primary" />
+                  <span>{activeReport.confirmation_count} Terkonfirmasi</span>
+                  {isVouched && <span className="text-[10px] text-success">(Dikonfirmasi Anda)</span>}
+                </button>
               </div>
             </div>
           </div>
@@ -352,7 +456,7 @@ export default function LacakPage() {
           {/* Vertical Status Timeline */}
           <div>
             <h3 className="text-base font-bold text-ink mb-2">
-              Timeline Tindak Lanjut
+              Timeline Tindak Lanjut Terbuka
             </h3>
             <TimelineStatus
               currentStatus={activeReport.status}
@@ -388,7 +492,7 @@ export default function LacakPage() {
             Kode Tracking Tidak Ditemukan
           </h2>
           <p className="text-sm text-ink-soft mb-6 leading-relaxed">
-            Tidak ada laporan bencana dengan kode <strong>&quot;{searchInput}&quot;</strong>. Pastikan format kode sudah benar (contoh: <code>LPR-8F3K2Q</code>) atau pilih salah satu kode contoh di atas.
+            Tidak ada laporan bencana dengan kode <strong>&quot;{searchInput}&quot;</strong> di database. Pastikan format kode sudah benar (contoh: <code>LPR-8F3K2Q</code>) atau pilih salah satu kode contoh di atas.
           </p>
           <button
             type="button"
@@ -400,5 +504,20 @@ export default function LacakPage() {
         </section>
       ) : null}
     </main>
+  );
+}
+
+export default function LacakPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex-1 w-full max-w-[900px] mx-auto px-4 py-16 text-center animate-pulse">
+          <div className="w-12 h-12 rounded-full bg-primary/20 mx-auto mb-3" />
+          <p className="text-sm font-semibold text-ink">Memuat Sistem Pelacakan...</p>
+        </div>
+      }
+    >
+      <LacakContent />
+    </Suspense>
   );
 }
