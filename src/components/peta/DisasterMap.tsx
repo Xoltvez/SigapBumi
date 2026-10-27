@@ -1,17 +1,8 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import Link from "next/link";
-import {
-  ShieldCheck,
-  Clock,
-  MapPin,
-  ExternalLink,
-  LocateFixed,
-} from "lucide-react";
 import type { DisasterType, ReportStatus } from "@/types";
 
 export interface MapPoint {
@@ -34,26 +25,24 @@ interface DisasterMapProps {
   onSelectPoint?: (point: MapPoint) => void;
 }
 
-// Custom DivIcon generator based on status and SOS
+// Generate custom DivIcon based on status and emergency SOS
 function createPinIcon(status: ReportStatus, isSos: boolean = false) {
-  let bgColor = "#2563EB"; // info default
-
   if (isSos) {
-    bgColor = "#DC2626"; // danger
     return L.divIcon({
       className: "custom-sos-pin",
       html: `
-        <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-          <div style="position: absolute; width: 100%; height: 100%; border-radius: 9999px; background-color: rgba(220, 38, 38, 0.4); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-          <div style="position: relative; width: 24px; height: 24px; border-radius: 9999px; background-color: #DC2626; border: 2px solid #FFFFFF; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 10px;">SOS</div>
+        <div style="position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <div style="position: absolute; width: 100%; height: 100%; border-radius: 9999px; background-color: rgba(220, 38, 38, 0.45); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+          <div style="position: relative; width: 24px; height: 24px; border-radius: 9999px; background-color: #DC2626; border: 2px solid #FFFFFF; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 10px; font-family: sans-serif;">SOS</div>
         </div>
       `,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-      popupAnchor: [0, -16],
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+      popupAnchor: [0, -17],
     });
   }
 
+  let bgColor = "#2563EB"; // info default (diterima)
   if (status === "diverifikasi") bgColor = "#1D4ED8";
   if (status === "ditindaklanjuti") bgColor = "#F59E0B";
   if (status === "selesai") bgColor = "#16A34A";
@@ -62,9 +51,9 @@ function createPinIcon(status: ReportStatus, isSos: boolean = false) {
   return L.divIcon({
     className: "custom-disaster-pin",
     html: `
-      <div style="position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
-        <div style="width: 24px; height: 24px; border-radius: 50% 50% 50% 0; background-color: ${bgColor}; transform: rotate(-45deg); border: 2px solid #FFFFFF; box-shadow: 0 2px 4px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center;">
-          <div style="width: 8px; height: 8px; border-radius: 50%; background-color: #FFFFFF;"></div>
+      <div style="position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <div style="width: 24px; height: 24px; border-radius: 50% 50% 50% 0; background-color: ${bgColor}; transform: rotate(-45deg); border: 2px solid #FFFFFF; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
+          <div style="width: 7px; height: 7px; border-radius: 50%; background-color: #FFFFFF;"></div>
         </div>
       </div>
     `,
@@ -74,42 +63,16 @@ function createPinIcon(status: ReportStatus, isSos: boolean = false) {
   });
 }
 
-function LocateUserButton() {
-  const map = useMap();
-
-  const handleLocate = () => {
-    map.locate().on("locationfound", function (e) {
-      map.flyTo(e.latlng, 13);
-    });
-  };
-
-  return (
-    <div className="leaflet-top leaflet-right" style={{ marginTop: "70px", marginRight: "10px" }}>
-      <div className="leaflet-bar">
-        <button
-          type="button"
-          onClick={handleLocate}
-          title="Pusatkan ke lokasi saya"
-          aria-label="Pusatkan ke lokasi saya"
-          className="w-9 h-9 bg-surface hover:bg-bg flex items-center justify-center text-ink rounded shadow-sm border border-line"
-        >
-          <LocateFixed className="w-5 h-5 text-ink-soft" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function DisasterMap({
   points,
   onSelectPoint,
 }: DisasterMapProps) {
-  // Center coordinates around Jabodetabek & West Java default
-  const defaultCenter: [number, number] = [-6.2088, 106.8456]; // Jakarta
-  const defaultZoom = 11;
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markersLayerRef = useRef<L.LayerGroup | null>(null);
 
+  // Injects ping animation styles
   useEffect(() => {
-    // Injects ping animation styles if not already present
     const styleId = "custom-pin-animations";
     if (!document.getElementById(styleId)) {
       const style = document.createElement("style");
@@ -117,94 +80,117 @@ export default function DisasterMap({
       style.innerHTML = `
         @keyframes ping {
           75%, 100% {
-            transform: scale(2);
+            transform: scale(2.2);
             opacity: 0;
           }
+        }
+        .leaflet-popup-content-wrapper {
+          border-radius: 8px !important;
+          box-shadow: 0 8px 24px rgba(31,41,55,0.15) !important;
+          padding: 4px !important;
         }
       `;
       document.head.appendChild(style);
     }
   }, []);
 
+  // Initialize Map Once
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    if (mapInstanceRef.current) return;
+
+    // Jakarta default view
+    const map = L.map(mapContainerRef.current, {
+      center: [-6.2088, 106.8456],
+      zoom: 11,
+      zoomControl: true,
+    });
+
+    // Required OpenStreetMap Attribution
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> kontributor',
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Add Locate Button Control
+    const LocateControl = L.Control.extend({
+      options: { position: "topright" },
+      onAdd: function () {
+        const btn = L.DomUtil.create("button", "leaflet-bar");
+        btn.innerHTML = `<span style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;background:#fff;border-radius:4px;cursor:pointer;font-size:16px;" title="Pusatkan ke lokasi saya">⌖</span>`;
+        btn.onclick = function (e) {
+          e.stopPropagation();
+          map.locate({ setView: true, maxZoom: 13 });
+        };
+        return btn;
+      },
+    });
+    map.addControl(new LocateControl());
+
+    const markersGroup = L.layerGroup().addTo(map);
+    markersLayerRef.current = markersGroup;
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  // Update Markers when points change
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const markersGroup = markersLayerRef.current;
+    if (!map || !markersGroup) return;
+
+    markersGroup.clearLayers();
+
+    points.forEach((pt) => {
+      const marker = L.marker([pt.lat, pt.lng], {
+        icon: createPinIcon(pt.status, pt.is_sos),
+      });
+
+      // Construct popup HTML
+      const popupHtml = `
+        <div style="font-family: system-ui, sans-serif; font-size: 12px; color: #1F2937; min-width: 180px; max-width: 240px; padding: 2px;">
+          ${
+            pt.is_sos
+              ? `<div style="background-color: #FEE2E2; color: #991B1B; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px;">PANGGILAN DARURAT SOS</div>`
+              : `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <span style="font-family: monospace; font-weight: bold; color: #EF6806;">${pt.tracking_code}</span>
+                  <span style="font-size: 10px; text-transform: capitalize; background: #F6F7F8; padding: 1px 6px; border-radius: 4px; border: 1px solid #E5E7EB;">${pt.status}</span>
+                </div>`
+          }
+          <div style="font-weight: 700; font-size: 13px; line-height: 1.3; margin-bottom: 4px;">${pt.title}</div>
+          <div style="color: #4B5563; font-size: 11px; margin-bottom: 6px;">📍 ${pt.location_name}</div>
+          <div style="display: flex; justify-content: space-between; font-size: 10px; color: #6B7280; padding-top: 4px; border-top: 1px solid #E5E7EB;">
+            <span>🕒 ${pt.created_at}</span>
+            ${!pt.is_sos ? `<span style="color: #EF6806; font-weight: 600;">🛡️ ${pt.confirmation_count} warga</span>` : ""}
+          </div>
+          ${
+            !pt.is_sos
+              ? `<a href="/lacak?kode=${pt.tracking_code}" style="display: block; text-align: center; background-color: #EF6806; color: white; text-decoration: none; padding: 5px 8px; border-radius: 6px; font-weight: 600; font-size: 11px; margin-top: 8px;">Lacak Status & Detail</a>`
+              : ""
+          }
+        </div>
+      `;
+
+      marker.bindPopup(popupHtml);
+
+      marker.on("click", () => {
+        if (onSelectPoint) {
+          onSelectPoint(pt);
+        }
+      });
+
+      markersGroup.addLayer(marker);
+    });
+  }, [points, onSelectPoint]);
+
   return (
     <div className="w-full h-full min-h-[500px] md:min-h-[600px] relative rounded-lg overflow-hidden border border-line shadow-card">
-      <MapContainer
-        center={defaultCenter}
-        zoom={defaultZoom}
-        scrollWheelZoom={true}
-        className="w-full h-full z-10"
-      >
-        {/* OpenStreetMap Tile Layer with Required Attribution */}
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> kontributor'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-
-        <LocateUserButton />
-
-        {/* Markers */}
-        {points.map((pt) => (
-          <Marker
-            key={pt.id}
-            position={[pt.lat, pt.lng]}
-            icon={createPinIcon(pt.status, pt.is_sos)}
-            eventHandlers={{
-              click: () => onSelectPoint && onSelectPoint(pt),
-            }}
-          >
-            <Popup className="custom-leaflet-popup">
-              <div className="p-1 max-w-[240px] text-left">
-                {pt.is_sos ? (
-                  <span className="inline-block px-2 py-0.5 rounded bg-danger-soft text-danger-text text-[10px] font-bold mb-1">
-                    PANGGILAN DARURAT SOS
-                  </span>
-                ) : (
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-[11px] font-mono text-primary font-bold">
-                      {pt.tracking_code}
-                    </span>
-                    <span className="capitalize text-[10px] px-1.5 py-0.5 rounded bg-bg text-ink-soft border border-line">
-                      {pt.status}
-                    </span>
-                  </div>
-                )}
-
-                <h4 className="text-xs font-bold text-ink leading-snug mb-1">
-                  {pt.title}
-                </h4>
-
-                <p className="text-[11px] text-ink-soft flex items-start gap-1 mb-2">
-                  <MapPin className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                  <span className="truncate">{pt.location_name}</span>
-                </p>
-
-                <div className="flex items-center justify-between pt-1.5 border-t border-line text-[10px] text-ink-muted">
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {pt.created_at}
-                  </span>
-                  {!pt.is_sos && (
-                    <span className="flex items-center gap-0.5 text-primary font-semibold">
-                      <ShieldCheck className="w-3 h-3" />
-                      {pt.confirmation_count}
-                    </span>
-                  )}
-                </div>
-
-                {!pt.is_sos && (
-                  <Link
-                    href={`/lacak?kode=${pt.tracking_code}`}
-                    className="mt-2 w-full inline-flex items-center justify-center gap-1 py-1 rounded bg-primary text-white text-[11px] font-semibold hover:bg-primary-hover transition-colors"
-                  >
-                    <span>Lacak Status</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </Link>
-                )}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+      <div ref={mapContainerRef} className="w-full h-full z-10" />
     </div>
   );
 }
