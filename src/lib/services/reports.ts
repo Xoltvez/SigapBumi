@@ -431,7 +431,25 @@ export async function updateReportStatusLive(
   note?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Jalankan update ke tabel reports
+    // 1. Coba panggil fungsi RPC jika sudah dibuat di database
+    try {
+      const { data: rpcData, error: rpcErr } = await supabase.rpc(
+        "update_report_status_public",
+        {
+          p_report_id: reportId,
+          p_new_status: newStatus,
+          p_note: note || `Status diperbarui menjadi ${newStatus}`,
+        }
+      );
+
+      if (!rpcErr && rpcData) {
+        return { success: true };
+      }
+    } catch {
+      // Lanjut ke fallback update langsung
+    }
+
+    // 2. Jalankan update langsung ke tabel reports
     const { error: repErr } = await supabase
       .from("reports")
       .update({
@@ -445,7 +463,7 @@ export async function updateReportStatusLive(
       return { success: false, error: repErr.message };
     }
 
-    // Catat log manual jika trigger RLS tidak mengizinkan trigger
+    // 3. Catat log manual ke tabel riwayat jika belum tercatat
     try {
       await supabase.from("report_status_logs").insert({
         report_id: reportId,
