@@ -1,0 +1,2 @@
+-- Supabase Seed Data
+-- Digunakan untuk data awal demonstrasi (lomba/pengujian)
