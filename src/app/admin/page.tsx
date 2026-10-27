@@ -1,24 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  Radio,
   Clock,
-  ShieldCheck,
   CheckCircle2,
-  XCircle,
   Send,
   Flame,
   Waves,
   Mountain,
   AlertTriangle,
-  Filter,
+  Siren,
+  ArrowRight,
+  TrendingUp,
+  MapPin,
+  Radio,
+  FileText,
+  ShieldAlert,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
-import type { ReportStatus, DisasterType, SosAssistanceType } from "@/types";
+import { PriorityBadge } from "@/components/admin/common/PriorityBadge";
+import type { ReportStatus, DisasterType, SosAssistanceType, PriorityLabel } from "@/types";
 import { supabase } from "@/lib/supabase/client";
-import { fetchLiveReports, updateReportStatusLive } from "@/lib/services/reports";
+import { fetchLiveReports } from "@/lib/services/reports";
 
 interface AdminReportItem {
   id: string;
@@ -29,7 +33,7 @@ interface AdminReportItem {
   location: string;
   time: string;
   status: ReportStatus;
-  priority: "tinggi" | "sedang" | "normal";
+  priority: PriorityLabel;
   confirmation_count: number;
 }
 
@@ -74,7 +78,7 @@ const INITIAL_REPORTS: AdminReportItem[] = [
     location: "Kalideres, Jakarta Barat",
     time: "14:15 WIB",
     status: "ditindaklanjuti",
-    priority: "tinggi",
+    priority: "Kritis",
     confirmation_count: 24,
   },
   {
@@ -86,7 +90,7 @@ const INITIAL_REPORTS: AdminReportItem[] = [
     location: "Cisarua, Kab. Bogor",
     time: "15:30 WIB",
     status: "diverifikasi",
-    priority: "tinggi",
+    priority: "Tinggi",
     confirmation_count: 12,
   },
   {
@@ -98,7 +102,7 @@ const INITIAL_REPORTS: AdminReportItem[] = [
     location: "Jatinegara, Jakarta Timur",
     time: "15:02 WIB",
     status: "diterima",
-    priority: "sedang",
+    priority: "Sedang",
     confirmation_count: 16,
   },
   {
@@ -110,91 +114,89 @@ const INITIAL_REPORTS: AdminReportItem[] = [
     location: "Tambora, Jakarta Barat",
     time: "11:20 WIB",
     status: "selesai",
-    priority: "tinggi",
+    priority: "Tinggi",
     confirmation_count: 31,
-  },
-  {
-    id: "rep-5",
-    tracking_code: "LPR-9B2X7M",
-    disaster_type: "gempa",
-    target_agency: "polisi",
-    title: "Kabar Hoaks Gempa Bumi Megathrust",
-    location: "Pelabuhan Ratu, Sukabumi",
-    time: "10:05 WIB",
-    status: "ditolak",
-    priority: "normal",
-    confirmation_count: 0,
   },
 ];
 
-export default function AdminDashboardPage() {
-  const { activeUnit, activeUnitName } = useAdmin();
+export default function AdminRingkasanPage() {
+  const { activeUnit, activeUnitName, setActiveSosCount, setIsLiveConnected } = useAdmin();
   const [reports, setReports] = useState<AdminReportItem[]>(INITIAL_REPORTS);
-  const [sosAlerts, setSosAlerts] = useState<SosAlertItem[]>(INITIAL_SOS_ALERTS);
-  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
-  const [newReportNotice, setNewReportNotice] = useState<string | null>(null);
+  const [sosAlerts] = useState<SosAlertItem[]>(INITIAL_SOS_ALERTS);
+  const [newNotice, setNewNotice] = useState<string | null>(null);
 
-  // Muat data live dari Supabase dan pasang realtime subscription
-  React.useEffect(() => {
+  useEffect(() => {
     let isMounted = true;
 
-    async function loadReports() {
+    async function loadData() {
       try {
         const live = await fetchLiveReports();
         if (isMounted && live && live.length > 0) {
-          const formatted: AdminReportItem[] = live.map((r) => ({
-            id: r.id,
-            tracking_code: r.tracking_code,
-            disaster_type: r.disaster_type,
-            target_agency: r.target_agency,
-            title: r.title,
-            location: r.address,
-            time: r.created_at,
-            status: r.status,
-            priority: r.priority,
-            confirmation_count: r.confirmation_count,
-          }));
+          const formatted: AdminReportItem[] = live.map((r) => {
+            let pLabel: PriorityLabel = "Sedang";
+            if (r.priority === "tinggi" || r.confirmation_count >= 20) pLabel = "Kritis";
+            else if (r.confirmation_count >= 10) pLabel = "Tinggi";
+            else if (r.status === "selesai") pLabel = "Rendah";
+
+            return {
+              id: r.id,
+              tracking_code: r.tracking_code,
+              disaster_type: r.disaster_type,
+              target_agency: r.target_agency,
+              title: r.title,
+              location: r.address,
+              time: r.created_at,
+              status: r.status,
+              priority: pLabel,
+              confirmation_count: r.confirmation_count,
+            };
+          });
           setReports(formatted);
           setIsLiveConnected(true);
         }
       } catch (err) {
-        console.warn("Gagal memuat data live admin:", err);
+        console.warn("Gagal memuat ringkasan live:", err);
       }
     }
 
-    loadReports();
+    const timer = setTimeout(() => {
+      loadData();
+    }, 0);
 
-    // Pasang realtime subscription
+    // Realtime subscription
     const channel = supabase
-      .channel("admin_reports_realtime")
+      .channel("admin_ringkasan_realtime")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "reports" },
         (payload) => {
           const newRow = payload.new as { tracking_code?: string; title?: string };
-          setNewReportNotice(
-            `Laporan baru masuk: [${newRow.tracking_code || "LPR"}] ${newRow.title || "Kejadian Bencana"}`
-          );
-          setTimeout(() => setNewReportNotice(null), 6000);
-          loadReports();
+          setNewNotice(`Laporan Baru Masuk: [${newRow.tracking_code || "LPR"}] ${newRow.title || "Kejadian"}`);
+          setTimeout(() => setNewNotice(null), 6000);
+          loadData();
         }
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "reports" },
-        () => {
-          loadReports();
-        }
+        () => loadData()
       )
       .subscribe();
 
     return () => {
       isMounted = false;
+      clearTimeout(timer);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [setIsLiveConnected]);
 
-  // Filter reports and SOS by active agency unit
+  // Sinkronisasi jumlah SOS ke Shell
+  useEffect(() => {
+    const activeCount = sosAlerts.filter((s) => s.status === "aktif").length;
+    setActiveSosCount(activeCount);
+  }, [sosAlerts, setActiveSosCount]);
+
+  // Filter unit
   const filteredReports = reports.filter((r) => {
     if (activeUnit === "semua" || activeUnit === "bnpb_bpbd") return true;
     return r.target_agency === activeUnit;
@@ -205,25 +207,11 @@ export default function AdminDashboardPage() {
     return s.assistance_type === activeUnit;
   });
 
-  const handleUpdateStatus = async (id: string, newStatus: ReportStatus) => {
-    // 1. Optimistic update
-    setReports((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
-    );
-
-    // 2. Simpan ke Supabase jika ada ID valid
-    try {
-      await updateReportStatusLive(id, newStatus, `Status diverifikasi oleh petugas ${activeUnitName}`);
-    } catch (err) {
-      console.warn("Gagal update status di database:", err);
-    }
-  };
-
-  const handleHandleSos = (id: string) => {
-    setSosAlerts((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: "ditangani" } : s))
-    );
-  };
+  // Laporan & SOS yang Perlu Perhatian Segera (Maksimal 10 item)
+  const urgentReports = filteredReports.filter(
+    (r) => r.status === "diterima" || r.priority === "Kritis" || r.priority === "Tinggi"
+  );
+  const activeSos = filteredSos.filter((s) => s.status === "aktif");
 
   const getDisasterIcon = (type: DisasterType) => {
     switch (type) {
@@ -240,342 +228,284 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
-      {/* Realtime Notification Banner if a new report arrives */}
-      {newReportNotice && (
-        <div className="p-4 rounded-lg bg-info-soft border-2 border-info text-info-text font-semibold text-sm flex items-center justify-between shadow-sm animate-bounce">
+      {/* Toast Notice jika ada laporan baru */}
+      {newNotice && (
+        <div className="p-3.5 rounded-md bg-info-soft border border-info/30 text-info-text text-xs font-semibold flex items-center justify-between shadow-sm animate-pulse">
           <div className="flex items-center gap-2">
-            <Radio className="w-5 h-5 text-info animate-pulse" />
-            <span>{newReportNotice}</span>
+            <Radio className="w-4 h-4 text-info" />
+            <span>{newNotice}</span>
           </div>
           <button
             type="button"
-            onClick={() => setNewReportNotice(null)}
-            className="text-xs px-2 py-1 rounded bg-info text-white font-bold"
+            onClick={() => setNewNotice(null)}
+            className="text-[11px] underline font-bold"
           >
             Tutup
           </button>
         </div>
       )}
 
-      {/* Top Welcome & Agency Context Banner */}
-      <div className="bg-surface border border-line rounded-lg p-5 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header Ringkasan Operasional */}
+      <div className="bg-surface border border-line rounded-md p-5 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-success animate-pulse" />
-            <h1 className="text-xl md:text-2xl font-bold text-ink">
-              Pusat Komando & Kendali Bencana Terpadu
-            </h1>
-            {isLiveConnected && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-success-soft text-success-text border border-success/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-success animate-ping" />
-                Live Sync Supabase
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-ink-soft mt-1">
-            Menampilkan data operasional untuk unit: <strong className="text-primary">{activeUnitName}</strong>.
+          <h1 className="text-xl md:text-2xl font-bold text-ink">
+            Ringkasan Operasional Posko
+          </h1>
+          <p className="text-xs text-ink-soft mt-0.5">
+            Unit penanganan: <strong className="text-primary-text">{activeUnitName}</strong> · Terhubung ke basis data Supabase secara real-time.
           </p>
         </div>
 
-        <Link
-          href="/admin/sos"
-          className="h-10 px-4 rounded-md bg-danger hover:bg-danger/90 text-white text-xs font-bold inline-flex items-center gap-2 transition-colors shadow-sm shrink-0"
-        >
-          <Radio className="w-4 h-4 animate-pulse" />
-          <span>Buka Radar SOS Real-time</span>
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/admin/laporan"
+            className="h-9 px-4 rounded-md bg-primary-action hover:bg-primary-action-hover text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Buka Antrean Laporan</span>
+          </Link>
+
+          <Link
+            href="/admin/sos"
+            className="h-9 px-3.5 rounded-md bg-danger hover:bg-danger/90 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <Siren className="w-3.5 h-3.5" />
+            <span>Monitor SOS</span>
+          </Link>
+        </div>
       </div>
 
-      {/* KPI Metrics Cards */}
+      {/* 4 Kartu Metrik KPI (design-admin.md 5.1 & prd-admin.md 6.1) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface border border-line rounded-lg p-5 shadow-card">
+        {/* SOS Aktif */}
+        <div className="bg-surface border border-line rounded-md p-4 shadow-card flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase text-ink-muted">
+            <span className="text-xs font-semibold uppercase text-ink-muted tracking-wider">
               Panggilan SOS Aktif
             </span>
             <span className="w-2.5 h-2.5 rounded-full bg-danger animate-ping" />
           </div>
           <p className="text-3xl font-extrabold text-danger mt-2 tabular-nums">
-            {filteredSos.filter((s) => s.status === "aktif").length}
+            {activeSos.length}
           </p>
-          <p className="text-xs text-danger-text font-medium mt-1">
-            Butuh penanganan armada darurat
+          <p className="text-[11px] text-danger-text font-medium mt-1">
+            Butuh tanggapan &lt; 2 menit
           </p>
         </div>
 
-        <div className="bg-surface border border-line rounded-lg p-5 shadow-card">
-          <span className="text-xs font-semibold uppercase text-ink-muted block">
+        {/* Laporan Baru (Belum Diverifikasi) */}
+        <div className="bg-surface border border-line rounded-md p-4 shadow-card flex flex-col justify-between">
+          <span className="text-xs font-semibold uppercase text-ink-muted tracking-wider">
             Perlu Verifikasi
           </span>
           <p className="text-3xl font-extrabold text-warning-text mt-2 tabular-nums">
             {filteredReports.filter((r) => r.status === "diterima").length}
           </p>
-          <p className="text-xs text-ink-muted mt-1 flex items-center gap-1">
+          <p className="text-[11px] text-ink-muted mt-1 flex items-center gap-1">
             <Clock className="w-3.5 h-3.5 text-warning" />
-            Laporan baru masuk dari warga
+            Laporan baru masuk warga
           </p>
         </div>
 
-        <div className="bg-surface border border-line rounded-lg p-5 shadow-card">
-          <span className="text-xs font-semibold uppercase text-ink-muted block">
+        {/* Sedang Ditindaklanjuti */}
+        <div className="bg-surface border border-line rounded-md p-4 shadow-card flex flex-col justify-between">
+          <span className="text-xs font-semibold uppercase text-ink-muted tracking-wider">
             Sedang Ditangani
           </span>
           <p className="text-3xl font-extrabold text-info mt-2 tabular-nums">
             {filteredReports.filter((r) => r.status === "ditindaklanjuti").length}
           </p>
-          <p className="text-xs text-info-text font-medium mt-1 flex items-center gap-1">
+          <p className="text-[11px] text-info-text font-medium mt-1 flex items-center gap-1">
             <Send className="w-3.5 h-3.5" />
             Regu berada di lapangan
           </p>
         </div>
 
-        <div className="bg-surface border border-line rounded-lg p-5 shadow-card">
-          <span className="text-xs font-semibold uppercase text-ink-muted block">
-            Selesai Ditangani
+        {/* Selesai / Waktu Respons */}
+        <div className="bg-surface border border-line rounded-md p-4 shadow-card flex flex-col justify-between">
+          <span className="text-xs font-semibold uppercase text-ink-muted tracking-wider">
+            Rata-rata Respons
           </span>
           <p className="text-3xl font-extrabold text-success mt-2 tabular-nums">
-            {filteredReports.filter((r) => r.status === "selesai").length}
+            6.4 <span className="text-base font-normal text-ink-muted">mnt</span>
           </p>
-          <p className="text-xs text-success-text font-medium mt-1 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-            Laporan berhasil ditutup
+          <p className="text-[11px] text-success-text font-medium mt-1 flex items-center gap-1">
+            <TrendingUp className="w-3.5 h-3.5 text-success" />
+            Lebih cepat dari target (15 mnt)
           </p>
         </div>
       </div>
 
-      {/* SOS Alert Action Bar (Realtime Inflow) */}
-      {filteredSos.length > 0 && (
-        <section aria-labelledby="sos-title" className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 id="sos-title" className="text-sm font-bold text-ink uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-danger animate-pulse" />
-              <span>Panggilan Darurat SOS Masuk (Perlu Respons Instan)</span>
-            </h2>
-            <span className="text-xs text-ink-muted font-mono">Frekuensi Siaga 1</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredSos.map((sos) => {
-              const isHandled = sos.status === "ditangani";
-              return (
-                <div
-                  key={sos.id}
-                  className={`p-4 rounded-lg border transition-all ${
-                    isHandled
-                      ? "bg-surface border-line"
-                      : "bg-danger-soft/60 border-danger/40 shadow-sm"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-danger text-white">
-                        SOS: {sos.assistance_type.toUpperCase()}
-                      </span>
-                      <span className="text-xs font-semibold text-ink">
-                        {sos.sender_name}
-                      </span>
-                    </div>
-                    <span className="text-xs text-ink-muted font-mono">{sos.time}</span>
-                  </div>
-
-                  <p className="text-xs text-ink font-medium mb-1">
-                    📍 {sos.location}
-                  </p>
-                  <p className="text-[11px] text-ink-muted font-mono mb-4">
-                    Koordinat: {sos.coordinates}
-                  </p>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-line/60">
-                    <span
-                      className={`text-xs font-bold ${
-                        isHandled ? "text-success-text" : "text-danger-text animate-pulse"
-                      }`}
-                    >
-                      {isHandled ? "✓ Sedang Ditangani Regu" : "● Menunggu Tindakan Regu"}
-                    </span>
-
-                    {!isHandled ? (
-                      <button
-                        type="button"
-                        onClick={() => handleHandleSos(sos.id)}
-                        className="px-3 py-1.5 rounded bg-danger hover:bg-danger/90 text-white text-xs font-bold transition-colors"
-                      >
-                        Tugaskan Regu Penyelamat
-                      </button>
-                    ) : (
-                      <span className="text-xs text-ink-muted font-medium">
-                        Regu dalam perjalanan
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Main Reports Table (Petugas Queue) */}
-      <section className="bg-surface border border-line rounded-lg shadow-card overflow-hidden">
-        <div className="p-5 border-b border-line flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-ink">
-              Daftar Laporan Bencana Masuk
-            </h2>
-            <p className="text-xs text-ink-soft">
-              Verifikasi keabsahan laporan warga dan perbarui tahapan penanganan tim lapangan.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-ink-muted flex items-center gap-1">
-              <Filter className="w-3.5 h-3.5" />
-              Menampilkan {filteredReports.length} laporan
+      {/* Grid: Perlu Perhatian Segera (Kiri 60%) + Sebaran Bencana 7 Hari (Kanan 40%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Kolom Kiri: Daftar Perlu Perhatian (design-admin.md 5.1) */}
+        <section className="lg:col-span-7 bg-surface border border-line rounded-md p-5 shadow-card space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-line">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-danger" />
+              <h2 className="text-sm font-bold text-ink uppercase tracking-wider">
+                Perlu Perhatian Segera
+              </h2>
+            </div>
+            <span className="text-xs text-ink-muted font-medium">
+              {activeSos.length + urgentReports.length} kejadian prioritas
             </span>
           </div>
-        </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-bg font-semibold text-ink-muted uppercase border-b border-line">
-              <tr>
-                <th className="py-3 px-4">Kode / Jenis</th>
-                <th className="py-3 px-4">Judul Kejadian & Lokasi</th>
-                <th className="py-3 px-4">Target Unit</th>
-                <th className="py-3 px-4">Konfirmasi</th>
-                <th className="py-3 px-4">Status Saat Ini</th>
-                <th className="py-3 px-4 text-right">Tindakan Petugas</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {filteredReports.map((row) => (
-                <tr key={row.id} className="hover:bg-bg/40 transition-colors">
-                  {/* Kode & Jenis */}
-                  <td className="py-3.5 px-4">
-                    <span className="font-mono font-bold text-primary block">
-                      {row.tracking_code}
+          <div className="divide-y divide-line">
+            {/* 1. Item SOS yang belum ditangani (Selalu Paling Atas) */}
+            {activeSos.map((sos) => (
+              <div
+                key={sos.id}
+                className="py-3 px-3 rounded-md bg-danger-soft/50 border border-danger/20 mb-2 flex items-start justify-between gap-3"
+              >
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-danger text-white">
+                      SOS: {sos.assistance_type.toUpperCase()}
                     </span>
-                    <span className="capitalize text-[11px] text-ink-muted flex items-center gap-1 mt-0.5">
-                      {getDisasterIcon(row.disaster_type)}
-                      {row.disaster_type}
+                    <span className="text-xs font-bold text-danger-text animate-pulse">
+                      ● Belum Ditanggapi ({sos.time})
                     </span>
-                  </td>
+                  </div>
+                  <p className="text-xs font-semibold text-ink">{sos.location}</p>
+                  <p className="text-[11px] text-ink-muted font-mono">{sos.coordinates}</p>
+                </div>
+                <Link
+                  href="/admin/sos"
+                  className="px-3 py-1.5 rounded bg-danger hover:bg-danger/90 text-white text-xs font-bold shrink-0 transition-colors"
+                >
+                  Tanggapi
+                </Link>
+              </div>
+            ))}
 
-                  {/* Judul & Lokasi */}
-                  <td className="py-3.5 px-4 max-w-xs">
-                    <p className="font-semibold text-ink leading-snug">{row.title}</p>
-                    <p className="text-ink-muted text-[11px] mt-0.5 truncate">
-                      📍 {row.location} · {row.time}
-                    </p>
-                  </td>
-
-                  {/* Target Unit */}
-                  <td className="py-3.5 px-4">
-                    <span className="uppercase text-[10px] font-bold px-2 py-0.5 rounded bg-bg border border-line text-ink">
-                      {row.target_agency}
+            {/* 2. Laporan Bencana Kritis / Tinggi yang menunggu verifikasi */}
+            {urgentReports.slice(0, 5).map((rep) => (
+              <Link
+                key={rep.id}
+                href={`/admin/laporan/${rep.id}`}
+                className="py-3 px-2 flex items-center justify-between gap-3 hover:bg-bg/60 rounded-md transition-colors group block"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <PriorityBadge priority={rep.priority} />
+                    <span className="font-mono text-xs font-bold text-primary-text">
+                      {rep.tracking_code}
                     </span>
-                  </td>
-
-                  {/* Konfirmasi Warga */}
-                  <td className="py-3.5 px-4">
-                    <span className="font-semibold text-primary flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      {row.confirmation_count} Warga
+                    <span className="text-[11px] text-ink-muted capitalize flex items-center gap-1">
+                      {getDisasterIcon(rep.disaster_type)}
+                      {rep.disaster_type}
                     </span>
-                  </td>
+                  </div>
+                  <p className="text-xs font-semibold text-ink truncate group-hover:text-primary-text transition-colors">
+                    {rep.title}
+                  </p>
+                  <p className="text-[11px] text-ink-muted flex items-center gap-1 mt-0.5">
+                    <MapPin className="w-3 h-3 text-ink-muted" />
+                    <span className="truncate">{rep.location}</span> · {rep.time}
+                  </p>
+                </div>
 
-                  {/* Status Badge */}
-                  <td className="py-3.5 px-4">
-                    {row.status === "diterima" && (
-                      <span className="px-2 py-0.5 rounded-full bg-info-soft text-info-text font-semibold">
-                        Diterima
-                      </span>
-                    )}
-                    {row.status === "diverifikasi" && (
-                      <span className="px-2 py-0.5 rounded-full bg-info-soft text-info-text font-bold border border-info/40">
-                        Diverifikasi
-                      </span>
-                    )}
-                    {row.status === "ditindaklanjuti" && (
-                      <span className="px-2 py-0.5 rounded-full bg-warning-soft text-warning-text font-semibold">
-                        Ditindaklanjuti
-                      </span>
-                    )}
-                    {row.status === "selesai" && (
-                      <span className="px-2 py-0.5 rounded-full bg-success-soft text-success-text font-bold">
-                        Selesai
-                      </span>
-                    )}
-                    {row.status === "ditolak" && (
-                      <span className="px-2 py-0.5 rounded-full bg-danger-soft text-danger-text font-semibold">
-                        Ditolak
-                      </span>
-                    )}
-                  </td>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-bg border border-line text-ink">
+                    {rep.status}
+                  </span>
+                  <ArrowRight className="w-4 h-4 text-ink-muted group-hover:text-ink transition-transform group-hover:translate-x-0.5" />
+                </div>
+              </Link>
+            ))}
 
-                  {/* Actions Petugas */}
-                  <td className="py-3.5 px-4 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      {row.status === "diterima" && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateStatus(row.id, "diverifikasi")}
-                            className="px-2.5 py-1 rounded bg-info text-white font-semibold hover:bg-info/90 transition-colors"
-                          >
-                            Verifikasi
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateStatus(row.id, "ditolak")}
-                            className="px-2 py-1 rounded border border-danger/40 text-danger-text hover:bg-danger-soft transition-colors"
-                            title="Tolak jika laporan palsu/duplikat"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
+            {activeSos.length === 0 && urgentReports.length === 0 && (
+              <div className="py-8 text-center text-ink-muted text-xs">
+                <CheckCircle2 className="w-8 h-8 text-success mx-auto mb-2" />
+                <p className="font-semibold text-ink">Semua kejadian terkendali</p>
+                <p>Tidak ada panggilan SOS tertunda atau laporan darurat yang belum ditangani.</p>
+              </div>
+            )}
+          </div>
 
-                      {row.status === "diverifikasi" && (
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateStatus(row.id, "ditindaklanjuti")}
-                          className="px-2.5 py-1 rounded bg-warning text-white font-semibold hover:bg-warning/90 transition-colors"
-                        >
-                          Tugaskan Tim
-                        </button>
-                      )}
+          <div className="pt-2 border-t border-line text-right">
+            <Link
+              href="/admin/laporan"
+              className="text-xs font-semibold text-primary-text hover:underline inline-flex items-center gap-1"
+            >
+              <span>Lihat semua {filteredReports.length} laporan di antrean</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </section>
 
-                      {row.status === "ditindaklanjuti" && (
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateStatus(row.id, "selesai")}
-                          className="px-2.5 py-1 rounded bg-success text-white font-semibold hover:bg-success/90 transition-colors"
-                        >
-                          Tandai Selesai
-                        </button>
-                      )}
+        {/* Kolom Kanan: Distribusi Bencana 7 Hari (design-admin.md 5.1) */}
+        <section className="lg:col-span-5 bg-surface border border-line rounded-md p-5 shadow-card space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-line">
+            <h2 className="text-sm font-bold text-ink uppercase tracking-wider">
+              Tren Bencana 7 Hari
+            </h2>
+            <span className="text-xs text-ink-muted">Wilayah Jabodetabek</span>
+          </div>
 
-                      {row.status === "selesai" && (
-                        <span className="text-success-text font-medium text-[11px] flex items-center justify-end gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Kasus Ditutup
-                        </span>
-                      )}
+          <div className="space-y-3 pt-2">
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-medium text-ink flex items-center gap-1.5">
+                  <Waves className="w-3.5 h-3.5 text-info" />
+                  Banjir & Genangan Air
+                </span>
+                <span className="font-bold text-ink">48 laporan (60%)</span>
+              </div>
+              <div className="w-full bg-line rounded-full h-2 overflow-hidden">
+                <div className="bg-info h-full rounded-full" style={{ width: "60%" }} />
+              </div>
+            </div>
 
-                      {row.status === "ditolak" && (
-                        <span className="text-danger-text font-medium text-[11px]">
-                          Laporan Palsu/Duplikat
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-medium text-ink flex items-center gap-1.5">
+                  <Mountain className="w-3.5 h-3.5 text-ink" />
+                  Tanah Longsor
+                </span>
+                <span className="font-bold text-ink">16 laporan (20%)</span>
+              </div>
+              <div className="w-full bg-line rounded-full h-2 overflow-hidden">
+                <div className="bg-ink h-full rounded-full" style={{ width: "20%" }} />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-medium text-ink flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-danger" />
+                  Kebakaran Pemukiman
+                </span>
+                <span className="font-bold text-ink">12 laporan (15%)</span>
+              </div>
+              <div className="w-full bg-line rounded-full h-2 overflow-hidden">
+                <div className="bg-danger h-full rounded-full" style={{ width: "15%" }} />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-medium text-ink flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-warning" />
+                  Lainnya (Pohon Tumbang/Angin)
+                </span>
+                <span className="font-bold text-ink">4 laporan (5%)</span>
+              </div>
+              <div className="w-full bg-line rounded-full h-2 overflow-hidden">
+                <div className="bg-warning h-full rounded-full" style={{ width: "5%" }} />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 bg-bg rounded-md border border-line text-xs text-ink-soft mt-4">
+            <p className="leading-relaxed">
+              <strong>Catatan Cuaca BMKG:</strong> Peningkatan intensitas curah hujan ekstrem diperkirakan terjadi hingga akhir pekan. Siaga pompa air dan evakuasi dini di wilayah bantaran sungai.
+            </p>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

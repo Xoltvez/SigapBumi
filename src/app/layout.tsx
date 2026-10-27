@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
@@ -29,10 +30,16 @@ export default function RootLayout({
   return (
     <html lang="id" className={`${plusJakartaSans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans bg-bg text-ink pb-20 md:pb-0">
-        <Header />
+        <Suspense fallback={null}>
+          <Header />
+        </Suspense>
         <div className="flex-1 flex flex-col">{children}</div>
-        <SosFab />
-        <BottomNav />
+        <Suspense fallback={null}>
+          <SosFab />
+        </Suspense>
+        <Suspense fallback={null}>
+          <BottomNav />
+        </Suspense>
       </body>
     </html>
   );

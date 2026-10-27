@@ -1,4 +1,4 @@
-export type UserRole = "warga" | "relawan" | "petugas";
+export type UserRole = "warga" | "relawan" | "petugas" | "koordinator";
 
 export type ReportStatus =
   | "diterima"
@@ -17,6 +17,8 @@ export type DisasterType =
   | "lainnya";
 
 export type SosAssistanceType = "damkar" | "medis" | "polisi" | "bnpb_bpbd";
+
+export type PriorityLabel = "Kritis" | "Tinggi" | "Sedang" | "Rendah";
 
 export interface Profile {
   id: string;
@@ -39,7 +41,16 @@ export interface Report {
   status: ReportStatus;
   confirmation_count: number;
   priority_score: number;
+  priority_label?: PriorityLabel;
+  version?: number;
   reporter_id?: string;
+  reporter_name?: string;
+  reporter_phone?: string;
+  verified_at?: string;
+  resolved_at?: string;
+  duplicate_of?: string;
+  regency?: string;
+  province?: string;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +69,7 @@ export interface ReportStatusLog {
   status: ReportStatus;
   note?: string;
   created_by?: string;
+  actor_name?: string;
   created_at: string;
 }
 
@@ -74,8 +86,33 @@ export interface SosAlert {
   latitude: number;
   longitude: number;
   assistance_type?: SosAssistanceType;
-  status: "aktif" | "ditangani" | "selesai";
+  status: "aktif" | "ditangani" | "selesai" | "palsu";
   note?: string;
+  closing_note?: string;
+  acknowledged_by?: string;
+  acknowledged_at?: string;
   created_at: string;
   resolved_at?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  actor_id?: string;
+  actor_name: string;
+  action: string;
+  entity: string;
+  entity_id?: string;
+  meta?: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  user_id?: string;
+  report_id?: string;
+  tracking_code: string;
+  title: string;
+  body: string;
+  read_at?: string;
+  created_at: string;
 }

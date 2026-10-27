@@ -2,6 +2,9 @@
 
 @theme {
   --color-primary: #EF6806;
+  --color-primary-action: #BF5305;
+  --color-primary-action-hover: #A74904;
+  --color-primary-text: #A74904;
   --color-primary-hover: #C75405;
   --color-primary-soft: #FEF0E6;
 

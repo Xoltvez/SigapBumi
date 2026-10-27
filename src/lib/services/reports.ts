@@ -428,12 +428,36 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
 export async function updateReportStatusLive(
   reportId: string,
   newStatus: ReportStatus,
-  note?: string
+  note?: string,
+  actorName: string = "Petugas Posko",
+  version?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // 1. Coba panggil fungsi RPC jika sudah dibuat di database
+    // 1. Coba panggil fungsi database resmi change_report_status (Tahap A1)
     try {
       const { data: rpcData, error: rpcErr } = await supabase.rpc(
+        "change_report_status",
+        {
+          p_report_id: reportId,
+          p_new_status: newStatus,
+          p_note: note || `Status diperbarui menjadi ${newStatus}`,
+          p_actor_name: actorName,
+          p_version: version || null,
+        }
+      );
+
+      if (!rpcErr && rpcData) {
+        const res = rpcData as { success?: boolean; error?: string };
+        if (res.success) return { success: true };
+        if (res.error) return { success: false, error: res.error };
+      }
+    } catch {
+      // Lanjut ke fallback RPC versi sebelumnya
+    }
+
+    // 2. Coba RPC update_report_status_public
+    try {
+      const { data: rpcData2, error: rpcErr2 } = await supabase.rpc(
         "update_report_status_public",
         {
           p_report_id: reportId,
@@ -442,14 +466,14 @@ export async function updateReportStatusLive(
         }
       );
 
-      if (!rpcErr && rpcData) {
+      if (!rpcErr2 && rpcData2) {
         return { success: true };
       }
     } catch {
       // Lanjut ke fallback update langsung
     }
 
-    // 2. Jalankan update langsung ke tabel reports
+    // 3. Fallback update langsung ke tabel reports
     const { error: repErr } = await supabase
       .from("reports")
       .update({
@@ -463,7 +487,7 @@ export async function updateReportStatusLive(
       return { success: false, error: repErr.message };
     }
 
-    // 3. Catat log manual ke tabel riwayat jika belum tercatat
+    // 4. Catat log manual ke tabel riwayat jika belum tercatat
     try {
       await supabase.from("report_status_logs").insert({
         report_id: reportId,
@@ -474,9 +498,45 @@ export async function updateReportStatusLive(
       // Abaikan jika trigger otomatis sudah menangani
     }
 
+    // 5. Catat audit log
+    try {
+      await supabase.from("audit_logs").insert({
+        actor_name: actorName,
+        action: "CHANGE_REPORT_STATUS",
+        entity: "reports",
+        entity_id: reportId,
+        meta: { new_status: newStatus, note },
+      });
+    } catch {
+      // Abaikan jika tabel audit belum tersedia
+    }
+
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Gagal memperbarui status";
     return { success: false, error: message };
+  }
+}
+
+/**
+ * Mencatat tindakan petugas ke tabel audit_logs
+ */
+export async function recordAuditLog(
+  action: string,
+  entity: string,
+  entityId: string,
+  meta?: Record<string, unknown>,
+  actorName: string = "Petugas Posko"
+): Promise<void> {
+  try {
+    await supabase.from("audit_logs").insert({
+      actor_name: actorName,
+      action,
+      entity,
+      entity_id: entityId,
+      meta,
+    });
+  } catch (err) {
+    console.warn("recordAuditLog warning:", err);
   }
 }
