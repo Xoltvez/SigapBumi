@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import {
   Flame,
   HeartPulse,
@@ -14,6 +15,7 @@ import {
 import type { SosAssistanceType } from "@/types";
 
 export function SosFab() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isSent, setIsSent] = useState(false);
@@ -21,6 +23,7 @@ export function SosFab() {
     useState<SosAssistanceType | null>(null);
 
   useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
     if (countdown === null) return;
     if (countdown > 0) {
       const timer = setTimeout(() => {
@@ -34,7 +37,7 @@ export function SosFab() {
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [countdown]);
+  }, [countdown, pathname]);
 
   const handleStartSos = () => {
     setIsOpen(true);
@@ -48,6 +51,10 @@ export function SosFab() {
     setIsOpen(false);
     setIsSent(false);
   };
+
+  if (pathname.startsWith("/admin")) {
+    return null;
+  }
 
   return (
     <>

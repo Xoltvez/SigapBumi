@@ -8,6 +8,10 @@ import { Home, MapPin, Plus, Search, BookOpen } from "lucide-react";
 export function BottomNav() {
   const pathname = usePathname();
 
+  if (pathname.startsWith("/admin")) {
+    return null;
+  }
+
   const isHome = pathname === "/";
   const isPeta = pathname.startsWith("/peta");
   const isLapor = pathname.startsWith("/lapor");

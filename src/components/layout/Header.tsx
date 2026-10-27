@@ -1,9 +1,18 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Bell, User } from "lucide-react";
 
 export function Header() {
+  const pathname = usePathname();
+
+  if (pathname.startsWith("/admin")) {
+    return null;
+  }
+
   return (
     <header className="sticky top-0 z-30 h-14 md:h-16 bg-surface border-b border-line px-4 md:px-8">
       <div className="max-w-[1200px] h-full mx-auto flex items-center justify-between">
