@@ -23,6 +23,7 @@ import { PriorityBadge } from "@/components/admin/common/PriorityBadge";
 import type { ReportStatus, DisasterType, SosAssistanceType, PriorityLabel } from "@/types";
 import { supabase } from "@/lib/supabase/client";
 import { fetchLiveReports } from "@/lib/services/reports";
+import { fetchLiveSosAlerts } from "@/lib/services/sos";
 
 interface AdminReportItem {
   id: string;
@@ -122,7 +123,7 @@ const INITIAL_REPORTS: AdminReportItem[] = [
 export default function AdminRingkasanPage() {
   const { activeUnit, activeUnitName, setActiveSosCount, setIsLiveConnected } = useAdmin();
   const [reports, setReports] = useState<AdminReportItem[]>(INITIAL_REPORTS);
-  const [sosAlerts] = useState<SosAlertItem[]>(INITIAL_SOS_ALERTS);
+  const [sosAlerts, setSosAlerts] = useState<SosAlertItem[]>(INITIAL_SOS_ALERTS);
   const [newNotice, setNewNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -153,6 +154,24 @@ export default function AdminRingkasanPage() {
           });
           setReports(formatted);
           setIsLiveConnected(true);
+        }
+
+        // Muat live SOS
+        const liveSos = await fetchLiveSosAlerts();
+        if (isMounted && liveSos && liveSos.length > 0) {
+          const activeOnly = liveSos.filter((s) => s.status !== "selesai");
+          setSosAlerts(
+            activeOnly.map((s) => ({
+              id: s.id,
+              sender_name: s.source,
+              assistance_type: s.assistance_type,
+              location: s.address,
+              coordinates: s.coordinates,
+              time: s.time_ago,
+              status: s.status as "aktif" | "ditangani",
+            }))
+          );
+          setActiveSosCount(activeOnly.filter((s) => s.status === "aktif").length);
         }
       } catch (err) {
         console.warn("Gagal memuat ringkasan live:", err);
@@ -188,7 +207,7 @@ export default function AdminRingkasanPage() {
       clearTimeout(timer);
       supabase.removeChannel(channel);
     };
-  }, [setIsLiveConnected]);
+  }, [setIsLiveConnected, setActiveSosCount]);
 
   // Sinkronisasi jumlah SOS ke Shell
   useEffect(() => {

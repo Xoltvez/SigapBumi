@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Volume2,
@@ -15,75 +15,78 @@ import {
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import type { SosAssistanceType } from "@/types";
-
-interface SosEmergency {
-  id: string;
-  source: string;
-  assistance_type: SosAssistanceType;
-  address: string;
-  coordinates: string;
-  time_ago: string;
-  battery_level?: string;
-  status: "aktif" | "ditangani" | "selesai";
-  dispatched_team?: string;
-}
-
-const INITIAL_EMERGENCIES: SosEmergency[] = [
-  {
-    id: "sos-101",
-    source: "Ponsel Warga (GPS Sensor)",
-    assistance_type: "damkar",
-    address: "Perumahan Citra 2 Blok B4, Kalideres, Jakarta Barat",
-    coordinates: "-6.1552, 106.7231",
-    time_ago: "1 menit lalu",
-    battery_level: "34%",
-    status: "aktif",
-  },
-  {
-    id: "sos-102",
-    source: "Ponsel Warga (GPS Sensor)",
-    assistance_type: "medis",
-    address: "Jalan Puncak Raya KM 82, Desa Tugu Selatan, Bogor",
-    coordinates: "-6.6984, 106.9425",
-    time_ago: "6 menit lalu",
-    battery_level: "68%",
-    status: "aktif",
-  },
-  {
-    id: "sos-103",
-    source: "Ponsel Warga (GPS Sensor)",
-    assistance_type: "polisi",
-    address: "Akses Jembatan Kali Sunter, Jakarta Utara",
-    coordinates: "-6.1492, 106.8041",
-    time_ago: "15 menit lalu",
-    battery_level: "82%",
-    status: "ditangani",
-    dispatched_team: "Patroli Polsek Tanjung Priok",
-  },
-];
+import { fetchLiveSosAlerts, updateSosAlertStatus, DEFAULT_MOCK_SOS, type LiveSosItem } from "@/lib/services/sos";
+import { supabase } from "@/lib/supabase/client";
 
 export default function AdminSosPage() {
-  const { activeUnit, activeUnitName } = useAdmin();
-  const [emergencies, setEmergencies] = useState<SosEmergency[]>(INITIAL_EMERGENCIES);
+  const { activeUnit, activeUnitName, setActiveSosCount } = useAdmin();
+  const [emergencies, setEmergencies] = useState<LiveSosItem[]>(DEFAULT_MOCK_SOS);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+
+  const loadData = useCallback(async () => {
+    try {
+      const live = await fetchLiveSosAlerts();
+      if (live && live.length > 0) {
+        setEmergencies(live);
+        const activeCount = live.filter((e) => e.status === "aktif").length;
+        setActiveSosCount(activeCount);
+      }
+    } catch (err) {
+      console.warn("Gagal memuat panggilan SOS:", err);
+    }
+  }, [setActiveSosCount]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadData();
+    }, 0);
+
+    // Realtime channel listener
+    const channel = supabase
+      .channel("admin_sos_page_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sos_alerts" },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    const interval = setInterval(loadData, 5000);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+  }, [loadData]);
 
   const filteredEmergencies = emergencies.filter((e) => {
     if (activeUnit === "semua" || activeUnit === "bnpb_bpbd") return true;
     return e.assistance_type === activeUnit;
   });
 
-  const handleDispatch = (id: string, team: string) => {
+  const handleDispatch = async (id: string, team: string) => {
+    // Optimistic UI update
     setEmergencies((prev) =>
       prev.map((e) =>
         e.id === id ? { ...e, status: "ditangani", dispatched_team: team } : e
       )
     );
+    // Real call
+    await updateSosAlertStatus(id, "ditangani", team);
+    loadData();
   };
 
-  const handleResolve = (id: string) => {
+  const handleResolve = async (id: string) => {
+    // Optimistic UI update
     setEmergencies((prev) =>
       prev.map((e) => (e.id === id ? { ...e, status: "selesai" } : e))
     );
+    // Real call
+    await updateSosAlertStatus(id, "selesai");
+    loadData();
   };
 
   const getAgencyIcon = (type: SosAssistanceType) => {

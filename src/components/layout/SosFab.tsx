@@ -13,6 +13,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import type { SosAssistanceType } from "@/types";
+import { sendSosAlert } from "@/lib/services/sos";
 
 export function SosFab() {
   const pathname = usePathname();
@@ -21,6 +22,28 @@ export function SosFab() {
   const [isSent, setIsSent] = useState(false);
   const [selectedAssistance, setSelectedAssistance] =
     useState<SosAssistanceType | null>(null);
+  const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number }>({
+    lat: -6.2088,
+    lng: 106.8456,
+  });
+
+  // Ambil lokasi GPS riil warga saat pertama kali menekan SOS
+  const fetchCurrentLocation = () => {
+    if (typeof window !== "undefined" && "geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setCurrentCoords({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+        },
+        (err) => {
+          console.warn("Geolocation denied/unavailable, using fallback coords:", err.message);
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    }
+  };
 
   useEffect(() => {
     if (pathname.startsWith("/admin")) return;
@@ -29,6 +52,14 @@ export function SosFab() {
       const timer = setTimeout(() => {
         setCountdown((prev) => {
           if (prev === 1) {
+            // Trigger kirim SOS nyata ke Supabase
+            sendSosAlert({
+              lat: currentCoords.lat,
+              lng: currentCoords.lng,
+              assistanceType: selectedAssistance || "damkar",
+              note: "Panggilan Darurat SOS Warga (Realtime)",
+            });
+
             setIsSent(true);
             return null;
           }
@@ -37,13 +68,25 @@ export function SosFab() {
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [countdown, pathname]);
+  }, [countdown, pathname, currentCoords, selectedAssistance]);
 
   const handleStartSos = () => {
+    fetchCurrentLocation();
     setIsOpen(true);
     setCountdown(3);
     setIsSent(false);
     setSelectedAssistance(null);
+  };
+
+  const handleSelectAssistance = (type: SosAssistanceType) => {
+    setSelectedAssistance(type);
+    // Kirim pembaruan tipe bantuan nyata
+    sendSosAlert({
+      lat: currentCoords.lat,
+      lng: currentCoords.lng,
+      assistanceType: type,
+      note: `Panggilan Darurat Warga - Butuh Bantuan ${type.toUpperCase()}`,
+    });
   };
 
   const handleCancel = () => {
@@ -148,7 +191,7 @@ export function SosFab() {
                 <div className="grid grid-cols-2 gap-3 mb-6 text-left">
                   <button
                     type="button"
-                    onClick={() => setSelectedAssistance("damkar")}
+                    onClick={() => handleSelectAssistance("damkar")}
                     className={`p-3 rounded-md border text-sm font-medium flex items-center gap-2 transition-colors ${
                       selectedAssistance === "damkar"
                         ? "border-primary bg-primary-soft text-primary-hover"
@@ -161,7 +204,7 @@ export function SosFab() {
 
                   <button
                     type="button"
-                    onClick={() => setSelectedAssistance("medis")}
+                    onClick={() => handleSelectAssistance("medis")}
                     className={`p-3 rounded-md border text-sm font-medium flex items-center gap-2 transition-colors ${
                       selectedAssistance === "medis"
                         ? "border-primary bg-primary-soft text-primary-hover"
@@ -174,7 +217,7 @@ export function SosFab() {
 
                   <button
                     type="button"
-                    onClick={() => setSelectedAssistance("polisi")}
+                    onClick={() => handleSelectAssistance("polisi")}
                     className={`p-3 rounded-md border text-sm font-medium flex items-center gap-2 transition-colors ${
                       selectedAssistance === "polisi"
                         ? "border-primary bg-primary-soft text-primary-hover"
@@ -187,7 +230,7 @@ export function SosFab() {
 
                   <button
                     type="button"
-                    onClick={() => setSelectedAssistance("bnpb_bpbd")}
+                    onClick={() => handleSelectAssistance("bnpb_bpbd")}
                     className={`p-3 rounded-md border text-sm font-medium flex items-center gap-2 transition-colors ${
                       selectedAssistance === "bnpb_bpbd"
                         ? "border-primary bg-primary-soft text-primary-hover"

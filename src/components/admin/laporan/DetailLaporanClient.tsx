@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { PriorityBadge } from "@/components/admin/common/PriorityBadge";
 import type { ReportStatus, DisasterType, PriorityLabel } from "@/types";
-import { fetchLiveReports, updateReportStatusLive, recordAuditLog } from "@/lib/services/reports";
+import { fetchLiveReports, fetchReportDetail, updateReportStatusLive, recordAuditLog } from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 
 interface ReportDetailState {
@@ -79,6 +79,8 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
         );
 
         if (isMounted && found) {
+          const detail = await fetchReportDetail(found.tracking_code);
+
           let pLabel: PriorityLabel = "Sedang";
           if (found.priority === "tinggi" || found.confirmation_count >= 20) pLabel = "Kritis";
           else if (found.confirmation_count >= 10) pLabel = "Tinggi";
@@ -98,9 +100,9 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
             confirmation_count: found.confirmation_count,
             created_at: found.created_at,
             version: 1,
-            reporter_name: "Budi Santoso",
-            reporter_phone: "0812-3456-7890",
-            timeline: found.timeline || [
+            reporter_name: "Warga SigapBumi (Terverifikasi)",
+            reporter_phone: "0812-8899-2345",
+            timeline: (detail?.timeline && detail.timeline.length > 0) ? detail.timeline : found.timeline || [
               {
                 status: "diterima",
                 label: "Laporan Masuk Sistem",

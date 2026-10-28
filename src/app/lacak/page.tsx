@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { TimelineStatus, type TimelineStep } from "@/components/laporan/TimelineStatus";
 import type { DisasterType, ReportStatus } from "@/types";
-import { fetchReportDetail } from "@/lib/services/reports";
+import { fetchReportDetail, vouchReportLive } from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 
 interface ReportDetail {
@@ -154,6 +154,9 @@ function LacakContent() {
 
     setIsLoading(true);
     setHasSearched(true);
+    if (typeof window !== "undefined") {
+      setIsVouched(Boolean(localStorage.getItem(`sigapbumi_vouched_${cleanCode}`)));
+    }
 
     try {
       // 1. Coba ambil dari Supabase
@@ -241,11 +244,22 @@ function LacakContent() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleVouch = () => {
+  const handleVouch = async () => {
     if (isVouched || !activeReport) return;
     setIsVouched(true);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`sigapbumi_vouched_${activeReport.tracking_code}`, "true");
+    }
+
+    const currentCount = activeReport.confirmation_count || 0;
     setActiveReport((prev) =>
-      prev ? { ...prev, confirmation_count: prev.confirmation_count + 1 } : null
+      prev ? { ...prev, confirmation_count: currentCount + 1 } : null
+    );
+
+    await vouchReportLive(
+      activeReport.id || "",
+      activeReport.tracking_code,
+      currentCount
     );
   };
 
