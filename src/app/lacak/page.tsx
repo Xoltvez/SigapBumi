@@ -21,7 +21,6 @@ import {
 import { TimelineStatus, type TimelineStep } from "@/components/laporan/TimelineStatus";
 import type { DisasterType, ReportStatus } from "@/types";
 import { fetchReportDetail, vouchReportLive } from "@/lib/services/reports";
-import { supabase } from "@/lib/supabase/client";
 
 interface ReportDetail {
   id?: string;
@@ -34,6 +33,7 @@ interface ReportDetail {
   status: ReportStatus;
   confirmation_count: number;
   timeline: TimelineStep[];
+  is_demo?: boolean;
 }
 
 const SAMPLE_REPORTS: Record<string, ReportDetail> = {
@@ -47,12 +47,13 @@ const SAMPLE_REPORTS: Record<string, ReportDetail> = {
     created_at: "27 Okt 2026, 14:15 WIB",
     status: "ditindaklanjuti",
     confirmation_count: 24,
+    is_demo: true,
     timeline: [
       {
         status: "diterima",
         label: "Laporan Diterima Sistem",
         timestamp: "27 Okt 2026, 14:15 WIB",
-        note: "Laporan otomatis diverifikasi formatnya dan diteruskan ke antrean prioritas BPBD DKI Jakarta.",
+        note: "Laporan otomatis diverifikasi formatnya dan diteruskan ke antrean prioritas posko terpadu.",
       },
       {
         status: "diverifikasi",
@@ -80,6 +81,7 @@ const SAMPLE_REPORTS: Record<string, ReportDetail> = {
     created_at: "27 Okt 2026, 15:30 WIB",
     status: "diverifikasi",
     confirmation_count: 12,
+    is_demo: true,
     timeline: [
       {
         status: "diterima",
@@ -106,6 +108,7 @@ const SAMPLE_REPORTS: Record<string, ReportDetail> = {
     created_at: "27 Okt 2026, 11:20 WIB",
     status: "selesai",
     confirmation_count: 31,
+    is_demo: true,
     timeline: [
       {
         status: "diterima",
@@ -159,7 +162,7 @@ function LacakContent() {
     }
 
     try {
-      // 1. Coba ambil dari Supabase
+      // 1. Coba ambil dari Supabase atau local cache via service
       const liveData = await fetchReportDetail(cleanCode);
       if (liveData) {
         setActiveReport({
@@ -173,6 +176,7 @@ function LacakContent() {
           status: liveData.status,
           confirmation_count: liveData.confirmation_count,
           timeline: liveData.timeline || [],
+          is_demo: liveData.is_demo,
         });
         return;
       }
@@ -198,35 +202,11 @@ function LacakContent() {
   useEffect(() => {
     if (!urlKode) return;
     const timer = setTimeout(() => {
+      setSearchInput(urlKode);
       performSearch(urlKode);
-    }, 0);
+    }, 100);
     return () => clearTimeout(timer);
   }, [urlKode, performSearch]);
-
-  // Realtime subscription untuk laporan aktif
-  useEffect(() => {
-    if (!activeReport?.tracking_code) return;
-
-    const channel = supabase
-      .channel(`lacak_${activeReport.tracking_code}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "reports",
-          filter: `tracking_code=eq.${activeReport.tracking_code}`,
-        },
-        () => {
-          performSearch(activeReport.tracking_code);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [activeReport?.tracking_code, performSearch]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -312,7 +292,7 @@ function LacakContent() {
   };
 
   return (
-    <main className="flex-1 w-full max-w-[900px] mx-auto px-4 md:px-8 py-6 md:py-10 space-y-8">
+    <main className="flex-1 w-full max-w-[900px] mx-auto px-4 md:px-8 py-6 md:py-10 pb-28 md:pb-12 space-y-8">
       {/* Search Header */}
       <section className="text-center max-w-xl mx-auto">
         <h1 className="text-2xl md:text-3xl font-bold text-ink mb-2">
@@ -337,35 +317,49 @@ function LacakContent() {
           <button
             type="submit"
             disabled={isLoading}
-            className="h-12 px-6 rounded-md bg-primary hover:bg-primary-hover disabled:opacity-50 text-white font-semibold text-base transition-colors shadow-sm focus-visible:outline-primary shrink-0"
+            className="h-12 px-6 rounded-md bg-primary hover:bg-primary-hover disabled:opacity-50 text-white font-semibold text-base transition-colors shadow-sm focus-visible:outline-primary shrink-0 min-h-[44px]"
           >
             {isLoading ? "Mencari..." : "Lacak"}
           </button>
         </form>
 
         {/* Demo Preset Codes */}
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-xs">
           <span className="text-ink-muted">Contoh kode demo:</span>
           <button
             type="button"
             onClick={() => selectPreset("LPR-8F3K2Q")}
-            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink"
+            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
           >
             LPR-8F3K2Q (Banjir)
           </button>
           <button
             type="button"
             onClick={() => selectPreset("LPR-4K9W1Z")}
-            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink"
+            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
           >
             LPR-4K9W1Z (Longsor)
           </button>
           <button
             type="button"
             onClick={() => selectPreset("LPR-2X7M9P")}
-            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink"
+            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
           >
             LPR-2X7M9P (Kebakaran)
+          </button>
+          <button
+            type="button"
+            onClick={() => selectPreset("LPR-8C3P5V")}
+            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
+          >
+            LPR-8C3P5V (Gempa)
+          </button>
+          <button
+            type="button"
+            onClick={() => selectPreset("LPR-2D7N4X")}
+            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
+          >
+            LPR-2D7N4X (Citarum)
           </button>
         </div>
       </section>
@@ -374,7 +368,7 @@ function LacakContent() {
       {isLoading ? (
         <section className="bg-surface border border-line rounded-lg p-10 text-center shadow-card animate-pulse space-y-3">
           <Radio className="w-8 h-8 text-primary mx-auto animate-spin" />
-          <p className="text-sm font-semibold text-ink">Menghubungkan ke Database Supabase...</p>
+          <p className="text-sm font-semibold text-ink">Menghubungkan ke Sistem Pelacakan...</p>
           <p className="text-xs text-ink-muted">Mengambil data status dan catatan tindak lanjut terkini</p>
         </section>
       ) : hasSearched && activeReport ? (
@@ -382,7 +376,7 @@ function LacakContent() {
           {/* Top Info Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-line">
             <div>
-              <div className="flex items-center gap-2 mb-1.5">
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider">
                   Kode Tracking
                 </span>
@@ -401,6 +395,15 @@ function LacakContent() {
                     <Copy className="w-4 h-4" />
                   )}
                 </button>
+                {activeReport.is_demo ? (
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-primary-soft text-primary-hover border border-primary/20">
+                    Data Demonstrasi
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-success-soft text-success-text border border-success/30">
+                    Laporan Warga
+                  </span>
+                )}
               </div>
 
               <h2 className="text-xl md:text-2xl font-bold text-ink">
@@ -443,7 +446,7 @@ function LacakContent() {
                   onClick={handleVouch}
                   disabled={isVouched}
                   title="Konfirmasi bahwa kejadian ini benar terjadi"
-                  className={`text-xs px-2.5 py-1 rounded border transition-colors flex items-center gap-1 font-semibold ${
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors flex items-center gap-1 font-semibold min-h-[36px] ${
                     isVouched
                       ? "bg-success-soft text-success-text border-success/30"
                       : "bg-surface border-line text-ink hover:border-primary"
@@ -451,7 +454,7 @@ function LacakContent() {
                 >
                   <ThumbsUp className="w-3.5 h-3.5 text-primary" />
                   <span>{activeReport.confirmation_count} Terkonfirmasi</span>
-                  {isVouched && <span className="text-[10px] text-success">(Dikonfirmasi Anda)</span>}
+                  {isVouched && <span className="text-[10px] text-success font-normal">(Dikonfirmasi Anda)</span>}
                 </button>
               </div>
             </div>
@@ -490,7 +493,7 @@ function LacakContent() {
 
             <Link
               href="/lapor"
-              className="inline-flex items-center justify-center h-10 px-4 rounded-md bg-surface border border-line text-xs font-semibold text-ink hover:bg-bg transition-colors"
+              className="inline-flex items-center justify-center h-10 px-4 rounded-md bg-surface border border-line text-xs font-semibold text-ink hover:bg-bg transition-colors min-h-[44px]"
             >
               Kirim Laporan Baru
             </Link>
@@ -506,12 +509,12 @@ function LacakContent() {
             Kode Tracking Tidak Ditemukan
           </h2>
           <p className="text-sm text-ink-soft mb-6 leading-relaxed">
-            Tidak ada laporan bencana dengan kode <strong>&quot;{searchInput}&quot;</strong> di database. Pastikan format kode sudah benar (contoh: <code>LPR-8F3K2Q</code>) atau pilih salah satu kode contoh di atas.
+            Tidak ada laporan bencana dengan kode <strong>&quot;{searchInput}&quot;</strong> di sistem. Pastikan format kode sudah benar (contoh: <code>LPR-8F3K2Q</code>) atau pilih salah satu kode contoh di atas.
           </p>
           <button
             type="button"
             onClick={() => selectPreset("LPR-8F3K2Q")}
-            className="h-11 px-5 rounded-md bg-ink text-white font-semibold text-sm hover:bg-ink-soft transition-colors"
+            className="h-11 px-5 rounded-md bg-ink text-white font-semibold text-sm hover:bg-ink-soft transition-colors min-h-[44px]"
           >
             Tampilkan Contoh Laporan
           </button>

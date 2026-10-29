@@ -51,6 +51,7 @@ export interface Report {
   duplicate_of?: string;
   regency?: string;
   province?: string;
+  is_demo?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -91,6 +92,7 @@ export interface SosAlert {
   closing_note?: string;
   acknowledged_by?: string;
   acknowledged_at?: string;
+  is_demo?: boolean;
   created_at: string;
   resolved_at?: string;
 }

@@ -3,6 +3,7 @@ import { parsePostGISPoint } from "@/lib/geo";
 import type { DisasterType, ReportStatus, SosAssistanceType } from "@/types";
 import type { MapPoint } from "@/components/peta/DisasterMap";
 import type { TimelineStep } from "@/components/laporan/TimelineStatus";
+import { MASTER_MOCK_REPORTS } from "@/lib/data/mock-reports";
 
 export interface LiveReportItem {
   id: string;
@@ -12,6 +13,8 @@ export interface LiveReportItem {
   title: string;
   description: string;
   address: string;
+  province?: string;
+  regency?: string;
   lat: number;
   lng: number;
   status: ReportStatus;
@@ -19,6 +22,7 @@ export interface LiveReportItem {
   confirmation_count: number;
   created_at: string;
   timeline?: TimelineStep[];
+  is_demo?: boolean;
 }
 
 export interface LiveSosAlertItem {
@@ -33,178 +37,42 @@ export interface LiveSosAlertItem {
   status: "aktif" | "ditangani";
 }
 
-// Data awal sebagai demo fallback agar tampilan tetap informatif saat database kosong
-export const DEFAULT_MOCK_REPORTS: LiveReportItem[] = [
-  {
-    id: "rep-1",
-    tracking_code: "LPR-8F3K2Q",
-    disaster_type: "banjir",
-    target_agency: "damkar",
-    title: "Banjir Luapan Kali Semanan 60 cm",
-    description:
-      "Akses jalan utama terputus akibat luapan kali. Air terus naik sejak pukul 14.00 WIB. Terdapat sekitar 40 KK membutuhkan bantuan evakuasi lansia.",
-    address: "Kalideres, Jakarta Barat",
-    lat: -6.155,
-    lng: 106.723,
-    status: "ditindaklanjuti",
-    priority: "tinggi",
-    confirmation_count: 24,
-    created_at: "27 Okt 2026, 14:15 WIB",
-    timeline: [
-      {
-        status: "diterima",
-        label: "Laporan Diterima Sistem",
-        timestamp: "27 Okt 2026, 14:15 WIB",
-        note: "Laporan masuk dengan foto bukti genangan air dan diteruskan ke posko terpadu.",
-      },
-      {
-        status: "diverifikasi",
-        label: "Diverifikasi Relawan Posko",
-        timestamp: "27 Okt 2026, 14:26 WIB",
-        actor: "Relawan FPRB Kalideres",
-        note: "Kondisi di lapangan terkonfirmasi benar. Arus air cukup deras.",
-      },
-      {
-        status: "ditindaklanjuti",
-        label: "Penanganan Operasional Berjalan",
-        timestamp: "27 Okt 2026, 14:48 WIB",
-        actor: "Regu Damkar & TRC BPBD Sektor Barat",
-        note: "2 unit perahu karet evakuasi dan 1 pompa mobile telah tiba di lokasi.",
-      },
-    ],
-  },
-  {
-    id: "rep-2",
-    tracking_code: "LPR-4K9W1Z",
-    disaster_type: "longsor",
-    target_agency: "bnpb_bpbd",
-    title: "Tebing Penahan Longsor Ambrol",
-    description:
-      "Tebing setinggi 4 meter ambrol setelah hujan deras. Menutup sebagian badan jalan akses antar desa.",
-    address: "Cisarua, Kab. Bogor",
-    lat: -6.698,
-    lng: 106.942,
-    status: "diverifikasi",
-    priority: "tinggi",
-    confirmation_count: 12,
-    created_at: "27 Okt 2026, 15:30 WIB",
-    timeline: [
-      {
-        status: "diterima",
-        label: "Laporan Diterima Sistem",
-        timestamp: "27 Okt 2026, 15:30 WIB",
-        note: "Laporan masuk dengan koordinat GPS akurat.",
-      },
-      {
-        status: "diverifikasi",
-        label: "Diverifikasi BPBD Wilayah II",
-        timestamp: "27 Okt 2026, 15:42 WIB",
-        actor: "Petugas Piket Pusdalops",
-        note: "Diverifikasi valid. Koordinasi dengan Dinas PUPR untuk alat berat mini loader.",
-      },
-    ],
-  },
-  {
-    id: "rep-3",
-    tracking_code: "LPR-7N2V9Q",
-    disaster_type: "banjir",
-    target_agency: "medis",
-    title: "Genangan Air Masuk Pemukiman Warga",
-    description:
-      "Genangan air setinggi 30 cm merendam pemukiman warga RT 04 RW 02. Beberapa lansia membutuhkan obat-obatan rutin.",
-    address: "Jatinegara, Jakarta Timur",
-    lat: -6.226,
-    lng: 106.862,
-    status: "diterima",
-    priority: "sedang",
-    confirmation_count: 16,
-    created_at: "27 Okt 2026, 15:02 WIB",
-    timeline: [
-      {
-        status: "diterima",
-        label: "Laporan Diterima Sistem",
-        timestamp: "27 Okt 2026, 15:02 WIB",
-        note: "Laporan tercatat dalam antrean penanganan posko medis.",
-      },
-    ],
-  },
-  {
-    id: "rep-4",
-    tracking_code: "LPR-2X7M9P",
-    disaster_type: "kebakaran",
-    target_agency: "damkar",
-    title: "Kebakaran Pemukiman Padat Tambora",
-    description:
-      "Dugaan korsleting listrik di lantai 2. Warga sempat memadamkan dengan APAR lokal sebelum petugas damkar tiba.",
-    address: "Tambora, Jakarta Barat",
-    lat: -6.149,
-    lng: 106.804,
-    status: "selesai",
-    priority: "tinggi",
-    confirmation_count: 31,
-    created_at: "27 Okt 2026, 11:20 WIB",
-    timeline: [
-      {
-        status: "diterima",
-        label: "Laporan Diterima Sistem",
-        timestamp: "27 Okt 2026, 11:20 WIB",
-        note: "Sistem menerima sinyal darurat kebakaran.",
-      },
-      {
-        status: "diverifikasi",
-        label: "Diverifikasi Command Center Damkar",
-        timestamp: "27 Okt 2026, 11:23 WIB",
-        actor: "Piket 112 Jakarta Barat",
-        note: "6 unit armada pemadam terdekat dikerahkan ke lokasi.",
-      },
-      {
-        status: "ditindaklanjuti",
-        label: "Operasi Pemadaman & Pendinginan",
-        timestamp: "27 Okt 2026, 11:35 WIB",
-        actor: "Sektor Tambora",
-        note: "Api berhasil dilokalisir agar tidak merembet ke bangunan lain.",
-      },
-      {
-        status: "selesai",
-        label: "Situasi Padam Total & Aman",
-        timestamp: "27 Okt 2026, 12:40 WIB",
-        actor: "Perwira Piket Damkar",
-        note: "Operasi dinyatakan selesai. Tidak ada korban jiwa.",
-      },
-    ],
-  },
-  {
-    id: "rep-5",
-    tracking_code: "LPR-5M1Q8L",
-    disaster_type: "karhutla",
-    target_agency: "bnpb_bpbd",
-    title: "Titik Asap Lahan Kering Perbukitan",
-    description:
-      "Asap tebal mengepul dari semak belukar lereng bukit. Dikhawatirkan merembet ke perkebunan warga jika tertiup angin.",
-    address: "Rumpin, Kab. Bogor",
-    lat: -6.442,
-    lng: 106.637,
-    status: "ditindaklanjuti",
-    priority: "sedang",
-    confirmation_count: 9,
-    created_at: "27 Okt 2026, 13:40 WIB",
-    timeline: [
-      {
-        status: "diterima",
-        label: "Laporan Diterima Sistem",
-        timestamp: "27 Okt 2026, 13:40 WIB",
-        note: "Laporan masuk via GPS relawan peduli api.",
-      },
-      {
-        status: "ditindaklanjuti",
-        label: "Pemadaman Darat Berjalan",
-        timestamp: "27 Okt 2026, 14:10 WIB",
-        actor: "Regu Manggala Agni & Warga",
-        note: "Penyekatan sekat bakar sedang dilakukan.",
-      },
-    ],
-  },
-];
+const LOCAL_STORAGE_REPORTS_KEY = "sigapbumi_local_reports";
+
+/**
+ * Mengambil daftar laporan warga yang tersimpan di browser lokal
+ */
+export function getLocalReports(): LiveReportItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_REPORTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Menyimpan laporan baru warga ke cache lokal perangkat
+ */
+export function saveLocalReport(report: LiveReportItem): void {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = getLocalReports();
+    const filtered = existing.filter(
+      (r) => r.tracking_code !== report.tracking_code && r.id !== report.id
+    );
+    localStorage.setItem(
+      LOCAL_STORAGE_REPORTS_KEY,
+      JSON.stringify([report, ...filtered])
+    );
+  } catch {
+    // Ignore quota error
+  }
+}
+
+// Dataset awal terstruktur 90 kejadian bencana di seluruh Indonesia
+export const DEFAULT_MOCK_REPORTS: LiveReportItem[] = MASTER_MOCK_REPORTS;
 
 export const DEFAULT_MOCK_SOS: LiveSosAlertItem[] = [
   {
@@ -257,70 +125,76 @@ export function formatReportTime(dateString: string): string {
   try {
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return "Baru saja";
-    return d.toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }) + " WIB";
+    return (
+      d.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }) + " WIB"
+    );
   } catch {
     return "Baru saja";
   }
 }
 
 /**
- * Mengambil daftar laporan langsung dari Supabase
- * dan menggabungkannya secara pintar dengan data bawaan.
+ * Mengambil daftar laporan: menggabungkan data Supabase live, local cache perangkat, dan data demo
  */
 export async function fetchLiveReports(): Promise<LiveReportItem[]> {
+  const localReports = getLocalReports();
+  let liveItems: LiveReportItem[] = [];
+
   try {
     const { data, error } = await supabase
       .from("reports")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error || !data || data.length === 0) {
-      return DEFAULT_MOCK_REPORTS;
+    if (!error && data && data.length > 0) {
+      liveItems = data.map((row) => {
+        const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
+        const disaster = row.disaster_type as DisasterType;
+        const agency = inferAgencyFromDisaster(disaster);
+        const priority: "tinggi" | "sedang" | "normal" =
+          row.priority_score >= 80 ? "tinggi" : row.priority_score >= 30 ? "sedang" : "normal";
+
+        return {
+          id: row.id,
+          tracking_code: row.tracking_code,
+          disaster_type: disaster,
+          target_agency: agency,
+          title: row.title,
+          description: row.description,
+          address: row.address || "Lokasi Koordinat GPS Terdeteksi",
+          lat: coords.lat,
+          lng: coords.lng,
+          status: row.status as ReportStatus,
+          priority,
+          confirmation_count: row.confirmation_count || 0,
+          created_at: formatReportTime(row.created_at),
+          is_demo: false,
+        };
+      });
     }
-
-    const liveItems: LiveReportItem[] = data.map((row) => {
-      const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
-      const disaster = row.disaster_type as DisasterType;
-      const agency = inferAgencyFromDisaster(disaster);
-      const priority: "tinggi" | "sedang" | "normal" =
-        row.priority_score >= 80 ? "tinggi" : row.priority_score >= 30 ? "sedang" : "normal";
-
-      return {
-        id: row.id,
-        tracking_code: row.tracking_code,
-        disaster_type: disaster,
-        target_agency: agency,
-        title: row.title,
-        description: row.description,
-        address: row.address || "Lokasi Koordinat GPS Terdeteksi",
-        lat: coords.lat,
-        lng: coords.lng,
-        status: row.status as ReportStatus,
-        priority,
-        confirmation_count: row.confirmation_count || 0,
-        created_at: formatReportTime(row.created_at),
-      };
-    });
-
-    // Gabungkan laporan live dari Supabase dengan data default yang belum ada di Supabase
-    // agar demo selalu kaya data
-    const liveCodes = new Set(liveItems.map((item) => item.tracking_code));
-    const merged = [
-      ...liveItems,
-      ...DEFAULT_MOCK_REPORTS.filter((item) => !liveCodes.has(item.tracking_code)),
-    ];
-
-    return merged;
   } catch (err) {
-    console.warn("fetchLiveReports error, using mock:", err);
-    return DEFAULT_MOCK_REPORTS;
+    console.warn("fetchLiveReports Supabase warning:", err);
   }
+
+  // Gabungkan laporan Supabase + Laporan Lokal Pengguna + Demo bawaan
+  const mergedMap = new Map<string, LiveReportItem>();
+
+  // 1. Data default demonstrasi
+  DEFAULT_MOCK_REPORTS.forEach((item) => mergedMap.set(item.tracking_code, item));
+
+  // 2. Data lokal perangkat pengguna (laporan baru yang dikirim di sesi ini)
+  localReports.forEach((item) => mergedMap.set(item.tracking_code, item));
+
+  // 3. Data database Supabase riil
+  liveItems.forEach((item) => mergedMap.set(item.tracking_code, item));
+
+  return Array.from(mergedMap.values());
 }
 
 /**
@@ -338,6 +212,9 @@ export function reportsToMapPoints(reports: LiveReportItem[]): MapPoint[] {
     status: r.status,
     created_at: r.created_at,
     confirmation_count: r.confirmation_count,
+    is_demo: r.is_demo,
+    province: r.province,
+    regency: r.regency,
   }));
 }
 
@@ -347,6 +224,7 @@ export function reportsToMapPoints(reports: LiveReportItem[]): MapPoint[] {
 export async function fetchReportDetail(trackingCode: string): Promise<LiveReportItem | null> {
   const code = trackingCode.trim().toUpperCase();
 
+  // 1. Coba ambil dari database Supabase
   try {
     const { data, error } = await supabase
       .from("reports")
@@ -359,14 +237,12 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
       const disaster = data.disaster_type as DisasterType;
       const agency = inferAgencyFromDisaster(disaster);
 
-      // Raw logs dari database
       const logs = (data.report_status_logs || []) as Array<{
         status: ReportStatus;
         note?: string;
         created_at: string;
       }>;
 
-      // Bentuk timeline dari log atau generate default step jika log belum ada
       const timeline: TimelineStep[] =
         logs.length > 0
           ? logs.map((log) => ({
@@ -411,19 +287,27 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         confirmation_count: data.confirmation_count || 0,
         created_at: formatReportTime(data.created_at),
         timeline,
+        is_demo: false,
       };
     }
   } catch (err) {
-    console.warn("fetchReportDetail Supabase error:", err);
+    console.warn("fetchReportDetail Supabase warning:", err);
   }
 
-  // Fallback ke DEFAULT_MOCK_REPORTS jika tidak ada di database
+  // 2. Cek apakah ada di cache lokal perangkat
+  const localItems = getLocalReports();
+  const localFound = localItems.find((r) => r.tracking_code === code);
+  if (localFound) {
+    return localFound;
+  }
+
+  // 3. Fallback ke DEFAULT_MOCK_REPORTS jika ini laporan sampel demonstrasi
   const mockFound = DEFAULT_MOCK_REPORTS.find((r) => r.tracking_code === code);
   return mockFound || null;
 }
 
 /**
- * Memperbarui status laporan di Supabase
+ * Memperbarui status laporan di database & cache lokal
  */
 export async function updateReportStatusLive(
   reportId: string,
@@ -435,7 +319,55 @@ export async function updateReportStatusLive(
   try {
     const cleanNote = note?.trim() || `Status diperbarui menjadi ${newStatus}`;
 
-    // 1. Coba update via server API route /api/admin/status
+    // Update data lokal jika ini laporan di cache browser
+    const localItems = getLocalReports();
+    const localMatch = localItems.find(
+      (r) => r.id === reportId || r.tracking_code === reportId
+    );
+    if (localMatch) {
+      localMatch.status = newStatus;
+      if (!localMatch.timeline) localMatch.timeline = [];
+      localMatch.timeline.push({
+        status: newStatus,
+        label:
+          newStatus === "diverifikasi"
+            ? "Diverifikasi Petugas"
+            : newStatus === "ditindaklanjuti"
+            ? "Tim Operasional Ditugaskan"
+            : newStatus === "selesai"
+            ? "Penanganan Selesai"
+            : "Laporan Ditolak",
+        timestamp: "Baru saja",
+        note: cleanNote,
+        actor: actorName,
+      });
+      saveLocalReport(localMatch);
+    }
+
+    // Update mock in-memory
+    const mockItem = DEFAULT_MOCK_REPORTS.find(
+      (r) => r.id === reportId || r.tracking_code === reportId
+    );
+    if (mockItem) {
+      mockItem.status = newStatus;
+      if (!mockItem.timeline) mockItem.timeline = [];
+      mockItem.timeline.push({
+        status: newStatus,
+        label:
+          newStatus === "diverifikasi"
+            ? "Diverifikasi Petugas"
+            : newStatus === "ditindaklanjuti"
+            ? "Tim Operasional Ditugaskan"
+            : newStatus === "selesai"
+            ? "Penanganan Selesai"
+            : "Laporan Ditolak",
+        timestamp: "Baru saja",
+        note: cleanNote,
+        actor: actorName,
+      });
+    }
+
+    // 1. Coba update via server API route
     try {
       const apiRes = await fetch("/api/admin/status", {
         method: "POST",
@@ -447,34 +379,12 @@ export async function updateReportStatusLive(
           actorName,
         }),
       });
-      if (apiRes.ok) {
-        // Update data in-memory jika ini laporan mock
-        const mockItem = DEFAULT_MOCK_REPORTS.find((r) => r.id === reportId);
-        if (mockItem) {
-          mockItem.status = newStatus;
-          if (!mockItem.timeline) mockItem.timeline = [];
-          mockItem.timeline.push({
-            status: newStatus,
-            label:
-              newStatus === "diverifikasi"
-                ? "Diverifikasi Petugas"
-                : newStatus === "ditindaklanjuti"
-                ? "Tim Operasional Ditugaskan"
-                : newStatus === "selesai"
-                ? "Penanganan Selesai"
-                : "Laporan Ditolak",
-            timestamp: "Baru saja",
-            note: cleanNote,
-            actor: actorName,
-          });
-        }
-        return { success: true };
-      }
+      if (apiRes.ok) return { success: true };
     } catch {
-      // Lanjut ke fallback client-side Supabase
+      // Lanjut fallback ke client Supabase
     }
 
-    // 2. Coba panggil fungsi database resmi change_report_status (Tahap A1)
+    // 2. Coba RPC resmi jika tersedia
     try {
       const { data: rpcData, error: rpcErr } = await supabase.rpc(
         "change_report_status",
@@ -486,44 +396,24 @@ export async function updateReportStatusLive(
           p_version: version || null,
         }
       );
-
-      if (!rpcErr && rpcData) {
-        const res = rpcData as { success?: boolean; error?: string };
-        if (res.success) return { success: true };
-        if (res.error) return { success: false, error: res.error };
+      if (!rpcErr && (rpcData as { success?: boolean })?.success) {
+        return { success: true };
       }
     } catch {
-      // Lanjut ke fallback RPC versi sebelumnya
+      // Lanjut direct update
     }
 
-    // 3. Fallback update langsung ke tabel reports
-    const { error: repErr } = await supabase
-      .from("reports")
-      .update({
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", reportId);
-
-    if (repErr) {
-      console.warn("updateReportStatusLive note:", repErr.message);
-    }
-
-    // 4. Catat log manual ke tabel riwayat jika belum tercatat
+    // 3. Direct update
     try {
-      await supabase.from("report_status_logs").insert({
-        report_id: reportId,
-        status: newStatus,
-        note: cleanNote,
-      });
+      await supabase
+        .from("reports")
+        .update({
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .or(`id.eq.${reportId},tracking_code.eq.${reportId}`);
     } catch {
-      // Abaikan jika trigger otomatis sudah menangani
-    }
-
-    // Update in-memory fallback
-    const mockItem = DEFAULT_MOCK_REPORTS.find((r) => r.id === reportId);
-    if (mockItem) {
-      mockItem.status = newStatus;
+      // Ignore
     }
 
     return { success: true };
@@ -557,44 +447,41 @@ export async function recordAuditLog(
 }
 
 /**
- * Menambahkan konfirmasi warga (+1) ke laporan bencana secara nyata
+ * Menambahkan konfirmasi warga (+1) ke laporan bencana
  */
 export async function vouchReportLive(
   reportId: string,
   trackingCode: string,
   currentCount: number
 ): Promise<{ success: boolean; newCount: number }> {
-  const newCount = currentCount + 1;
+  let newCount = currentCount + 1;
 
   // 1. Coba update via API Route internal /api/reports/vouch
   try {
     const res = await fetch("/api/reports/vouch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reportId, trackingCode, newCount }),
+      body: JSON.stringify({ reportId, trackingCode }),
     });
     if (res.ok) {
       const data = await res.json();
-      return { success: true, newCount: data.newCount || newCount };
+      if (data.newCount) newCount = data.newCount;
     }
   } catch {
     // Lanjut fallback ke client Supabase
   }
 
-  // 2. Fallback update langsung ke tabel reports di Supabase
-  try {
-    await supabase
-      .from("reports")
-      .update({
-        confirmation_count: newCount,
-        updated_at: new Date().toISOString(),
-      })
-      .or(`id.eq.${reportId},tracking_code.eq.${trackingCode}`);
-  } catch (err) {
-    console.warn("vouchReportLive client update error:", err);
+  // 2. Update local reports cache jika tersimpan di browser
+  const localItems = getLocalReports();
+  const localMatch = localItems.find(
+    (r) => r.id === reportId || r.tracking_code === trackingCode
+  );
+  if (localMatch) {
+    localMatch.confirmation_count = newCount;
+    saveLocalReport(localMatch);
   }
 
-  // 3. Update juga mock data jika laporan adalah mock
+  // 3. Update mock memory jika mock report
   const mockItem = DEFAULT_MOCK_REPORTS.find(
     (r) => r.id === reportId || r.tracking_code === trackingCode
   );

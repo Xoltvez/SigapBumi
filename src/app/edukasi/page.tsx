@@ -2,13 +2,10 @@
 
 import React, { useState } from "react";
 import {
-  BookOpen,
   Activity,
   Waves,
   Flame,
   Mountain,
-  ShieldAlert,
-  Phone,
   CheckSquare,
   Square,
   AlertTriangle,
@@ -209,13 +206,12 @@ export default function EdukasiPage() {
   const checkedCount = Object.values(checkedItems).filter(Boolean).length;
 
   return (
-    <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 md:px-8 py-6 md:py-10 space-y-10">
+    <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 md:px-8 py-6 md:py-10 pb-28 md:pb-12 space-y-10">
       {/* Top Header */}
       <div className="text-center max-w-2xl mx-auto">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-soft text-primary-hover text-xs font-semibold mb-3">
-          <BookOpen className="w-4 h-4" />
-          <span>Panduan Mitigasi & Kesiapsiagaan Bencana</span>
-        </div>
+        <span className="inline-block px-3 py-1 rounded-full bg-primary-soft text-primary-hover text-xs font-semibold mb-3">
+          Panduan Mitigasi & Kesiapsiagaan Bencana
+        </span>
         <h1 className="text-2xl md:text-3xl font-bold text-ink">
           Edukasi Tanggap Bencana
         </h1>
@@ -250,12 +246,9 @@ export default function EdukasiPage() {
       {/* Guide Content: 3 Phases Grid */}
       <section className="bg-surface border border-line rounded-lg p-6 md:p-8 shadow-card space-y-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <activeGuide.icon className={`w-6 h-6 ${activeGuide.color}`} />
-            <h2 className="text-xl md:text-2xl font-bold text-ink">
-              Panduan Menghadapi {activeGuide.name}
-            </h2>
-          </div>
+          <h2 className="text-xl md:text-2xl font-bold text-ink mb-1">
+            Panduan Menghadapi {activeGuide.name}
+          </h2>
           <p className="text-xs md:text-sm text-ink-soft leading-relaxed">
             {activeGuide.overview}
           </p>
@@ -328,9 +321,8 @@ export default function EdukasiPage() {
       <section className="bg-surface border border-line rounded-lg p-6 md:p-8 shadow-card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-line">
           <div>
-            <h2 className="text-lg md:text-xl font-bold text-ink flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-primary" />
-              <span>Checklist Tas Siaga Bencana (Survival Kit)</span>
+            <h2 className="text-lg md:text-xl font-bold text-ink">
+              Checklist Tas Siaga Bencana (Survival Kit)
             </h2>
             <p className="text-xs text-ink-soft mt-0.5">
               Siapkan barang-barang penting ini di satu tas ransel tahan air untuk evakuasi cepat
@@ -376,9 +368,8 @@ export default function EdukasiPage() {
       {/* Official Emergency Contact Directory */}
       <section className="bg-surface border border-line rounded-lg p-6 md:p-8 shadow-card">
         <div className="mb-4">
-          <h2 className="text-lg font-bold text-ink flex items-center gap-2">
-            <Phone className="w-5 h-5 text-danger" />
-            <span>Kanal Panggilan Darurat Nasional</span>
+          <h2 className="text-lg font-bold text-ink">
+            Kanal Panggilan Darurat Nasional
           </h2>
           <p className="text-xs text-ink-soft mt-0.5">
             Nomor bebas pulsa yang dapat dihubungi 24 jam saat terjadi kondisi genting

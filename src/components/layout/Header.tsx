@@ -71,19 +71,20 @@ export function Header() {
           </Link>
         </nav>
 
-        {/* Action / Auth icons */}
-        <div className="flex items-center gap-3">
+        {/* Action / Auth */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/notifikasi"
             aria-label="Notifikasi"
-            className="w-10 h-10 rounded-md flex items-center justify-center text-ink-soft hover:bg-bg hover:text-ink transition-colors focus-visible:outline-primary"
+            className="w-9 h-9 md:w-10 md:h-10 rounded-md flex items-center justify-center text-ink-soft hover:bg-bg hover:text-ink transition-colors focus-visible:outline-primary"
           >
-            <Bell className="w-5 h-5" />
+            <Bell className="w-4 h-4 md:w-5 md:h-5" />
           </Link>
+
           <Link
             href="/masuk"
             aria-label="Akun Pengguna"
-            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-md border border-line text-sm font-medium text-ink hover:border-line-strong hover:bg-bg transition-colors focus-visible:outline-primary"
+            className="inline-flex items-center gap-1.5 h-9 md:h-10 px-3 md:px-3.5 rounded-md border border-line text-xs md:text-sm font-medium text-ink hover:border-line-strong hover:bg-bg transition-colors focus-visible:outline-primary"
           >
             <User className="w-4 h-4 text-ink-soft" />
             <span className="hidden sm:inline">Masuk</span>

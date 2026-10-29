@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import {
   Flame,
@@ -11,6 +11,7 @@ import {
   AlertCircle,
   X,
   CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import type { SosAssistanceType } from "@/types";
 import { sendSosAlert } from "@/lib/services/sos";
@@ -28,7 +29,7 @@ export function SosFab() {
   });
 
   // Ambil lokasi GPS riil warga saat pertama kali menekan SOS
-  const fetchCurrentLocation = () => {
+  const fetchCurrentLocation = useCallback(() => {
     if (typeof window !== "undefined" && "geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -43,7 +44,7 @@ export function SosFab() {
         { enableHighAccuracy: true, timeout: 5000 }
       );
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (pathname.startsWith("/admin")) return;
@@ -70,13 +71,28 @@ export function SosFab() {
     }
   }, [countdown, pathname, currentCoords, selectedAssistance]);
 
-  const handleStartSos = () => {
+  const handleStartSos = useCallback(() => {
     fetchCurrentLocation();
     setIsOpen(true);
     setCountdown(3);
     setIsSent(false);
     setSelectedAssistance(null);
-  };
+  }, [fetchCurrentLocation]);
+
+  // Listen to open-sos event triggered by Header SOS button or other emergency CTAs
+  useEffect(() => {
+    const handleCustomSos = () => {
+      handleStartSos();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("sigapbumi:open-sos", handleCustomSos);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("sigapbumi:open-sos", handleCustomSos);
+      }
+    };
+  }, [handleStartSos]);
 
   const handleSelectAssistance = (type: SosAssistanceType) => {
     setSelectedAssistance(type);
@@ -101,17 +117,17 @@ export function SosFab() {
 
   return (
     <>
-      {/* Floating Action Button (FAB) */}
-      <div className="fixed bottom-20 right-4 md:bottom-8 md:right-8 z-40">
+      {/* Tombol Mengambang (FAB) SOS di Pojok Kanan Bawah */}
+      {!isOpen && (
         <button
           type="button"
           onClick={handleStartSos}
-          aria-label="Tombol Darurat SOS"
-          className="w-16 h-16 md:w-[72px] md:h-[72px] rounded-full bg-danger text-white font-bold text-xl md:text-2xl shadow-overlay flex items-center justify-center transition-transform hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+          aria-label="Panggilan Darurat SOS"
+          className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 w-12 h-12 md:w-13 md:h-13 rounded-full bg-danger text-white font-black text-sm tracking-wider flex items-center justify-center shadow-lg border-2 border-white hover:bg-danger/90 hover:scale-105 active:scale-95 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
         >
           SOS
         </button>
-      </div>
+      )}
 
       {/* SOS Modal Overlay */}
       {isOpen && (
@@ -131,14 +147,18 @@ export function SosFab() {
                   </div>
                 </div>
 
+                <div className="inline-block px-2.5 py-0.5 rounded-full bg-warning-soft text-warning-text text-[11px] font-bold mb-2">
+                  Mode Simulasi Posko Terpadu
+                </div>
+
                 <h2
                   id="sos-title"
                   className="text-xl md:text-2xl font-bold text-ink mb-2"
                 >
-                  Mengirim Sinyal SOS Darurat
+                  Mengirim Sinyal Darurat SOS
                 </h2>
-                <p className="text-ink-soft text-sm mb-6">
-                  Lokasi darurat Anda akan dikirim ke tim siaga bencana dalam:
+                <p className="text-ink-soft text-xs mb-5 leading-relaxed">
+                  Lokasi koordinat darurat Anda akan dicatat di monitor operasional posko dalam:
                 </p>
 
                 {/* Countdown display */}
@@ -177,97 +197,109 @@ export function SosFab() {
                   </div>
                 </div>
 
+                <div className="inline-block px-2.5 py-0.5 rounded-full bg-primary-soft text-primary-hover text-[11px] font-bold mb-1">
+                  Tercatat di Monitor Posko
+                </div>
+
                 <h2
                   id="sos-title"
                   className="text-xl font-bold text-ink mb-1"
                 >
-                  Sinyal SOS Terkirim
+                  Sinyal SOS Tersimpan di Sistem
                 </h2>
-                <p className="text-ink-soft text-sm mb-5">
-                  Posisi Anda telah diteruskan ke petugas piket. Pilih jenis bantuan jika memungkinkan:
+                <p className="text-ink-soft text-xs mb-3">
+                  Koordinat posisi darurat Anda telah masuk ke daftar radar posko. Pilih jenis bantuan jika memungkinkan:
                 </p>
 
+                {/* Dispatch Disclaimer Notice */}
+                <div className="p-3 mb-4 rounded-md bg-warning-soft border border-warning/30 text-left text-[11px] text-warning-text flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-warning" />
+                  <p className="leading-relaxed">
+                    <strong>Penting:</strong> Platform ini adalah sistem pelaporan prototipe WIA 2026 dan belum terhubung ke sistem dispatch darurat nasional. Untuk ancaman keselamatan jiwa, segera hubungi <strong>112</strong>.
+                  </p>
+                </div>
+
                 {/* Tipe Bantuan SOS */}
-                <div className="grid grid-cols-2 gap-3 mb-6 text-left">
+                <div className="grid grid-cols-2 gap-2.5 mb-5 text-left">
                   <button
                     type="button"
                     onClick={() => handleSelectAssistance("damkar")}
-                    className={`p-3 rounded-md border text-sm font-medium flex items-center gap-2 transition-colors ${
+                    className={`min-h-[48px] p-3 rounded-md border text-xs font-semibold flex items-center gap-2 transition-colors ${
                       selectedAssistance === "damkar"
-                        ? "border-primary bg-primary-soft text-primary-hover"
+                        ? "border-primary bg-primary-soft text-primary-hover ring-1 ring-primary"
                         : "border-line bg-surface text-ink hover:border-line-strong"
                     }`}
                   >
-                    <Flame className="w-5 h-5 text-danger shrink-0" />
+                    <Flame className="w-4 h-4 text-danger shrink-0" />
                     <span>Damkar</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleSelectAssistance("medis")}
-                    className={`p-3 rounded-md border text-sm font-medium flex items-center gap-2 transition-colors ${
+                    className={`min-h-[48px] p-3 rounded-md border text-xs font-semibold flex items-center gap-2 transition-colors ${
                       selectedAssistance === "medis"
-                        ? "border-primary bg-primary-soft text-primary-hover"
+                        ? "border-primary bg-primary-soft text-primary-hover ring-1 ring-primary"
                         : "border-line bg-surface text-ink hover:border-line-strong"
                     }`}
                   >
-                    <HeartPulse className="w-5 h-5 text-danger shrink-0" />
+                    <HeartPulse className="w-4 h-4 text-danger shrink-0" />
                     <span>Medis / RS</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleSelectAssistance("polisi")}
-                    className={`p-3 rounded-md border text-sm font-medium flex items-center gap-2 transition-colors ${
+                    className={`min-h-[48px] p-3 rounded-md border text-xs font-semibold flex items-center gap-2 transition-colors ${
                       selectedAssistance === "polisi"
-                        ? "border-primary bg-primary-soft text-primary-hover"
+                        ? "border-primary bg-primary-soft text-primary-hover ring-1 ring-primary"
                         : "border-line bg-surface text-ink hover:border-line-strong"
                     }`}
                   >
-                    <Shield className="w-5 h-5 text-info shrink-0" />
+                    <Shield className="w-4 h-4 text-info shrink-0" />
                     <span>Polisi</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleSelectAssistance("bnpb_bpbd")}
-                    className={`p-3 rounded-md border text-sm font-medium flex items-center gap-2 transition-colors ${
+                    className={`min-h-[48px] p-3 rounded-md border text-xs font-semibold flex items-center gap-2 transition-colors ${
                       selectedAssistance === "bnpb_bpbd"
-                        ? "border-primary bg-primary-soft text-primary-hover"
+                        ? "border-primary bg-primary-soft text-primary-hover ring-1 ring-primary"
                         : "border-line bg-surface text-ink hover:border-line-strong"
                     }`}
                   >
-                    <LifeBuoy className="w-5 h-5 text-primary shrink-0" />
+                    <LifeBuoy className="w-4 h-4 text-primary shrink-0" />
                     <span>BNPB / BPBD</span>
                   </button>
                 </div>
 
-                {/* Panggilan Cepat */}
-                <div className="border-t border-line pt-4 text-left">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">
-                    Panggilan Darurat Langsung
+                {/* Direct Emergency Calls */}
+                <div className="border-t border-line pt-3 text-left">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-2">
+                    Hubungi Panggilan Darurat Resmi Langsung:
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <a
                       href="tel:112"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-bg border border-line text-xs font-semibold text-ink hover:bg-line"
+                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-2 rounded-md bg-danger text-white text-xs font-bold hover:bg-danger/90 transition-colors shadow-sm"
                     >
-                      <Phone className="w-3.5 h-3.5 text-danger" />
-                      112 (Darurat)
+                      <Phone className="w-3.5 h-3.5" />
+                      112
                     </a>
                     <a
                       href="tel:115"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-bg border border-line text-xs font-semibold text-ink hover:bg-line"
+                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-2 rounded-md bg-surface border border-line text-xs font-bold text-ink hover:bg-bg transition-colors"
                     >
                       <Phone className="w-3.5 h-3.5 text-primary" />
-                      115 (SAR / Basarnas)
+                      115 SAR
                     </a>
                     <a
                       href="tel:113"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-bg border border-line text-xs font-semibold text-ink hover:bg-line"
+                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-2 rounded-md bg-surface border border-line text-xs font-bold text-ink hover:bg-bg transition-colors"
                     >
                       <Phone className="w-3.5 h-3.5 text-danger" />
-                      113 (Damkar)
+                      113 Damkar
                     </a>
                   </div>
                 </div>
@@ -275,9 +307,9 @@ export function SosFab() {
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="w-full mt-5 h-11 rounded-md bg-ink text-white font-semibold text-sm transition-colors hover:bg-ink-soft"
+                  className="w-full mt-4 h-11 rounded-md bg-ink text-white font-semibold text-xs transition-colors hover:bg-ink-soft"
                 >
-                  Tutup
+                  Tutup Dialog
                 </button>
               </div>
             )}

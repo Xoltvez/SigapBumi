@@ -16,14 +16,13 @@ import {
   MapPin,
   Radio,
   FileText,
-  ShieldAlert,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import { PriorityBadge } from "@/components/admin/common/PriorityBadge";
 import type { ReportStatus, DisasterType, SosAssistanceType, PriorityLabel } from "@/types";
 import { supabase } from "@/lib/supabase/client";
-import { fetchLiveReports } from "@/lib/services/reports";
-import { fetchLiveSosAlerts } from "@/lib/services/sos";
+import { fetchLiveReports, DEFAULT_MOCK_REPORTS } from "@/lib/services/reports";
+import { fetchLiveSosAlerts, DEFAULT_MOCK_SOS } from "@/lib/services/sos";
 
 interface AdminReportItem {
   id: string;
@@ -48,77 +47,37 @@ interface SosAlertItem {
   status: "aktif" | "ditangani";
 }
 
-const INITIAL_SOS_ALERTS: SosAlertItem[] = [
-  {
-    id: "sos-1",
-    sender_name: "Warga Kalideres (via GPS)",
-    assistance_type: "damkar",
-    location: "Kelurahan Semanan, Kalideres, Jakarta Barat",
-    coordinates: "-6.155, 106.723",
-    time: "2 menit lalu",
-    status: "aktif",
-  },
-  {
-    id: "sos-2",
-    sender_name: "Warga Cisarua (via GPS)",
-    assistance_type: "medis",
-    location: "Jalan Raya Puncak KM 82, Cisarua, Bogor",
-    coordinates: "-6.698, 106.942",
-    time: "8 menit lalu",
-    status: "aktif",
-  },
-];
+const INITIAL_SOS_ALERTS: SosAlertItem[] = DEFAULT_MOCK_SOS.filter(
+  (s) => s.status !== "selesai"
+).map((s) => ({
+  id: s.id,
+  sender_name: s.source,
+  assistance_type: s.assistance_type,
+  location: s.address,
+  coordinates: s.coordinates,
+  time: s.time_ago,
+  status: s.status as "aktif" | "ditangani",
+}));
 
-const INITIAL_REPORTS: AdminReportItem[] = [
-  {
-    id: "rep-1",
-    tracking_code: "LPR-8F3K2Q",
-    disaster_type: "banjir",
-    target_agency: "damkar",
-    title: "Banjir Luapan Kali Semanan 60 cm",
-    location: "Kalideres, Jakarta Barat",
-    time: "14:15 WIB",
-    status: "ditindaklanjuti",
-    priority: "Kritis",
-    confirmation_count: 24,
-  },
-  {
-    id: "rep-2",
-    tracking_code: "LPR-4K9W1Z",
-    disaster_type: "longsor",
-    target_agency: "bnpb_bpbd",
-    title: "Tebing Penahan Longsor Ambrol Menutup Jalan",
-    location: "Cisarua, Kab. Bogor",
-    time: "15:30 WIB",
-    status: "diverifikasi",
-    priority: "Tinggi",
-    confirmation_count: 12,
-  },
-  {
-    id: "rep-3",
-    tracking_code: "LPR-7N2V9Q",
-    disaster_type: "banjir",
-    target_agency: "medis",
-    title: "Genangan Air Masuk Pemukiman Warga",
-    location: "Jatinegara, Jakarta Timur",
-    time: "15:02 WIB",
-    status: "diterima",
-    priority: "Sedang",
-    confirmation_count: 16,
-  },
-  {
-    id: "rep-4",
-    tracking_code: "LPR-2X7M9P",
-    disaster_type: "kebakaran",
-    target_agency: "damkar",
-    title: "Kebakaran Pemukiman Padat Tambora",
-    location: "Tambora, Jakarta Barat",
-    time: "11:20 WIB",
-    status: "selesai",
-    priority: "Tinggi",
-    confirmation_count: 31,
-  },
-];
+const INITIAL_REPORTS: AdminReportItem[] = DEFAULT_MOCK_REPORTS.map((r) => {
+  let pLabel: PriorityLabel = "Sedang";
+  if (r.priority === "tinggi" || r.confirmation_count >= 20) pLabel = "Kritis";
+  else if (r.confirmation_count >= 10) pLabel = "Tinggi";
+  else if (r.status === "selesai") pLabel = "Rendah";
+
+  return {
+    id: r.id,
+    tracking_code: r.tracking_code,
+    disaster_type: r.disaster_type,
+    target_agency: r.target_agency,
+    title: r.title,
+    location: r.address,
+    time: r.created_at,
+    status: r.status,
+    priority: pLabel,
+    confirmation_count: r.confirmation_count,
+  };
+});
 
 export default function AdminRingkasanPage() {
   const { activeUnit, activeUnitName, setActiveSosCount, setIsLiveConnected } = useAdmin();
@@ -232,6 +191,21 @@ export default function AdminRingkasanPage() {
   );
   const activeSos = filteredSos.filter((s) => s.status === "aktif");
 
+  const totalReportsCount = filteredReports.length || 1;
+  const banjirCount = filteredReports.filter((r) => r.disaster_type === "banjir").length;
+  const longsorCount = filteredReports.filter((r) => r.disaster_type === "longsor").length;
+  const kebakaranCount = filteredReports.filter((r) => r.disaster_type === "kebakaran").length;
+  const gempaCount = filteredReports.filter((r) => r.disaster_type === "gempa").length;
+  const lainnyaCount = filteredReports.filter(
+    (r) => r.disaster_type === "lainnya" || r.disaster_type === "karhutla" || r.disaster_type === "tsunami"
+  ).length;
+
+  const banjirPct = Math.round((banjirCount / totalReportsCount) * 100);
+  const longsorPct = Math.round((longsorCount / totalReportsCount) * 100);
+  const kebakaranPct = Math.round((kebakaranCount / totalReportsCount) * 100);
+  const gempaPct = Math.round((gempaCount / totalReportsCount) * 100);
+  const lainnyaPct = Math.round((lainnyaCount / totalReportsCount) * 100);
+
   const getDisasterIcon = (type: DisasterType) => {
     switch (type) {
       case "banjir":
@@ -267,11 +241,16 @@ export default function AdminRingkasanPage() {
       {/* Header Ringkasan Operasional */}
       <div className="bg-surface border border-line rounded-md p-5 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
+          <div className="mb-1.5">
+            <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-primary-soft text-primary-hover border border-primary/20">
+              Mode Demonstrasi Posko Terpadu — WIA 2026
+            </span>
+          </div>
           <h1 className="text-xl md:text-2xl font-bold text-ink">
             Ringkasan Operasional Posko
           </h1>
           <p className="text-xs text-ink-soft mt-0.5">
-            Unit penanganan: <strong className="text-primary-text">{activeUnitName}</strong> · Terhubung ke basis data Supabase secara real-time.
+            Unit penanganan: <strong className="text-primary-text">{activeUnitName}</strong> · Terhubung ke basis data Posko Komando Terpadu.
           </p>
         </div>
 
@@ -360,8 +339,7 @@ export default function AdminRingkasanPage() {
         {/* Kolom Kiri: Daftar Perlu Perhatian (design-admin.md 5.1) */}
         <section className="lg:col-span-7 bg-surface border border-line rounded-md p-5 shadow-card space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-line">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-danger" />
+            <div>
               <h2 className="text-sm font-bold text-ink uppercase tracking-wider">
                 Perlu Perhatian Segera
               </h2>
@@ -455,13 +433,15 @@ export default function AdminRingkasanPage() {
           </div>
         </section>
 
-        {/* Kolom Kanan: Distribusi Bencana 7 Hari (design-admin.md 5.1) */}
+        {/* Kolom Kanan: Distribusi Bencana (design-admin.md 5.1) */}
         <section className="lg:col-span-5 bg-surface border border-line rounded-md p-5 shadow-card space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-line">
             <h2 className="text-sm font-bold text-ink uppercase tracking-wider">
-              Tren Bencana 7 Hari
+              Distribusi Tipe Bencana
             </h2>
-            <span className="text-xs text-ink-muted">Wilayah Jabodetabek</span>
+            <span className="text-xs text-ink-muted">
+              {filteredReports.length} Laporan Posko
+            </span>
           </div>
 
           <div className="space-y-3 pt-2">
@@ -471,10 +451,15 @@ export default function AdminRingkasanPage() {
                   <Waves className="w-3.5 h-3.5 text-info" />
                   Banjir & Genangan Air
                 </span>
-                <span className="font-bold text-ink">48 laporan (60%)</span>
+                <span className="font-bold text-ink">
+                  {banjirCount} laporan ({banjirPct}%)
+                </span>
               </div>
               <div className="w-full bg-line rounded-full h-2 overflow-hidden">
-                <div className="bg-info h-full rounded-full" style={{ width: "60%" }} />
+                <div
+                  className="bg-info h-full rounded-full transition-all"
+                  style={{ width: `${banjirPct}%` }}
+                />
               </div>
             </div>
 
@@ -484,10 +469,15 @@ export default function AdminRingkasanPage() {
                   <Mountain className="w-3.5 h-3.5 text-ink" />
                   Tanah Longsor
                 </span>
-                <span className="font-bold text-ink">16 laporan (20%)</span>
+                <span className="font-bold text-ink">
+                  {longsorCount} laporan ({longsorPct}%)
+                </span>
               </div>
               <div className="w-full bg-line rounded-full h-2 overflow-hidden">
-                <div className="bg-ink h-full rounded-full" style={{ width: "20%" }} />
+                <div
+                  className="bg-ink h-full rounded-full transition-all"
+                  style={{ width: `${longsorPct}%` }}
+                />
               </div>
             </div>
 
@@ -497,10 +487,15 @@ export default function AdminRingkasanPage() {
                   <Flame className="w-3.5 h-3.5 text-danger" />
                   Kebakaran Pemukiman
                 </span>
-                <span className="font-bold text-ink">12 laporan (15%)</span>
+                <span className="font-bold text-ink">
+                  {kebakaranCount} laporan ({kebakaranPct}%)
+                </span>
               </div>
               <div className="w-full bg-line rounded-full h-2 overflow-hidden">
-                <div className="bg-danger h-full rounded-full" style={{ width: "15%" }} />
+                <div
+                  className="bg-danger h-full rounded-full transition-all"
+                  style={{ width: `${kebakaranPct}%` }}
+                />
               </div>
             </div>
 
@@ -508,19 +503,42 @@ export default function AdminRingkasanPage() {
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="font-medium text-ink flex items-center gap-1.5">
                   <AlertTriangle className="w-3.5 h-3.5 text-warning" />
-                  Lainnya (Pohon Tumbang/Angin)
+                  Gempa Bumi
                 </span>
-                <span className="font-bold text-ink">4 laporan (5%)</span>
+                <span className="font-bold text-ink">
+                  {gempaCount} laporan ({gempaPct}%)
+                </span>
               </div>
               <div className="w-full bg-line rounded-full h-2 overflow-hidden">
-                <div className="bg-warning h-full rounded-full" style={{ width: "5%" }} />
+                <div
+                  className="bg-warning h-full rounded-full transition-all"
+                  style={{ width: `${gempaPct}%` }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-medium text-ink flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-ink-muted" />
+                  Lainnya / Karhutla
+                </span>
+                <span className="font-bold text-ink">
+                  {lainnyaCount} laporan ({lainnyaPct}%)
+                </span>
+              </div>
+              <div className="w-full bg-line rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-ink-muted h-full rounded-full transition-all"
+                  style={{ width: `${lainnyaPct}%` }}
+                />
               </div>
             </div>
           </div>
 
           <div className="p-3 bg-bg rounded-md border border-line text-xs text-ink-soft mt-4">
             <p className="leading-relaxed">
-              <strong>Catatan Cuaca BMKG:</strong> Peningkatan intensitas curah hujan ekstrem diperkirakan terjadi hingga akhir pekan. Siaga pompa air dan evakuasi dini di wilayah bantaran sungai.
+              <strong>Catatan Operasional Posko:</strong> Peningkatan intensitas curah hujan ekstrem memerlukan koordinasi cepat unit evakuasi dan logistik di titik rawan longsor serta bantaran sungai.
             </p>
           </div>
         </section>

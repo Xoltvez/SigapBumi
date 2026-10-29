@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { ReportStatus } from "@/types";
 
+const VALID_STATUSES: ReportStatus[] = [
+  "diterima",
+  "diverifikasi",
+  "ditindaklanjuti",
+  "selesai",
+  "ditolak",
+];
+
 export async function POST(request: Request) {
   try {
     const { reportId, status, note, actorName } = (await request.json()) as {
@@ -13,12 +21,40 @@ export async function POST(request: Request) {
 
     if (!reportId || !status) {
       return NextResponse.json(
-        { success: false, error: "Missing reportId or status" },
+        { success: false, error: "Parameter reportId dan status wajib diisi." },
         { status: 400 }
       );
     }
 
-    const cleanNote = note?.trim() || `Status diperbarui menjadi ${status}`;
+    if (!VALID_STATUSES.includes(status)) {
+      return NextResponse.json(
+        { success: false, error: `Status "${status}" bukan status resmi yang valid.` },
+        { status: 400 }
+      );
+    }
+
+    const cleanNote = note?.trim() || "";
+
+    // Validasi catatan wajib untuk status ditolak dan selesai demi akuntabilitas
+    if ((status === "ditolak" || status === "selesai") && cleanNote.length < 5) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Catatan tindak lanjut wajib diisi minimal 5 karakter untuk laporan yang ditolak atau selesai.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const finalNote =
+      cleanNote ||
+      (status === "diverifikasi"
+        ? "Laporan telah diverifikasi oleh posko dan siap ditindaklanjuti tim operasional."
+        : status === "ditindaklanjuti"
+        ? "Tim operasional telah dikerahkan ke lokasi kejadian."
+        : `Status diperbarui menjadi ${status}`);
+
     const actor = actorName || "Petugas Posko Terpadu";
     const nowIso = new Date().toISOString();
 
@@ -29,18 +65,18 @@ export async function POST(request: Request) {
     if (supabaseUrl && supabaseKey) {
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      // 1. Coba panggil RPC resmi change_report_status jika sudah ada di database
+      // 1. Coba panggil RPC resmi change_report_status jika skema A1 aktif
       try {
         const { data: rpcData, error: rpcErr } = await supabase.rpc(
           "change_report_status",
           {
             p_report_id: reportId,
             p_new_status: status,
-            p_note: cleanNote,
+            p_note: finalNote,
             p_actor_name: actor,
           }
         );
-        if (!rpcErr && rpcData?.success) {
+        if (!rpcErr && (rpcData as { success?: boolean })?.success) {
           return NextResponse.json({ success: true, via: "rpc_change_report_status" });
         }
       } catch {
@@ -54,7 +90,7 @@ export async function POST(request: Request) {
           {
             p_report_id: reportId,
             p_new_status: status,
-            p_note: cleanNote,
+            p_note: finalNote,
           }
         );
         if (!rpcErr2 && rpcData2) {
@@ -64,7 +100,7 @@ export async function POST(request: Request) {
         // Lanjut ke fallback direct
       }
 
-      // 3. Update langsung tabel reports jika id adalah UUID Supabase
+      // 3. Update langsung tabel reports jika UUID
       const isUUID =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
           reportId
@@ -84,7 +120,7 @@ export async function POST(request: Request) {
           await supabase.from("report_status_logs").insert({
             report_id: reportId,
             status,
-            note: cleanNote,
+            note: finalNote,
             created_at: nowIso,
           });
         } catch {

@@ -17,6 +17,8 @@ import {
 function SuksesContent() {
   const searchParams = useSearchParams();
   const kode = searchParams.get("kode") || "LPR-8F3K2Q";
+  const statusParam = searchParams.get("status");
+  const isLocalOnly = statusParam === "local";
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -26,7 +28,7 @@ function SuksesContent() {
   };
 
   return (
-    <main className="flex-1 w-full max-w-[640px] mx-auto px-4 py-10 md:py-16 text-center">
+    <main className="flex-1 w-full max-w-[640px] mx-auto px-4 py-10 md:py-16 pb-28 md:pb-16 text-center">
       <div className="bg-surface border border-line rounded-lg p-6 md:p-10 shadow-card space-y-6">
         {/* Success Icon */}
         <div className="w-16 h-16 rounded-full bg-success-soft text-success flex items-center justify-center mx-auto">
@@ -35,10 +37,12 @@ function SuksesContent() {
 
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-ink mb-2">
-            Laporan Berhasil Terkirim!
+            Laporan Berhasil Dicatat!
           </h1>
           <p className="text-sm text-ink-soft leading-relaxed">
-            Data kejadian telah masuk ke antrean verifikasi posko penanggulangan bencana dan relawan wilayah terdekat.
+            {isLocalOnly
+              ? "Laporan Anda telah tersimpan secara aman di penyimpanan perangkat (Mode Kesiapsiagaan Sinyal) dan siap disinkronkan ke posko penanggulangan bencana."
+              : "Data kejadian telah masuk ke antrean verifikasi posko penanggulangan bencana dan relawan wilayah terdekat."}
           </p>
         </div>
 
@@ -54,7 +58,7 @@ function SuksesContent() {
             <button
               type="button"
               onClick={handleCopy}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-line bg-surface hover:bg-line text-xs font-semibold text-ink transition-colors shadow-sm"
+              className="inline-flex items-center gap-1 min-h-[44px] px-3.5 py-1.5 rounded-md border border-line bg-surface hover:bg-line text-xs font-semibold text-ink transition-colors shadow-sm"
             >
               {copied ? (
                 <>
@@ -78,7 +82,7 @@ function SuksesContent() {
         <div className="p-3.5 bg-primary-soft/50 rounded-md border border-primary/20 text-xs text-ink-soft flex items-start gap-2.5 text-left">
           <ShieldCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <strong>Dukungan Warga Terbuka:</strong> Laporan Anda kini dapat dikonfirmasi oleh warga sekitar untuk otomatis menaikkan prioritas penanganan.
+            <strong>Dukungan Warga Terbuka:</strong> Laporan Anda dapat dikonfirmasi oleh warga sekitar untuk otomatis menaikkan prioritas penanganan tim lapangan.
           </p>
         </div>
 
@@ -86,7 +90,7 @@ function SuksesContent() {
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             href={`/lacak?kode=${kode}`}
-            className="w-full sm:w-auto h-12 px-6 rounded-md bg-primary hover:bg-primary-hover text-white font-semibold text-sm inline-flex items-center justify-center gap-2 transition-colors shadow-sm"
+            className="w-full sm:w-auto min-h-[44px] px-6 rounded-md bg-primary hover:bg-primary-hover text-white font-semibold text-sm inline-flex items-center justify-center gap-2 transition-colors shadow-sm"
           >
             <Search className="w-4 h-4" />
             <span>Lacak Status Sekarang</span>
@@ -95,7 +99,7 @@ function SuksesContent() {
 
           <Link
             href="/peta"
-            className="w-full sm:w-auto h-12 px-5 rounded-md border border-line-strong bg-surface hover:bg-bg text-ink font-semibold text-sm inline-flex items-center justify-center gap-2 transition-colors"
+            className="w-full sm:w-auto min-h-[44px] px-5 rounded-md border border-line-strong bg-surface hover:bg-bg text-ink font-semibold text-sm inline-flex items-center justify-center gap-2 transition-colors"
           >
             <MapPin className="w-4 h-4 text-ink-soft" />
             <span>Lihat di Peta Bencana</span>

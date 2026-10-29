@@ -17,12 +17,17 @@ export interface MapPoint {
   created_at: string;
   confirmation_count: number;
   is_sos?: boolean;
+  is_demo?: boolean;
+  province?: string;
+  regency?: string;
 }
 
 interface DisasterMapProps {
   points: MapPoint[];
   selectedPointId?: string;
   onSelectPoint?: (point: MapPoint) => void;
+  showLegend?: boolean;
+  className?: string;
 }
 
 // Generate custom DivIcon based on status and emergency SOS
@@ -33,7 +38,7 @@ function createPinIcon(status: ReportStatus, isSos: boolean = false) {
       html: `
         <div style="position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
           <div style="position: absolute; width: 100%; height: 100%; border-radius: 9999px; background-color: rgba(220, 38, 38, 0.45); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-          <div style="position: relative; width: 24px; height: 24px; border-radius: 9999px; background-color: #DC2626; border: 2px solid #FFFFFF; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 10px; font-family: sans-serif;">SOS</div>
+          <div style="width: 22px; height: 22px; border-radius: 9999px; background-color: #DC2626; border: 2.5px solid #FFFFFF; box-shadow: 0 4px 10px rgba(220,38,38,0.5); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 9px;">SOS</div>
         </div>
       `,
       iconSize: [34, 34],
@@ -42,38 +47,39 @@ function createPinIcon(status: ReportStatus, isSos: boolean = false) {
     });
   }
 
-  let bgColor = "#2563EB"; // info default (diterima)
-  if (status === "diverifikasi") bgColor = "#1D4ED8";
-  if (status === "ditindaklanjuti") bgColor = "#F59E0B";
-  if (status === "selesai") bgColor = "#16A34A";
-  if (status === "ditolak") bgColor = "#DC2626";
+  let bgHex = "#2563EB"; // info default
+  if (status === "ditindaklanjuti") bgHex = "#F59E0B";
+  else if (status === "selesai") bgHex = "#16A34A";
+  else if (status === "ditolak") bgHex = "#DC2626";
 
   return L.divIcon({
-    className: "custom-disaster-pin",
+    className: "custom-report-pin",
     html: `
-      <div style="position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-        <div style="width: 24px; height: 24px; border-radius: 50% 50% 50% 0; background-color: ${bgColor}; transform: rotate(-45deg); border: 2px solid #FFFFFF; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
-          <div style="width: 7px; height: 7px; border-radius: 50%; background-color: #FFFFFF;"></div>
-        </div>
+      <div style="position: relative; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <div style="width: 18px; height: 18px; border-radius: 9999px; background-color: ${bgHex}; border: 2.5px solid #FFFFFF; box-shadow: 0 2px 6px rgba(31,41,55,0.3);"></div>
       </div>
     `,
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    popupAnchor: [0, -28],
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -13],
   });
 }
 
 export default function DisasterMap({
   points,
+  selectedPointId,
   onSelectPoint,
+  showLegend = true,
+  className = "",
 }: DisasterMapProps) {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
 
-  // Injects ping animation styles
+  // Injeksi style animasi ping jika belum ada di document
   useEffect(() => {
-    const styleId = "custom-pin-animations";
+    if (typeof document === "undefined") return;
+    const styleId = "sigapbumi-map-styles";
     if (!document.getElementById(styleId)) {
       const style = document.createElement("style");
       style.id = styleId;
@@ -99,10 +105,10 @@ export default function DisasterMap({
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    // Jakarta default view
+    // Indonesia archipelago default view
     const map = L.map(mapContainerRef.current, {
-      center: [-6.2088, 106.8456],
-      zoom: 11,
+      center: [-2.5, 118.0],
+      zoom: 5,
       zoomControl: true,
     });
 
@@ -138,6 +144,15 @@ export default function DisasterMap({
     };
   }, []);
 
+  // Pan to selected point when selectedPointId changes
+  useEffect(() => {
+    if (!selectedPointId || !mapInstanceRef.current) return;
+    const pt = points.find((p) => p.id === selectedPointId);
+    if (pt) {
+      mapInstanceRef.current.setView([pt.lat, pt.lng], 13);
+    }
+  }, [selectedPointId, points]);
+
   // Update Markers when points change
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -151,9 +166,9 @@ export default function DisasterMap({
         icon: createPinIcon(pt.status, pt.is_sos),
       });
 
-      // Construct popup HTML
+      // Construct popup HTML (tanpa emoji, mematuhi Anti-Slop R-01)
       const popupHtml = `
-        <div style="font-family: system-ui, sans-serif; font-size: 12px; color: #1F2937; min-width: 180px; max-width: 240px; padding: 2px;">
+        <div style="font-family: system-ui, sans-serif; font-size: 12px; color: #1F2937; min-width: 190px; max-width: 250px; padding: 2px;">
           ${
             pt.is_sos
               ? `<div style="background-color: #FEE2E2; color: #991B1B; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px;">PANGGILAN DARURAT SOS</div>`
@@ -162,15 +177,20 @@ export default function DisasterMap({
                   <span style="font-size: 10px; text-transform: capitalize; background: #F6F7F8; padding: 1px 6px; border-radius: 4px; border: 1px solid #E5E7EB;">${pt.status}</span>
                 </div>`
           }
+          ${
+            pt.is_demo
+              ? `<div style="background: #FEF0E6; color: #A74904; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; display: inline-block; margin-bottom: 4px;">DATA DEMONSTRASI</div>`
+              : ""
+          }
           <div style="font-weight: 700; font-size: 13px; line-height: 1.3; margin-bottom: 4px;">${pt.title}</div>
-          <div style="color: #4B5563; font-size: 11px; margin-bottom: 6px;">📍 ${pt.location_name}</div>
+          <div style="color: #4B5563; font-size: 11px; margin-bottom: 6px;">Lokasi: ${pt.location_name}</div>
           <div style="display: flex; justify-content: space-between; font-size: 10px; color: #6B7280; padding-top: 4px; border-top: 1px solid #E5E7EB;">
-            <span>🕒 ${pt.created_at}</span>
-            ${!pt.is_sos ? `<span style="color: #EF6806; font-weight: 600;">🛡️ ${pt.confirmation_count} warga</span>` : ""}
+            <span>Waktu: ${pt.created_at}</span>
+            ${!pt.is_sos ? `<span style="color: #EF6806; font-weight: 600;">${pt.confirmation_count} konfirmasi</span>` : ""}
           </div>
           ${
             !pt.is_sos
-              ? `<a href="/lacak?kode=${pt.tracking_code}" style="display: block; text-align: center; background-color: #EF6806; color: white; text-decoration: none; padding: 5px 8px; border-radius: 6px; font-weight: 600; font-size: 11px; margin-top: 8px;">Lacak Status & Detail</a>`
+              ? `<a href="/lacak?kode=${pt.tracking_code}" style="display: block; text-align: center; background-color: #EF6806; color: white; text-decoration: none; padding: 6px 8px; border-radius: 6px; font-weight: 600; font-size: 11px; margin-top: 8px;">Lacak Status & Detail</a>`
               : ""
           }
         </div>
@@ -186,11 +206,55 @@ export default function DisasterMap({
 
       markersGroup.addLayer(marker);
     });
-  }, [points, onSelectPoint]);
+
+    // Auto-fit bounds jika ada titik dan tidak sedang fokus pada titik tertentu
+    if (!selectedPointId && points.length > 0) {
+      const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [35, 35], maxZoom: 12 });
+      }
+    }
+  }, [points, onSelectPoint, selectedPointId]);
+
+  const sosCount = points.filter((p) => p.is_sos).length;
+  const reportCount = points.filter((p) => !p.is_sos).length;
 
   return (
-    <div className="w-full h-full min-h-[500px] md:min-h-[600px] relative rounded-lg overflow-hidden border border-line shadow-card">
+    <div
+      className={`w-full h-full min-h-[500px] md:min-h-[600px] relative rounded-lg overflow-hidden border border-line shadow-card ${className}`}
+    >
       <div ref={mapContainerRef} className="w-full h-full z-10" />
+
+      {showLegend && (
+        <div className="absolute bottom-4 left-4 z-[400] max-w-[280px] bg-surface/95 backdrop-blur-sm border border-line rounded-lg p-3 shadow-card text-xs pointer-events-auto">
+          <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-line">
+            <span className="font-bold text-ink uppercase tracking-wider text-[10px]">
+              Legenda Status
+            </span>
+            <span className="text-[10px] text-ink-muted font-medium">
+              Total {points.length} Titik ({reportCount} Lap + {sosCount} SOS)
+            </span>
+          </div>
+          <div className="space-y-1.5 text-[11px] text-ink-soft">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB] shrink-0" />
+              <span>Diterima / Diverifikasi</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B] shrink-0" />
+              <span>Ditindaklanjuti</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] shrink-0" />
+              <span>Selesai Teratasi</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#DC2626] shrink-0 animate-pulse" />
+              <span className="font-bold text-danger">Panggilan SOS Darurat ({sosCount})</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
