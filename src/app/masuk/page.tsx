@@ -47,11 +47,6 @@ export default function MasukPage() {
             <ChevronLeft className="w-4 h-4" />
             <span>Kembali ke Beranda</span>
           </Link>
-          <div className="mb-2">
-            <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-primary-soft text-primary-hover border border-primary/20">
-              Mode Demonstrasi — Akses Evaluator WIA 2026
-            </span>
-          </div>
           <h1 className="text-2xl font-bold text-ink">Masuk ke SigapBumi</h1>
           <p className="text-xs text-ink-soft mt-1">
             Akses pelacakan laporan bencana warga dan sistem verifikasi posko komando.
@@ -124,6 +119,15 @@ export default function MasukPage() {
           >
             Masuk
           </button>
+
+          <div className="text-center pt-1">
+            <p className="text-xs text-ink-soft">
+              Belum memiliki akun warga?{" "}
+              <Link href="/daftar" className="font-bold text-primary hover:underline">
+                Daftar Akun Baru
+              </Link>
+            </p>
+          </div>
         </form>
 
         {/* Quick Demo Login Box */}
@@ -131,7 +135,7 @@ export default function MasukPage() {
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-primary" />
             <span className="text-xs font-bold text-ink">
-              Jalur Pintas Demo Evaluator WIA 2026:
+              Jalur Pintas Akses Posko & Evaluasi:
             </span>
           </div>
           <p className="text-[11px] text-ink-muted leading-relaxed">
