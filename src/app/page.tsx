@@ -238,18 +238,6 @@ export default function HomePage() {
                 <span>Jelajahi Peta Situasi</span>
               </Link>
             </div>
-
-            {/* Quick Micro-stats indicator */}
-            <div className="flex items-center gap-4 sm:gap-6 pt-2 text-xs text-ink-soft">
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-primary shrink-0" />
-                <span>Target Respons: <strong className="text-ink font-bold">&lt; 18 Menit</strong></span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-                <span>Verifikasi Posko Resmi</span>
-              </div>
-            </div>
           </div>
 
           {/* Right Column: Live Telemetry & Emergency Hotline Card */}
