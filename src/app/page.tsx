@@ -280,11 +280,6 @@ export default function HomePage() {
                   Hotline Darurat
                 </button>
               </div>
-
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-success-text">
-                <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
-                <span>Posko Siaga 24/7</span>
-              </div>
             </div>
 
             {/* Tab Content 1: Live Status Feed */}
