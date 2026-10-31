@@ -337,7 +337,7 @@ export default function HomePage() {
                   </div>
                   <div className="w-full h-2 rounded-full bg-line overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all duration-500"
+                      className="h-full bg-success rounded-full transition-all duration-500"
                       style={{ width: `${resolvedRate}%` }}
                     />
                   </div>
@@ -758,7 +758,7 @@ export default function HomePage() {
             {/* Progress Bar */}
             <div className="w-full h-2 rounded-full bg-line overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-primary to-emerald-500 rounded-full transition-all duration-300"
+                className="h-full bg-success rounded-full transition-all duration-300"
                 style={{ width: `${tsbProgress}%` }}
               />
             </div>
