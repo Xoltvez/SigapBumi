@@ -14,7 +14,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type { SosAssistanceType } from "@/types";
-import { sendSosAlert } from "@/lib/services/sos";
+import { sendSosAlert, updateSosPhone } from "@/lib/services/sos";
 
 export function SosFab() {
   const pathname = usePathname();
@@ -23,10 +23,21 @@ export function SosFab() {
   const [isSent, setIsSent] = useState(false);
   const [selectedAssistance, setSelectedAssistance] =
     useState<SosAssistanceType | null>(null);
+  const [activeSosId, setActiveSosId] = useState<string | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState<string>("");
+  const [isPhoneSaved, setIsPhoneSaved] = useState<boolean>(false);
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number }>({
     lat: -6.2088,
     lng: 106.8456,
   });
+
+  // Ambil nomor HP tersimpan jika ada
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("sigapbumi_user_phone");
+      if (saved) setPhoneNumber(saved);
+    }
+  }, []);
 
   // Ambil lokasi GPS riil warga saat pertama kali menekan SOS
   const fetchCurrentLocation = useCallback(() => {
@@ -54,11 +65,17 @@ export function SosFab() {
         setCountdown((prev) => {
           if (prev === 1) {
             // Trigger kirim SOS nyata ke Supabase
+            const savedPhone = typeof window !== "undefined" ? localStorage.getItem("sigapbumi_user_phone") || undefined : undefined;
+            const phoneToSend = phoneNumber.trim() || savedPhone;
+
             sendSosAlert({
               lat: currentCoords.lat,
               lng: currentCoords.lng,
               assistanceType: selectedAssistance || "damkar",
               note: "Panggilan Darurat SOS Warga (Realtime)",
+              phoneNumber: phoneToSend,
+            }).then((res) => {
+              if (res.id) setActiveSosId(res.id);
             });
 
             setIsSent(true);
@@ -69,7 +86,7 @@ export function SosFab() {
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [countdown, pathname, currentCoords, selectedAssistance]);
+  }, [countdown, pathname, currentCoords, selectedAssistance, phoneNumber]);
 
   const handleStartSos = useCallback(() => {
     fetchCurrentLocation();
@@ -77,6 +94,7 @@ export function SosFab() {
     setCountdown(3);
     setIsSent(false);
     setSelectedAssistance(null);
+    setIsPhoneSaved(false);
   }, [fetchCurrentLocation]);
 
   // Listen to open-sos event triggered by Header SOS button or other emergency CTAs
@@ -96,13 +114,43 @@ export function SosFab() {
 
   const handleSelectAssistance = (type: SosAssistanceType) => {
     setSelectedAssistance(type);
+    const cleanPhone = phoneNumber.trim();
     // Kirim pembaruan tipe bantuan nyata
     sendSosAlert({
       lat: currentCoords.lat,
       lng: currentCoords.lng,
       assistanceType: type,
+      phoneNumber: cleanPhone || undefined,
       note: `Panggilan Darurat Warga - Butuh Bantuan ${type.toUpperCase()}`,
+    }).then((res) => {
+      if (res.id) setActiveSosId(res.id);
     });
+  };
+
+  const handleSavePhone = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanPhone = phoneNumber.trim();
+    if (!cleanPhone) return;
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sigapbumi_user_phone", cleanPhone);
+    }
+    if (activeSosId) {
+      await updateSosPhone(activeSosId, cleanPhone);
+    } else {
+      // Jika belum ada ID, kirim update dengan note berisi phone
+      sendSosAlert({
+        lat: currentCoords.lat,
+        lng: currentCoords.lng,
+        assistanceType: selectedAssistance || "damkar",
+        phoneNumber: cleanPhone,
+        note: `Panggilan Darurat Warga [Kontak: ${cleanPhone}]`,
+      }).then((res) => {
+        if (res.id) setActiveSosId(res.id);
+      });
+    }
+
+    setIsPhoneSaved(true);
   };
 
   const handleCancel = () => {
@@ -272,6 +320,44 @@ export function SosFab() {
                     <LifeBuoy className="w-4 h-4 text-primary shrink-0" />
                     <span>BNPB / BPBD</span>
                   </button>
+                </div>
+
+                {/* Input Nomor HP / WhatsApp untuk Verifikasi Posko */}
+                <div className="mb-4 p-3 rounded-lg bg-bg border border-line text-left">
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="sos-phone-input" className="text-[11px] font-bold text-ink flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-primary" />
+                      <span>No. HP / WhatsApp Anda (Opsional)</span>
+                    </label>
+                    {isPhoneSaved && (
+                      <span className="text-[10px] font-bold text-success flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Tersimpan di Posko
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-ink-muted mb-2 leading-tight">
+                    Petugas posko akan melakukan verifikasi via telepon/WA sebelum armada meluncur ke titik Anda.
+                  </p>
+                  <form onSubmit={handleSavePhone} className="flex gap-2">
+                    <input
+                      id="sos-phone-input"
+                      type="tel"
+                      placeholder="Contoh: 081234567890"
+                      value={phoneNumber}
+                      onChange={(e) => {
+                        setPhoneNumber(e.target.value);
+                        setIsPhoneSaved(false);
+                      }}
+                      className="flex-1 px-3 py-1.5 text-xs rounded-md border border-line bg-surface text-ink placeholder:text-ink-muted focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <button
+                      type="submit"
+                      className="px-3 py-1.5 rounded-md bg-ink text-white text-xs font-semibold hover:bg-ink-soft transition-colors shrink-0"
+                    >
+                      {isPhoneSaved ? "Tersimpan" : "Kirim No. HP"}
+                    </button>
+                  </form>
                 </div>
 
                 {/* Direct Emergency Calls */}

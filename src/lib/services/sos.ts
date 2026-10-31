@@ -12,7 +12,8 @@ export interface LiveSosItem {
   lng: number;
   time_ago: string;
   battery_level?: string;
-  status: "aktif" | "ditangani" | "selesai";
+  status: "aktif" | "ditangani" | "selesai" | "palsu";
+  phone_number?: string;
   dispatched_team?: string;
   note?: string;
   created_at: string;
@@ -30,6 +31,7 @@ export const DEFAULT_MOCK_SOS: LiveSosItem[] = [
     time_ago: "1 menit lalu",
     battery_level: "34%",
     status: "aktif",
+    phone_number: "0812-8877-6655",
     created_at: new Date(Date.now() - 60000).toISOString(),
   },
   {
@@ -43,6 +45,7 @@ export const DEFAULT_MOCK_SOS: LiveSosItem[] = [
     time_ago: "6 menit lalu",
     battery_level: "68%",
     status: "aktif",
+    phone_number: "0857-1234-9876",
     created_at: new Date(Date.now() - 360000).toISOString(),
   },
   {
@@ -56,6 +59,7 @@ export const DEFAULT_MOCK_SOS: LiveSosItem[] = [
     time_ago: "15 menit lalu",
     battery_level: "82%",
     status: "ditangani",
+    phone_number: undefined,
     dispatched_team: "Patroli Polsek Tanjung Priok",
     created_at: new Date(Date.now() - 900000).toISOString(),
   },
@@ -118,9 +122,14 @@ export async function sendSosAlert(params: {
   assistanceType?: SosAssistanceType;
   note?: string;
   senderName?: string;
+  phoneNumber?: string;
 }): Promise<{ success: boolean; id?: string; error?: string }> {
   const generatedId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `sos-${Date.now()}`;
   const nowIso = new Date().toISOString();
+
+  const formattedNote = params.phoneNumber
+    ? `${params.note || "Panggilan Darurat SOS Warga"} [Kontak: ${params.phoneNumber}]`
+    : (params.note || "Panggilan Darurat SOS Warga");
 
   const newItem: LiveSosItem = {
     id: generatedId,
@@ -133,7 +142,8 @@ export async function sendSosAlert(params: {
     time_ago: "Baru saja",
     battery_level: "100%",
     status: "aktif",
-    note: params.note,
+    phone_number: params.phoneNumber,
+    note: formattedNote,
     created_at: nowIso,
   };
 
@@ -148,7 +158,7 @@ export async function sendSosAlert(params: {
       location: `POINT(${params.lng} ${params.lat})`,
       assistance_type: params.assistanceType || "damkar",
       status: "aktif",
-      note: params.note || "Panggilan Darurat SOS Warga",
+      note: formattedNote,
       created_at: nowIso,
     });
 
@@ -160,6 +170,36 @@ export async function sendSosAlert(params: {
   }
 
   return { success: true, id: generatedId };
+}
+
+/**
+ * Memperbarui nomor telepon kontak pada sinyal SOS aktif
+ */
+export async function updateSosPhone(
+  id: string,
+  phoneNumber: string
+): Promise<{ success: boolean }> {
+  const localItems = getLocalSosCache();
+  const existing = localItems.find((x) => x.id === id);
+  if (existing) {
+    existing.phone_number = phoneNumber;
+    if (!existing.note?.includes("[Kontak:")) {
+      existing.note = `${existing.note || "Panggilan Darurat SOS Warga"} [Kontak: ${phoneNumber}]`;
+    }
+    saveLocalSosCache(localItems);
+  }
+
+  try {
+    const formattedNote = `Panggilan Darurat SOS Warga [Kontak: ${phoneNumber}]`;
+    await supabase
+      .from("sos_alerts")
+      .update({ note: formattedNote })
+      .eq("id", id);
+  } catch (err) {
+    console.warn("updateSosPhone network error:", err);
+  }
+
+  return { success: true };
 }
 
 /**
@@ -178,6 +218,9 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
     if (!error && data && data.length > 0) {
       supabaseItems = data.map((row) => {
         const coords = parsePostGISPoint(row.location) || { lat: -6.155, lng: 106.723 };
+        const phoneMatch = row.note ? (row.note as string).match(/\[Kontak:\s*([^\]]+)\]/) : null;
+        const extractedPhone = phoneMatch ? phoneMatch[1].trim() : undefined;
+
         return {
           id: row.id,
           source: "Ponsel Warga (GPS Sensor)",
@@ -188,7 +231,8 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
           lng: coords.lng,
           time_ago: timeAgo(row.created_at),
           battery_level: "85%",
-          status: (row.status as "aktif" | "ditangani" | "selesai") || "aktif",
+          status: (row.status as "aktif" | "ditangani" | "selesai" | "palsu") || "aktif",
+          phone_number: extractedPhone,
           dispatched_team: row.acknowledged_by || undefined,
           note: row.note || undefined,
           created_at: row.created_at,
@@ -209,7 +253,13 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
   localItems.forEach((item) => mergedMap.set(item.id, item));
 
   // 3. Timpa dengan supabase items (ground truth jika ada)
-  supabaseItems.forEach((item) => mergedMap.set(item.id, item));
+  supabaseItems.forEach((item) => {
+    const prev = mergedMap.get(item.id);
+    mergedMap.set(item.id, {
+      ...item,
+      phone_number: item.phone_number || prev?.phone_number,
+    });
+  });
 
   return Array.from(mergedMap.values()).sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -217,11 +267,11 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
 }
 
 /**
- * Memperbarui status penanganan panggilan SOS (Tugaskan Tim atau Selesaikan)
+ * Memperbarui status penanganan panggilan SOS (Tugaskan Tim, Selesaikan, atau Tandai Palsu)
  */
 export async function updateSosAlertStatus(
   id: string,
-  newStatus: "aktif" | "ditangani" | "selesai",
+  newStatus: "aktif" | "ditangani" | "selesai" | "palsu",
   dispatchedTeam?: string
 ): Promise<{ success: boolean; error?: string }> {
   // Update local cache
@@ -247,14 +297,17 @@ export async function updateSosAlertStatus(
   // Coba update ke Supabase
   try {
     const updatePayload: Record<string, unknown> = {
-      status: newStatus,
+      status: newStatus === "palsu" ? "selesai" : newStatus,
     };
     if (newStatus === "ditangani" && dispatchedTeam) {
       updatePayload.acknowledged_by = dispatchedTeam;
       updatePayload.acknowledged_at = new Date().toISOString();
     }
-    if (newStatus === "selesai") {
+    if (newStatus === "selesai" || newStatus === "palsu") {
       updatePayload.resolved_at = new Date().toISOString();
+      if (newStatus === "palsu") {
+        updatePayload.closing_note = "Ditolak: Terindikasi Panggilan Palsu / False Alarm";
+      }
     }
 
     const { error } = await supabase
