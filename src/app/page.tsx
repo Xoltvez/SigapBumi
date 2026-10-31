@@ -443,12 +443,9 @@ export default function HomePage() {
       <section aria-labelledby="kategori-title" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-              <h2 id="kategori-title" className="text-xl md:text-2xl font-bold text-ink">
-                Kategori Kejadian Bencana
-              </h2>
-            </div>
+            <h2 id="kategori-title" className="text-xl md:text-2xl font-bold text-ink">
+              Kategori Kejadian Bencana
+            </h2>
             <p className="text-xs sm:text-sm text-ink-soft mt-1">
               Pilih klasifikasi bencana untuk membuka formulir pelaporan dengan panduan evakuasi spesifik
             </p>
@@ -504,12 +501,9 @@ export default function HomePage() {
       <section aria-labelledby="laporan-terkini-title" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-              <h2 id="laporan-terkini-title" className="text-xl md:text-2xl font-bold text-ink">
-                Laporan Kejadian Terkini
-              </h2>
-            </div>
+            <h2 id="laporan-terkini-title" className="text-xl md:text-2xl font-bold text-ink">
+              Laporan Kejadian Terkini
+            </h2>
             <p className="text-xs sm:text-sm text-ink-soft mt-1">
               Data insiden terverifikasi posko terpadu dari seluruh penjuru Indonesia
             </p>
@@ -613,12 +607,9 @@ export default function HomePage() {
       <section aria-labelledby="stats-title" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-              <h2 id="stats-title" className="text-xl md:text-2xl font-bold text-ink">
-                Ringkasan Penanganan & Efektivitas Posko
-              </h2>
-            </div>
+            <h2 id="stats-title" className="text-xl md:text-2xl font-bold text-ink">
+              Ringkasan Penanganan & Efektivitas Posko
+            </h2>
             <p className="text-xs sm:text-sm text-ink-soft mt-1">
               Data agregat dihitung secara transparan dari laporan terverifikasi di seluruh Indonesia
             </p>
@@ -696,12 +687,9 @@ export default function HomePage() {
       <section aria-labelledby="edukasi-title" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-              <h2 id="edukasi-title" className="text-xl md:text-2xl font-bold text-ink">
-                Kesiapsiagaan & Mitigasi Mandiri
-              </h2>
-            </div>
+            <h2 id="edukasi-title" className="text-xl md:text-2xl font-bold text-ink">
+              Kesiapsiagaan & Mitigasi Mandiri
+            </h2>
             <p className="text-xs sm:text-sm text-ink-soft mt-1">
               Bekali diri dan keluarga dengan langkah penyelamatan dan persiapan darurat sebelum bencana terjadi
             </p>
