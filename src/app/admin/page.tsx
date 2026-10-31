@@ -241,11 +241,6 @@ export default function AdminRingkasanPage() {
       {/* Header Ringkasan Operasional */}
       <div className="bg-surface border border-line rounded-md p-5 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="mb-1.5">
-            <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-primary-soft text-primary-hover border border-primary/20">
-              Mode Demonstrasi Posko Terpadu — WIA 2026
-            </span>
-          </div>
           <h1 className="text-xl md:text-2xl font-bold text-ink">
             Ringkasan Operasional Posko
           </h1>
