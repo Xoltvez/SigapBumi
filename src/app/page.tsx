@@ -500,13 +500,10 @@ export default function HomePage() {
                 className={`group relative p-5 bg-surface border border-line rounded-2xl transition-all duration-200 hover:-translate-y-1 hover:shadow-card flex flex-col justify-between ${cat.borderColor}`}
               >
                 <div>
-                  <div className="flex items-center justify-between mb-3.5">
+                  <div className="mb-3.5">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105 ${cat.iconColor}`}>
                       <IconComponent className="w-6 h-6" />
                     </div>
-                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border ${cat.badgeColor}`}>
-                      Siaga
-                    </span>
                   </div>
 
                   <h3 className="text-base font-bold text-ink group-hover:text-primary transition-colors">
