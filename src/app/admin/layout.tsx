@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: "Pusat komando tanggap bencana, monitor SOS, dan verifikasi laporan warga.",
 };
 
+export const instant = false;
+
 export default function AdminLayout({
   children,
 }: {
