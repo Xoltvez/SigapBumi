@@ -39,7 +39,7 @@ export function AdminSidebar({
       href: "/admin/sos",
       label: "Monitor SOS",
       icon: Bell,
-      badge: activeSosCount > 0 ? `${activeSosCount}` : "11",
+      badge: activeSosCount > 0 ? `${activeSosCount}` : "1",
     },
     { href: "/admin/peta", label: "Peta Operasional", icon: MapPin },
     { href: "/admin/statistik", label: "Rekap & Statistik", icon: BarChart2 },
@@ -111,11 +111,11 @@ export function AdminSidebar({
               ? pathname === "/admin"
               : pathname.startsWith(item.href);
 
-          const isLaporan = item.href === "/admin/laporan";
-          const activeClasses = isLaporan
+          const isBlueActive = item.href === "/admin/laporan" || item.href === "/admin/sos";
+          const activeClasses = isBlueActive
             ? "bg-[#EFF6FF] text-[#2563EB] font-semibold"
             : "bg-[#FFF4EC] text-[#EA580C] font-semibold";
-          const iconActiveColor = isLaporan ? "text-[#2563EB]" : "text-[#EA580C]";
+          const iconActiveColor = isBlueActive ? "text-[#2563EB]" : "text-[#EA580C]";
 
           return (
             <Link
