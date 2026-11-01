@@ -139,7 +139,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         logout,
       }}
     >
-      <div className="flex h-screen w-full bg-[#0c0e14] text-slate-100 overflow-hidden">
+      <div className="flex h-screen w-full bg-bg text-ink overflow-hidden">
         {/* Collapsible Left Dark Sidebar */}
         <React.Suspense fallback={<div className="w-64 bg-[#131722] min-h-screen shrink-0" />}>
           <AdminSidebar
@@ -150,7 +150,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </React.Suspense>
 
         {/* Right Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#0c0e14]">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg">
           <AdminTopbar
             isSidebarCollapsed={isSidebarCollapsed}
             onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
@@ -159,7 +159,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             activeSosCount={activeSosCount}
             isLiveConnected={isLiveConnected}
           />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-bg text-ink">
             {children}
           </main>
         </div>
