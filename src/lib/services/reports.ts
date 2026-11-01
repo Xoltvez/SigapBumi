@@ -215,7 +215,6 @@ export function reportsToMapPoints(reports: LiveReportItem[]): MapPoint[] {
     is_demo: r.is_demo,
     province: r.province,
     regency: r.regency,
-    description: r.description,
   }));
 }
 

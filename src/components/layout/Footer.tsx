@@ -14,8 +14,8 @@ import {
 export function Footer() {
   const pathname = usePathname();
 
-  // Jangan tampilkan footer di area dashboard admin atau peta bencana
-  if (pathname.startsWith("/admin") || pathname.startsWith("/peta")) {
+  // Jangan tampilkan footer di area dashboard admin
+  if (pathname.startsWith("/admin")) {
     return null;
   }
 
