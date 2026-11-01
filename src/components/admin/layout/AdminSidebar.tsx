@@ -111,7 +111,10 @@ export function AdminSidebar({
               ? pathname === "/admin"
               : pathname.startsWith(item.href);
 
-          const isBlueActive = item.href === "/admin/laporan" || item.href === "/admin/sos";
+          const isBlueActive =
+            item.href === "/admin/laporan" ||
+            item.href === "/admin/sos" ||
+            item.href === "/admin/peta";
           const activeClasses = isBlueActive
             ? "bg-[#EFF6FF] text-[#2563EB] font-semibold"
             : "bg-[#FFF4EC] text-[#EA580C] font-semibold";

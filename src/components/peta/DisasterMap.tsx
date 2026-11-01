@@ -139,6 +139,10 @@ export default function DisasterMap({
     markersLayerRef.current = markersGroup;
     mapInstanceRef.current = map;
 
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+
     return () => {
       map.remove();
       mapInstanceRef.current = null;
@@ -235,7 +239,7 @@ export default function DisasterMap({
     <div
       className={`w-full h-full min-h-[500px] md:min-h-[600px] relative rounded-lg overflow-hidden border border-line shadow-card ${className}`}
     >
-      <div ref={mapContainerRef} className="w-full h-full z-10" />
+      <div ref={mapContainerRef} className="w-full h-full min-h-[500px] md:min-h-[600px] z-10" />
 
       {showLegend && (
         <div className="absolute bottom-4 left-4 z-[400] max-w-[280px] bg-surface/95 backdrop-blur-sm border border-line rounded-lg p-3 shadow-card text-xs pointer-events-auto">
