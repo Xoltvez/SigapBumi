@@ -39,7 +39,6 @@ export default function HomePage() {
   // Search tracking state
   const [trackingInput, setTrackingInput] = useState("");
   const [selectedDisasterFilter, setSelectedDisasterFilter] = useState<string>("semua");
-  const [activeHeroTab, setActiveHeroTab] = useState<"status" | "hotline">("status");
 
   // Interactive Tas Siaga Bencana (TSB) checklist state
   const [checkedTsb, setCheckedTsb] = useState<{ [key: string]: boolean }>({
@@ -234,160 +233,193 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Right Column: Live Telemetry & Emergency Hotline Card */}
-          <div className="lg:col-span-5 bg-surface border border-line rounded-2xl p-5 sm:p-6 shadow-card space-y-4">
-            {/* Header with Interactive Tabs */}
-            <div className="flex items-center justify-between border-b border-line pb-3">
-              <div className="flex items-center gap-1 bg-bg p-1 rounded-lg border border-line">
-                <button
-                  type="button"
-                  onClick={() => setActiveHeroTab("status")}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                    activeHeroTab === "status"
-                      ? "bg-surface text-ink shadow-xs"
-                      : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  Status Terkini
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveHeroTab("hotline")}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                    activeHeroTab === "hotline"
-                      ? "bg-surface text-danger shadow-xs"
-                      : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  Hotline Darurat
-                </button>
+          {/* Right Column: Interactive Quick-Report Bento Card matching Image 2 */}
+          <div className="lg:col-span-5 relative">
+            {/* Background Geometric Red/Orange Blob Accent (giving depth like Image 2) */}
+            <div
+              aria-hidden="true"
+              className="absolute -top-3 -right-3 w-40 h-40 rounded-full bg-gradient-to-br from-red-500/80 to-orange-500/80 blur-xs -z-10"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute -bottom-4 -left-4 w-32 h-32 rounded-3xl bg-orange-600/30 blur-lg -z-10"
+            />
+
+            {/* Dark Container Card */}
+            <div className="bg-[#111622] border border-slate-800 rounded-[28px] sm:rounded-[32px] p-5 sm:p-7 shadow-2xl shadow-black/50 space-y-5 text-white">
+              {/* Header Headline (matching: Explore insights, creativity, and new possibilities) */}
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 rounded-full inline-block mb-2">
+                  Lapor Cepat 1-Klik
+                </span>
+                <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-snug">
+                  Laporkan kejadian darurat di sekitar Anda sekarang.
+                </h2>
               </div>
-            </div>
 
-            {/* Tab Content 1: Live Status Feed */}
-            {activeHeroTab === "status" ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs text-ink-muted">
-                  <span>Laporan Terverifikasi Terbaru</span>
-                  <Link href="/lacak" className="text-primary hover:underline font-semibold">
-                    Semua Laporan &rarr;
-                  </Link>
-                </div>
+              {/* Stacked White Card (Center Layer with Offset Card Shadow like in Image 2) */}
+              <div className="relative my-2">
+                {/* Offset Card Layer Behind */}
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 bg-white/40 rounded-2xl rotate-2 translate-x-2 -translate-y-1 scale-[0.98] shadow-md pointer-events-none"
+                />
 
-                <div className="space-y-2.5">
-                  {DEFAULT_MOCK_REPORTS.slice(0, 2).map((item) => (
+                {/* Main Foreground White Card */}
+                <div className="relative bg-white rounded-2xl p-3 sm:p-4 shadow-xl text-slate-900 border border-slate-100">
+                  <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-slate-100 text-xs">
+                    <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
+                      Pilih Jenis Kejadian
+                    </span>
+                    <span className="text-[10px] font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                      Siaga 24/7
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    {/* Item 1: Kebakaran */}
                     <Link
-                      key={item.id}
-                      href={`/lacak?kode=${item.tracking_code}`}
-                      className="block p-3 rounded-xl border border-line bg-bg hover:bg-primary-soft/40 hover:border-primary/30 transition-all text-xs group"
+                      href="/lapor?tipe=kebakaran"
+                      className="group flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="font-mono font-bold text-primary group-hover:underline">
-                          {item.tracking_code}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            item.status === "selesai"
-                              ? "bg-success-soft text-success-text"
-                              : "bg-warning-soft text-warning-text"
-                          }`}
-                        >
-                          {item.status}
-                        </span>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Flame className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 text-left">
+                          <p className="text-xs font-bold text-slate-900 group-hover:text-red-600 transition-colors truncate">
+                            Kebakaran Pemukiman / Lahan
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            Damkar 113 &middot; Pemadaman darurat
+                          </p>
+                        </div>
                       </div>
-                      <p className="font-bold text-ink truncate group-hover:text-primary transition-colors">
-                        {item.title}
-                      </p>
-                      <p className="text-ink-muted text-[11px] truncate mt-0.5 flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-primary shrink-0" />
-                        <span>{item.address}</span>
-                      </p>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-red-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
                     </Link>
-                  ))}
-                </div>
 
-                {/* Progress bar info */}
-                <div className="pt-2 border-t border-line">
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-ink-soft font-medium">Tingkat Penanganan Posko</span>
-                    <span className="font-bold text-success">{resolvedRate}% Selesai</span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-line overflow-hidden">
-                    <div
-                      className="h-full bg-success rounded-full transition-all duration-500"
-                      style={{ width: `${resolvedRate}%` }}
-                    />
+                    {/* Item 2: Banjir */}
+                    <Link
+                      href="/lapor?tipe=banjir"
+                      className="group flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Waves className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 text-left">
+                          <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                            Banjir &amp; Luapan Air Sungai
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            Lapor tinggi genangan &amp; warga terjebak
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                    </Link>
+
+                    {/* Item 3: Gempa Bumi */}
+                    <Link
+                      href="/lapor?tipe=gempa"
+                      className="group flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Activity className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 text-left">
+                          <p className="text-xs font-bold text-slate-900 group-hover:text-amber-600 transition-colors truncate">
+                            Gempa Bumi &amp; Kerusakan
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            Info kerusakan bangunan &amp; posko aman
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                    </Link>
+
+                    {/* Item 4: Tanah Longsor */}
+                    <Link
+                      href="/lapor?tipe=longsor"
+                      className="group flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Mountain className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 text-left">
+                          <p className="text-xs font-bold text-slate-900 group-hover:text-emerald-600 transition-colors truncate">
+                            Tanah Longsor &amp; Tebing Runtuh
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            Lapor akses jalan putus &amp; longsoran
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                    </Link>
+
+                    {/* Item 5: Angin Puting Beliung / Cuaca Ekstrem */}
+                    <Link
+                      href="/lapor?tipe=cuaca_ekstrem"
+                      className="group flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Wind className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 text-left">
+                          <p className="text-xs font-bold text-slate-900 group-hover:text-teal-600 transition-colors truncate">
+                            Puting Beliung &amp; Cuaca Ekstrem
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            Pohon roboh &amp; atap beterbangan
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                    </Link>
                   </div>
                 </div>
               </div>
-            ) : (
-              /* Tab Content 2: Emergency Hotline Direct Calls */
-              <div className="space-y-2.5">
-                <p className="text-xs text-ink-soft">
-                  Hubungi nomor panggilan darurat bebas pulsa resmi untuk situasi mengancam jiwa:
+
+              {/* Bottom Section: Overlapping Avatars + Report Count + Description */}
+              <div className="pt-2 border-t border-slate-800/80">
+                <div className="flex items-center gap-3">
+                  {/* Overlapping Citizen Avatars (like in Image 2) */}
+                  <div className="flex -space-x-2.5 overflow-hidden shrink-0">
+                    <div className="inline-flex h-8 w-8 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-orange-500 to-amber-400 text-white text-[10px] font-extrabold items-center justify-center shadow-xs">
+                      AH
+                    </div>
+                    <div className="inline-flex h-8 w-8 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-blue-600 to-cyan-400 text-white text-[10px] font-extrabold items-center justify-center shadow-xs">
+                      RD
+                    </div>
+                    <div className="inline-flex h-8 w-8 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-emerald-600 to-teal-400 text-white text-[10px] font-extrabold items-center justify-center shadow-xs">
+                      SY
+                    </div>
+                    <div className="inline-flex h-8 w-8 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-purple-600 to-pink-500 text-white text-[10px] font-extrabold items-center justify-center shadow-xs">
+                      WN
+                    </div>
+                  </div>
+
+                  {/* Report Count */}
+                  <div className="min-w-0">
+                    <div className="text-sm font-black text-white tracking-tight flex items-center gap-1.5">
+                      <span>1.420+ Warga Melaporkan</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    </div>
+                    <p className="text-[11px] text-slate-400 truncate">
+                      {totalCount} laporan darurat aktif terverifikasi posko
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-400 mt-2.5 leading-relaxed">
+                  Laporan Anda diteruskan langsung ke sistem koordinasi posko BPBD dan instansi penyelamat terdekat.
                 </p>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <a
-                    href="tel:112"
-                    className="p-3 rounded-xl border border-danger/30 bg-danger-soft hover:bg-danger/10 transition-colors flex flex-col justify-between"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-danger">Panggilan 112</span>
-                      <PhoneCall className="w-3.5 h-3.5 text-danger" />
-                    </div>
-                    <span className="text-lg font-extrabold text-danger mt-1">112</span>
-                    <span className="text-[10px] text-danger-text/80">Darurat Umum & BPBD</span>
-                  </a>
-
-                  <a
-                    href="tel:115"
-                    className="p-3 rounded-xl border border-orange-200 bg-orange-50 hover:bg-orange-100/60 transition-colors flex flex-col justify-between"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-orange-800">SAR Basarnas</span>
-                      <PhoneCall className="w-3.5 h-3.5 text-orange-700" />
-                    </div>
-                    <span className="text-lg font-extrabold text-orange-900 mt-1">115</span>
-                    <span className="text-[10px] text-orange-800/80">Penyelamatan & Evakuasi</span>
-                  </a>
-
-                  <a
-                    href="tel:119"
-                    className="p-3 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100/60 transition-colors flex flex-col justify-between"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-blue-800">Medis 119</span>
-                      <HeartPulse className="w-3.5 h-3.5 text-blue-700" />
-                    </div>
-                    <span className="text-lg font-extrabold text-blue-900 mt-1">119</span>
-                    <span className="text-[10px] text-blue-800/80">Gawat Darurat & Ambulans</span>
-                  </a>
-
-                  <a
-                    href="tel:113"
-                    className="p-3 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100/60 transition-colors flex flex-col justify-between"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-red-800">Damkar 113</span>
-                      <Flame className="w-3.5 h-3.5 text-red-700" />
-                    </div>
-                    <span className="text-lg font-extrabold text-red-900 mt-1">113</span>
-                    <span className="text-[10px] text-red-800/80">Pemadam Kebakaran</span>
-                  </a>
-                </div>
               </div>
-            )}
-
-            {/* Quick Link Footer */}
-            <div className="pt-2 border-t border-line flex items-center justify-between text-xs text-ink-muted">
-              <Link href="/fasilitas" className="hover:text-primary transition-colors flex items-center gap-1">
-                <Building2 className="w-3.5 h-3.5 text-primary" />
-                <span>Cari Fasilitas Kesehatan Terdekat</span>
-              </Link>
-              <Link href="/kontak-darurat" className="text-primary hover:underline font-semibold">
-                Daftar Lengkap &rarr;
-              </Link>
             </div>
           </div>
         </div>
