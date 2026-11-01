@@ -715,64 +715,52 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Bento 2: 3 Langkah Emas Tanggap Darurat (5 cols) */}
-          <div className="lg:col-span-5 bg-gradient-to-br from-ink to-slate-900 text-white rounded-2xl p-6 shadow-card flex flex-col justify-between space-y-5">
+          {/* Bento 2: Visualisasi 3D Realistis Tas Siaga Bencana (TSB) (5 cols) */}
+          <div className="lg:col-span-5 bg-surface border border-line rounded-2xl p-5 shadow-card flex flex-col justify-between overflow-hidden group">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-[11px] font-bold text-amber-300">
-                <Sparkles className="w-3 h-3" />
-                <span>Prosedur Keselamatan Warga</span>
+              <div className="flex items-center justify-between mb-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary-soft text-primary-hover text-[11px] font-bold">
+                  <Sparkles className="w-3 h-3" />
+                  <span>Visual 3D Perlengkapan Darurat</span>
+                </span>
+                <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Standar BPBD 72 Jam
+                </span>
               </div>
-              <h3 className="text-lg font-bold mt-2">
-                3 Langkah Emas Saat Bencana Tiba
+              <h3 className="text-lg font-bold text-ink">
+                Tas Siaga Bencana (TSB) 3D
               </h3>
-              <p className="text-xs text-white/70 mt-1 leading-relaxed">
-                Reaksi cepat yang tepat dapat menyelamatkan jiwa Anda dan keluarga.
+              <p className="text-xs text-ink-soft mt-0.5 leading-relaxed">
+                Kompartemen lengkap siap evakuasi: dokumen kedap air, kotak P3K medis, air minum, senter &amp; radio darurat.
               </p>
             </div>
 
-            <div className="space-y-3.5">
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                <div className="w-7 h-7 rounded-lg bg-primary text-white font-extrabold text-xs flex items-center justify-center shrink-0">
-                  1
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">Jangan Panik & Lindungi Kepala</h4>
-                  <p className="text-[11px] text-white/70 mt-0.5">
-                    Gunakan meja kuat atau bantal untuk melindungi organ vital saat gempa/reruntuhan.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                <div className="w-7 h-7 rounded-lg bg-primary text-white font-extrabold text-xs flex items-center justify-center shrink-0">
-                  2
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">Putus Aliran Listrik & Gas</h4>
-                  <p className="text-[11px] text-white/70 mt-0.5">
-                    Cegah risiko kebakaran sekunder dengan mematikan MCB dan melepas regulator gas tabung.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                <div className="w-7 h-7 rounded-lg bg-primary text-white font-extrabold text-xs flex items-center justify-center shrink-0">
-                  3
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">Evakuasi Menuju Titik Kumpul</h4>
-                  <p className="text-[11px] text-white/70 mt-0.5">
-                    Gunakan jalur evakuasi terbuka, jauhi bangunan tinggi/tiang listrik, dan aktifkan sinyal SOS.
-                  </p>
-                </div>
+            {/* 3D Realistic Image Showcase */}
+            <div className="relative my-3 w-full aspect-square rounded-xl overflow-hidden bg-slate-50 border border-line/80 shadow-inner group/img">
+              <Image
+                src="/tas_siaga_3d.jpg"
+                alt="Visualisasi 3D Realistis Tas Siaga Bencana (TSB) beserta dokumen, kotak P3K, air minum, dan peralatan darurat"
+                fill
+                sizes="(max-width: 1024px) 100vw, 400px"
+                className="object-cover transition-transform duration-500 group-hover/img:scale-105"
+                priority
+              />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-transparent p-3 pt-8 flex items-center justify-between text-white">
+                <span className="text-[11px] font-medium flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  Kelengkapan Mandiri 72 Jam
+                </span>
+                <span className="text-[10px] text-white/80 font-mono bg-white/20 px-2 py-0.5 rounded backdrop-blur-xs">
+                  Model 3D TSB
+                </span>
               </div>
             </div>
 
             <Link
-              href="/edukasi"
+              href="/edukasi#tsb"
               className="inline-flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold transition-colors shadow-xs"
             >
-              <span>Pelajari Semua Langkah Mitigasi</span>
+              <span>Pelajari Rincian Isi Tas Siaga</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
