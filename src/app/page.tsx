@@ -42,29 +42,34 @@ export default function HomePage() {
   const [trackingInput, setTrackingInput] = useState("");
   const [selectedDisasterFilter, setSelectedDisasterFilter] = useState<string>("semua");
 
-  // Interactive Tas Siaga Bencana (TSB) checklist state
-  const [checkedTsb, setCheckedTsb] = useState<{ [key: string]: boolean }>({
-    dokumen: true,
-    p3k: true,
-    senter: false,
-    air: true,
-    peluit: false,
-  });
-
+  // Checklist Tas Siaga Bencana (TSB) standar BPBD
   const tsbItems = [
-    { id: "dokumen", label: "Dokumen & Surat Berharga (Kantong Kedap Air)" },
-    { id: "p3k", label: "Kotak P3K, Obat-obatan Khusus & Masker" },
-    { id: "air", label: "Air Minum Bersih & Makanan Tahan Lama (3 Hari)" },
-    { id: "senter", label: "Senter / Penerangan Darurat & Baterai Cadangan" },
-    { id: "peluit", label: "Peluit Sinyal Darurat SOS & Powerbank" },
+    {
+      id: "dokumen",
+      label: "Dokumen & Surat Berharga",
+      desc: "KTP, KK, Ijazah, Buku Tabungan dalam kantong kedap air",
+    },
+    {
+      id: "p3k",
+      label: "Kotak P3K & Obat Medis",
+      desc: "Obat pribadi, perban, plester luka, antiseptik, dan masker",
+    },
+    {
+      id: "air",
+      label: "Air Minum & Ransum Pangan",
+      desc: "Minimal 3 liter per jiwa dan makanan instan/kaleng tahan 72 jam",
+    },
+    {
+      id: "senter",
+      label: "Senter & Baterai Cadangan",
+      desc: "Penerangan darurat LED tahan air dan baterai ekstra",
+    },
+    {
+      id: "peluit",
+      label: "Peluit Darurat & Powerbank",
+      desc: "Sinyal suara penolong SOS dan daya komunikasi ponsel",
+    },
   ];
-
-  const completedTsbCount = Object.values(checkedTsb).filter(Boolean).length;
-  const tsbProgress = Math.round((completedTsbCount / tsbItems.length) * 100);
-
-  const toggleTsbItem = (id: string) => {
-    setCheckedTsb((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
 
   const handleTrackingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -653,20 +658,20 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Bento 1: Interactive Tas Siaga Bencana (TSB) Checklist (7 cols) */}
+          {/* Bento 1: Checklist Tas Siaga Bencana (TSB) Standar BPBD (7 cols) */}
           <div className="lg:col-span-7 bg-surface border border-line rounded-2xl p-6 shadow-card space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                  Checklist Interaktif
+                  Checklist Kesiapsiagaan
                 </span>
                 <h3 className="text-lg font-bold text-ink mt-0.5">
                   Tas Siaga Bencana (TSB) Keluarga
                 </h3>
               </div>
-              <div className="text-right">
-                <span className="text-xl font-extrabold text-primary">{tsbProgress}%</span>
-                <span className="text-[11px] text-ink-muted block font-semibold">Kesiapan</span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-xs font-bold">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Standar BPBD 72 Jam</span>
               </div>
             </div>
 
@@ -674,42 +679,26 @@ export default function HomePage() {
               Pastikan tas siaga berisi kebutuhan pokok bertahan hidup minimal untuk 72 jam pertama pasca bencana:
             </p>
 
-            {/* Progress Bar */}
-            <div className="w-full h-2 rounded-full bg-line overflow-hidden">
-              <div
-                className="h-full bg-success rounded-full transition-all duration-300"
-                style={{ width: `${tsbProgress}%` }}
-              />
-            </div>
-
-            {/* Checklist Items */}
+            {/* Checklist Items (Daftar Statis Biasa) */}
             <div className="space-y-2.5 pt-1">
-              {tsbItems.map((item) => {
-                const isChecked = checkedTsb[item.id] || false;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => toggleTsbItem(item.id)}
-                    className={`w-full p-3 rounded-xl border text-left flex items-center justify-between gap-3 transition-all ${
-                      isChecked
-                        ? "bg-success-soft/60 border-success/40 text-ink"
-                        : "bg-bg border-line hover:border-line-strong text-ink-soft"
-                    }`}
-                  >
-                    <span className="text-xs font-semibold">{item.label}</span>
-                    {isChecked ? (
-                      <CheckSquare className="w-4 h-4 text-success shrink-0" />
-                    ) : (
-                      <Square className="w-4 h-4 text-ink-muted shrink-0" />
-                    )}
-                  </button>
-                );
-              })}
+              {tsbItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="w-full p-3 rounded-xl border border-line/80 bg-slate-50/70 flex items-start gap-3"
+                >
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-ink">{item.label}</p>
+                    <p className="text-[11px] text-ink-muted mt-0.5 leading-snug">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="pt-2 flex items-center justify-between text-xs text-ink-soft">
-              <span>{completedTsbCount} dari {tsbItems.length} perlengkapan siap</span>
+              <span>Wajib disiapkan di dekat pintu keluar rumah</span>
               <Link href="/edukasi#tsb" className="font-bold text-primary hover:underline">
                 Panduan Isi Tas Lengkap &rarr;
               </Link>
