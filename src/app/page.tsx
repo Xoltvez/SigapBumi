@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   MapPin,
@@ -367,19 +368,43 @@ export default function HomePage() {
               {/* Bottom Section: Overlapping Avatars + Report Count + Description */}
               <div className="pt-2 border-t border-slate-800/80">
                 <div className="flex items-center gap-2.5">
-                  {/* Overlapping Citizen Avatars (like in Image 2) */}
+                  {/* Overlapping Citizen Avatars */}
                   <div className="flex -space-x-2 overflow-hidden shrink-0">
-                    <div className="inline-flex h-7 w-7 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-orange-500 to-amber-400 text-white text-[9px] font-extrabold items-center justify-center shadow-xs">
-                      AH
+                    <div className="relative inline-block h-7 w-7 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-xs">
+                      <Image
+                        src="/avatars/avatar-1.svg"
+                        alt="Foto Profil Warga Pelapor 1"
+                        width={28}
+                        height={28}
+                        className="object-cover h-full w-full"
+                      />
                     </div>
-                    <div className="inline-flex h-7 w-7 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-blue-600 to-cyan-400 text-white text-[9px] font-extrabold items-center justify-center shadow-xs">
-                      RD
+                    <div className="relative inline-block h-7 w-7 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-xs">
+                      <Image
+                        src="/avatars/avatar-2.svg"
+                        alt="Foto Profil Warga Pelapor 2"
+                        width={28}
+                        height={28}
+                        className="object-cover h-full w-full"
+                      />
                     </div>
-                    <div className="inline-flex h-7 w-7 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-emerald-600 to-teal-400 text-white text-[9px] font-extrabold items-center justify-center shadow-xs">
-                      SY
+                    <div className="relative inline-block h-7 w-7 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-xs">
+                      <Image
+                        src="/avatars/avatar-3.svg"
+                        alt="Foto Profil Warga Pelapor 3"
+                        width={28}
+                        height={28}
+                        className="object-cover h-full w-full"
+                      />
                     </div>
-                    <div className="inline-flex h-7 w-7 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-purple-600 to-pink-500 text-white text-[9px] font-extrabold items-center justify-center shadow-xs">
-                      WN
+                    <div className="relative inline-block h-7 w-7 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-xs">
+                      <Image
+                        src="/avatars/avatar-4.svg"
+                        alt="Foto Profil Warga Pelapor 4"
+                        width={28}
+                        height={28}
+                        className="object-cover h-full w-full"
+                      />
                     </div>
                   </div>
 
