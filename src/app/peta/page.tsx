@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   MapPin,
@@ -56,7 +57,12 @@ const INITIAL_POINTS: MapPoint[] = [
   ...reportsToMapPoints(DEFAULT_MOCK_REPORTS),
 ];
 
-export default function PetaPage() {
+function PetaContent() {
+  const searchParams = useSearchParams();
+  const urlKode = searchParams.get("kode");
+  const urlLat = searchParams.get("lat");
+  const urlLng = searchParams.get("lng");
+
   const [points, setPoints] = useState<MapPoint[]>(INITIAL_POINTS);
   const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<"peta" | "daftar">("peta");
@@ -65,6 +71,56 @@ export default function PetaPage() {
   const [selectedRegion, setSelectedRegion] = useState<string>("Semua Wilayah");
   const [showSos, setShowSos] = useState<boolean>(true);
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
+
+  // Fokus otomatis ke titik jika terdapat query param kode/koordinat
+  useEffect(() => {
+    if (!urlKode && !urlLat) return;
+
+    let target = points.find(
+      (p) => urlKode && p.tracking_code?.toUpperCase() === urlKode.toUpperCase()
+    );
+
+    if (!target && urlLat && urlLng) {
+      const latNum = parseFloat(urlLat);
+      const lngNum = parseFloat(urlLng);
+      if (!isNaN(latNum) && !isNaN(lngNum)) {
+        target = points.find(
+          (p) => Math.abs(p.lat - latNum) < 0.002 && Math.abs(p.lng - lngNum) < 0.002
+        );
+        if (!target) {
+          const focusedPoint: MapPoint = {
+            id: `focus-${urlKode || "target"}`,
+            tracking_code: urlKode || "TITIK-BENCANA",
+            disaster_type: "banjir",
+            title: `Lokasi Kejadian Laporan (${urlKode || "Terpantau"})`,
+            location_name: "Titik Lokasi Bencana",
+            lat: latNum,
+            lng: lngNum,
+            status: "ditindaklanjuti",
+            created_at: "Terpantau",
+            confirmation_count: 1,
+            is_demo: false,
+          };
+          setPoints((prev) => [focusedPoint, ...prev]);
+          target = focusedPoint;
+        }
+      }
+    }
+
+    if (target) {
+      setSelectedPoint(target);
+      setViewMode("peta");
+      if (selectedCategory !== "semua" && target.disaster_type !== selectedCategory) {
+        setSelectedCategory("semua");
+      }
+      if (selectedStatus !== "semua" && target.status !== selectedStatus) {
+        setSelectedStatus("semua");
+      }
+      if (selectedRegion !== "Semua Wilayah" && target.province && target.province !== selectedRegion) {
+        setSelectedRegion("Semua Wilayah");
+      }
+    }
+  }, [urlKode, urlLat, urlLng, points, selectedCategory, selectedStatus, selectedRegion]);
 
   // Ambil data live dari Supabase/service dan pasang realtime listener
   useEffect(() => {
@@ -327,5 +383,20 @@ export default function PetaPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function PetaPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full h-96 flex flex-col items-center justify-center text-ink-muted">
+          <MapPin className="w-8 h-8 mb-2 text-primary animate-bounce" />
+          <p className="text-sm font-semibold text-ink">Menyiapkan Peta Bencana...</p>
+        </div>
+      }
+    >
+      <PetaContent />
+    </Suspense>
   );
 }

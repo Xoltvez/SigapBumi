@@ -34,10 +34,13 @@ interface ReportDetail {
   confirmation_count: number;
   timeline: TimelineStep[];
   is_demo?: boolean;
+  lat?: number;
+  lng?: number;
 }
 
 const SAMPLE_REPORTS: Record<string, ReportDetail> = {
   "LPR-8F3K2Q": {
+    id: "rep-1",
     tracking_code: "LPR-8F3K2Q",
     disaster_type: "banjir",
     title: "Banjir Luapan Kali Semanan Tinggi 50-70 cm",
@@ -48,6 +51,8 @@ const SAMPLE_REPORTS: Record<string, ReportDetail> = {
     status: "ditindaklanjuti",
     confirmation_count: 24,
     is_demo: true,
+    lat: -6.155,
+    lng: 106.723,
     timeline: [
       {
         status: "diterima",
@@ -72,6 +77,7 @@ const SAMPLE_REPORTS: Record<string, ReportDetail> = {
     ],
   },
   "LPR-4K9W1Z": {
+    id: "rep-11",
     tracking_code: "LPR-4K9W1Z",
     disaster_type: "longsor",
     title: "Tanah Longsor Menutup Sebagian Badan Jalan Desa",
@@ -82,6 +88,8 @@ const SAMPLE_REPORTS: Record<string, ReportDetail> = {
     status: "diverifikasi",
     confirmation_count: 12,
     is_demo: true,
+    lat: -6.698,
+    lng: 106.942,
     timeline: [
       {
         status: "diterima",
@@ -99,6 +107,7 @@ const SAMPLE_REPORTS: Record<string, ReportDetail> = {
     ],
   },
   "LPR-2X7M9P": {
+    id: "rep-3",
     tracking_code: "LPR-2X7M9P",
     disaster_type: "kebakaran",
     title: "Kebakaran Rumah Tinggal Padat Penduduk",
@@ -109,6 +118,8 @@ const SAMPLE_REPORTS: Record<string, ReportDetail> = {
     status: "selesai",
     confirmation_count: 31,
     is_demo: true,
+    lat: -6.149,
+    lng: 106.804,
     timeline: [
       {
         status: "diterima",
@@ -177,6 +188,8 @@ function LacakContent() {
           confirmation_count: liveData.confirmation_count,
           timeline: liveData.timeline || [],
           is_demo: liveData.is_demo,
+          lat: liveData.lat,
+          lng: liveData.lng,
         });
         return;
       }
@@ -485,7 +498,11 @@ function LacakContent() {
           {/* Action Footer */}
           <div className="pt-4 border-t border-line flex flex-wrap items-center justify-between gap-3">
             <Link
-              href="/peta"
+              href={
+                activeReport.lat && activeReport.lng
+                  ? `/peta?kode=${encodeURIComponent(activeReport.tracking_code)}&lat=${activeReport.lat}&lng=${activeReport.lng}`
+                  : `/peta?kode=${encodeURIComponent(activeReport.tracking_code)}`
+              }
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-hover"
             >
               <span>Lihat Titik di Peta Bencana Publik</span>

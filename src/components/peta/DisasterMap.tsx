@@ -75,6 +75,7 @@ export default function DisasterMap({
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
 
   // Injeksi style animasi ping jika belum ada di document
   useEffect(() => {
@@ -144,12 +145,21 @@ export default function DisasterMap({
     };
   }, []);
 
-  // Pan to selected point when selectedPointId changes
+  // Pan to selected point and open popup when selectedPointId changes
   useEffect(() => {
     if (!selectedPointId || !mapInstanceRef.current) return;
     const pt = points.find((p) => p.id === selectedPointId);
     if (pt) {
-      mapInstanceRef.current.setView([pt.lat, pt.lng], 13);
+      mapInstanceRef.current.setView([pt.lat, pt.lng], 15, {
+        animate: true,
+      });
+      // Buka popup titik kejadian secara otomatis
+      const marker = markersMapRef.current.get(pt.id);
+      if (marker) {
+        setTimeout(() => {
+          marker.openPopup();
+        }, 250);
+      }
     }
   }, [selectedPointId, points]);
 
@@ -160,6 +170,7 @@ export default function DisasterMap({
     if (!map || !markersGroup) return;
 
     markersGroup.clearLayers();
+    markersMapRef.current.clear();
 
     points.forEach((pt) => {
       const marker = L.marker([pt.lat, pt.lng], {
@@ -205,6 +216,7 @@ export default function DisasterMap({
       });
 
       markersGroup.addLayer(marker);
+      markersMapRef.current.set(pt.id, marker);
     });
 
     // Auto-fit bounds jika ada titik dan tidak sedang fokus pada titik tertentu
