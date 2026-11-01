@@ -591,10 +591,7 @@ export default function HomePage() {
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-extrabold text-primary px-2.5 py-0.5 rounded-md bg-primary-soft border border-primary/20">
-                      {report.tracking_code}
-                    </span>
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-bg text-ink-muted border border-line">
+                    <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-md bg-bg text-ink-muted border border-line">
                       {report.province}
                     </span>
                   </div>
