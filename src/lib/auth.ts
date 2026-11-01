@@ -1,5 +1,7 @@
 "use client";
 
+import { showToast } from "@/components/ui/Toast";
+
 export interface UserSession {
   id: string;
   full_name: string;
@@ -30,6 +32,8 @@ export function setCurrentUser(user: UserSession): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
     window.dispatchEvent(new Event(AUTH_EVENT));
+    const name = getFirstName(user.full_name);
+    showToast("Berhasil Masuk!", `Selamat datang kembali, ${name}. Sesi warga Anda telah aktif.`, "success");
   } catch (err) {
     console.warn("Gagal menyimpan session auth user:", err);
   }
@@ -40,6 +44,7 @@ export function logoutUser(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new Event(AUTH_EVENT));
+    showToast("Berhasil Keluar", "Anda telah keluar dari akun warga.", "info");
   } catch (err) {
     console.warn("Gagal logout user:", err);
   }

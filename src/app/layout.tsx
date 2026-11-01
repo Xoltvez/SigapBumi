@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { SosFab } from "@/components/layout/SosFab";
+import { ToastContainer } from "@/components/ui/Toast";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -34,6 +35,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <Header />
         </Suspense>
+        <ToastContainer />
         <div className="flex-1 flex flex-col">{children}</div>
         <Suspense fallback={null}>
           <Footer />
