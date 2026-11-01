@@ -60,34 +60,34 @@ export function AdminTopbar({
 
   return (
     <header className="h-20 bg-[#FAFBFC] border-b border-slate-200/90 px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.03)] select-none font-sans">
-      {/* Left: Date Pill Dropdown */}
-      <div className="flex items-center gap-3">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 shadow-2xs text-xs font-medium text-slate-700 hover:border-slate-300 transition-colors cursor-default">
+      {/* Left: Date Pill Dropdown & Search Bar positioned side by side */}
+      <div className="flex items-center gap-3 sm:gap-3.5 flex-1 min-w-0">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 shadow-2xs text-xs font-medium text-slate-700 hover:border-slate-300 transition-colors cursor-default shrink-0">
           <Calendar className="w-3.5 h-3.5 text-slate-500" />
           <span>{formattedDate}</span>
           <ChevronDown className="w-3 h-3 text-slate-400" />
         </div>
-      </div>
 
-      {/* Center: Global Search Pill */}
-      <div className="relative flex-1 max-w-md mx-4 hidden md:block">
-        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-        <input
-          type="text"
-          defaultValue={urlCari}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              const val = (e.target as HTMLInputElement).value;
-              router.push(`/admin/laporan?cari=${encodeURIComponent(val)}`);
-            }
-          }}
-          placeholder="Cari laporan berdasarkan lokasi, jenis, atau kata kunci..."
-          className="w-full h-9 pl-9 pr-4 rounded-full border border-slate-200/90 bg-white text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-orange-500/30 transition-all"
-        />
+        {/* Global Search Pill directly next to date */}
+        <div className="relative w-full max-w-sm lg:max-w-md hidden md:block">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            defaultValue={urlCari}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const val = (e.target as HTMLInputElement).value;
+                router.push(`/admin/laporan?cari=${encodeURIComponent(val)}`);
+              }
+            }}
+            placeholder="Cari laporan berdasarkan lokasi, jenis, atau kata kunci..."
+            className="w-full h-9 pl-9 pr-4 rounded-full border border-slate-200/90 bg-white text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-orange-500/30 transition-all"
+          />
+        </div>
       </div>
 
       {/* Right Controls: Siren Toggle, Unit Selector, Notification Bell, User Avatar */}
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
         {/* Siren Status & Mute/Unmute toggle */}
         {onToggleSiren && (
           <button
