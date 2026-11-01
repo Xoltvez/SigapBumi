@@ -19,6 +19,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { setCurrentUser } from "@/lib/auth";
 
 export default function DaftarPage() {
   const router = useRouter();
@@ -112,9 +113,7 @@ export default function DaftarPage() {
         created_at: new Date().toISOString(),
       };
 
-      if (typeof window !== "undefined") {
-        localStorage.setItem("sigapbumi_current_user", JSON.stringify(localUserData));
-      }
+      setCurrentUser(localUserData);
 
       setIsSuccess(true);
     } catch (err: any) {
