@@ -32,6 +32,7 @@ export default function DaftarPage() {
   const [agreeTerms, setAgreeTerms] = useState(true);
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -307,14 +308,22 @@ export default function DaftarPage() {
                 </label>
                 <div className="relative">
                   <input
-                    type={showPassword ? "text" : "password"}
+                    type={showConfirmPassword ? "text" : "password"}
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Ketik ulang kata sandi"
-                    className="w-full h-11 pl-9 pr-3.5 rounded-xl border border-line bg-surface text-xs text-ink placeholder:text-ink-muted focus:border-primary focus:outline-none"
+                    className="w-full h-11 pl-9 pr-9 rounded-xl border border-line bg-surface text-xs text-ink placeholder:text-ink-muted focus:border-primary focus:outline-none"
                   />
                   <Lock className="w-3.5 h-3.5 text-ink-muted absolute left-3 top-3.5" />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={showConfirmPassword ? "Sembunyikan kata sandi" : "Lihat kata sandi"}
+                    className="absolute right-3 top-3.5 text-ink-muted hover:text-ink focus:outline-none"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               </div>
             </div>

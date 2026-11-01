@@ -59,10 +59,10 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative px-3.5 py-1.5 rounded-lg text-xs lg:text-sm transition-all focus-visible:outline-primary ${
+                className={`px-3 py-1.5 text-xs lg:text-sm transition-colors focus-visible:outline-primary ${
                   isActive
-                    ? "font-bold text-primary bg-primary-soft border border-primary/25 shadow-xs"
-                    : "text-ink-soft hover:text-ink hover:bg-bg border border-transparent font-medium"
+                    ? "font-bold text-primary"
+                    : "text-ink-soft hover:text-primary font-medium"
                 }`}
               >
                 <span>{item.label}</span>
@@ -79,10 +79,10 @@ export function Header() {
           <Link
             href="/notifikasi"
             aria-label="Notifikasi"
-            className={`w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-all focus-visible:outline-primary ${
+            className={`w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors focus-visible:outline-primary ${
               isNotifActive
-                ? "bg-primary-soft text-primary border border-primary/25 shadow-xs font-bold"
-                : "text-ink-soft hover:bg-bg hover:text-ink border border-transparent"
+                ? "text-primary"
+                : "text-ink-soft hover:text-primary hover:bg-bg"
             }`}
           >
             <Bell className="w-4 h-4 md:w-5 md:h-5" />
