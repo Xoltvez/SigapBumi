@@ -301,6 +301,69 @@ export async function updateSosAssistanceType(
 }
 
 /**
+ * Memperbarui titik koordinat GPS pada sinyal SOS aktif (auto-refine setelah GPS lock)
+ */
+export async function updateSosLocation(
+  id: string,
+  lat: number,
+  lng: number,
+  accuracy?: number
+): Promise<{ success: boolean }> {
+  const localItems = getLocalSosCache();
+  const existing = localItems.find((x) => x.id === id);
+  const formattedCoords = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  const formattedAddress = `Koordinat GPS: ${formattedCoords}${
+    accuracy ? ` (±${Math.round(accuracy)}m)` : ""
+  }`;
+
+  if (existing) {
+    existing.lat = lat;
+    existing.lng = lng;
+    existing.coordinates = formattedCoords;
+    existing.address = formattedAddress;
+    saveLocalSosCache(localItems);
+  }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(
+      new CustomEvent("sigapbumi:sos-updated", {
+        detail: { id, lat, lng, coordinates: formattedCoords, address: formattedAddress },
+      })
+    );
+  }
+
+  // 1. Update di tabel sos_alerts
+  try {
+    await supabase
+      .from("sos_alerts")
+      .update({
+        location: `POINT(${lng} ${lat})`,
+      })
+      .eq("id", id);
+  } catch (err) {
+    console.warn("updateSosLocation sos_alerts error:", err);
+  }
+
+  // 2. Update di tabel reports
+  try {
+    await supabase
+      .from("reports")
+      .update({
+        location: `POINT(${lng} ${lat})`,
+        address: formattedAddress,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+  } catch (err) {
+    console.warn("updateSosLocation reports error:", err);
+  }
+
+  return { success: true };
+}
+
+
+/**
  * Mengambil daftar panggilan SOS live dari Supabase dan sinkron dengan mock/cache
  */
 export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {

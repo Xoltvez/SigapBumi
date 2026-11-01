@@ -33,6 +33,7 @@ interface AdminContextType {
   setIsSirenMuted: React.Dispatch<React.SetStateAction<boolean>>;
   triggerSiren: () => void;
   adminUser: AdminAuthSession | null;
+  updateAdminUser: (updated: Partial<AdminAuthSession>) => void;
   logout: () => void;
 }
 
@@ -48,6 +49,7 @@ const AdminContext = createContext<AdminContextType>({
   setIsSirenMuted: () => {},
   triggerSiren: () => {},
   adminUser: null,
+  updateAdminUser: () => {},
   logout: () => {},
 });
 
@@ -101,6 +103,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       // Local storage fallback
     }
   }, [isLoginPage]);
+
+  const updateAdminUser = useCallback((updated: Partial<AdminAuthSession>) => {
+    setAdminUser((prev) => {
+      if (!prev) return null;
+      const next = { ...prev, ...updated };
+      try {
+        localStorage.setItem("sigapbumi_admin_auth", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
 
   const triggerSiren = useCallback(() => {
     if (!isSirenMuted) {
@@ -233,6 +246,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         setIsSirenMuted,
         triggerSiren,
         adminUser,
+        updateAdminUser,
         logout,
       }}
     >
