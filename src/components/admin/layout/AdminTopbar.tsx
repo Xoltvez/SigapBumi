@@ -74,7 +74,7 @@ export function AdminTopbar({
   };
 
   return (
-    <header className="h-16 bg-[#131722] border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between gap-3 sticky top-0 z-20 shadow-sm select-none">
+    <header className="h-16 bg-[#131722] border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between gap-3 sticky top-0 z-20 shadow-sm select-none font-sans">
       {/* Left: Mobile Toggle, Date Pill, Search Bar */}
       <div className="flex items-center gap-3 flex-1 max-w-2xl">
         {/* Mobile / Responsive Sidebar Toggle Button */}

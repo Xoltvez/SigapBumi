@@ -48,7 +48,7 @@ export function AdminSidebar({
 
   return (
     <aside
-      className={`bg-[#131722] text-white flex flex-col shrink-0 min-h-screen transition-all duration-300 border-r border-slate-800 relative z-30 select-none ${
+      className={`bg-[#131722] text-white font-sans flex flex-col shrink-0 min-h-screen transition-all duration-300 border-r border-slate-800 relative z-30 select-none ${
         isCollapsed ? "w-[76px]" : "w-64"
       }`}
     >
@@ -74,11 +74,11 @@ export function AdminSidebar({
           </div>
 
           {!isCollapsed && (
-            <div className="truncate flex-1">
-              <span className="font-serif tracking-[0.18em] font-bold text-xs sm:text-[13px] text-amber-200 block uppercase leading-tight">
+            <div className="truncate flex-1 font-sans">
+              <span className="font-sans font-extrabold tracking-[0.14em] text-xs sm:text-[13px] text-amber-200 block uppercase leading-tight">
                 SIGAP BUMI
               </span>
-              <span className="text-[9px] tracking-[0.24em] text-slate-400 uppercase font-semibold block mt-0.5">
+              <span className="font-sans text-[9px] tracking-[0.2em] text-slate-400 uppercase font-semibold block mt-0.5">
                 POSKO TERPADU
               </span>
             </div>
