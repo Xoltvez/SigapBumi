@@ -11,6 +11,8 @@ import {
   LifeBuoy,
   ChevronDown,
   X,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 interface AdminTopbarProps {
@@ -20,11 +22,17 @@ interface AdminTopbarProps {
   onSelectUnit: (unit: string) => void;
   activeSosCount?: number;
   isLiveConnected?: boolean;
+  isSirenMuted?: boolean;
+  onToggleSiren?: () => void;
+  onTestSiren?: () => void;
 }
 
 export function AdminTopbar({
   activeUnit,
   onSelectUnit,
+  isSirenMuted = false,
+  onToggleSiren,
+  onTestSiren,
 }: AdminTopbarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -112,8 +120,33 @@ export function AdminTopbar({
         </form>
       </div>
 
-      {/* Right: Agency Unit Selector with visible prominent stroke */}
-      <div className="flex items-center">
+      {/* Right: Siren Status & Agency Unit Selector */}
+      <div className="flex items-center gap-2">
+        {onToggleSiren && (
+          <button
+            type="button"
+            onClick={onToggleSiren}
+            title={isSirenMuted ? "Sirine Dibisukan (Klik untuk Aktifkan)" : "Sirine Siaga Aktif (Klik untuk Bisukan)"}
+            className={`h-9 px-3 rounded-full border text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm transition-all ${
+              isSirenMuted
+                ? "border-slate-700 bg-slate-900/95 text-slate-400 hover:text-white"
+                : "border-red-500/80 bg-red-950/40 text-red-400 hover:bg-red-900/50"
+            }`}
+          >
+            {isSirenMuted ? (
+              <>
+                <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+                <span className="hidden md:inline">Sirine Mati</span>
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+                <span className="hidden md:inline">Sirine Aktif</span>
+              </>
+            )}
+          </button>
+        )}
+
         <div className="relative">
           <select
             value={activeUnit}

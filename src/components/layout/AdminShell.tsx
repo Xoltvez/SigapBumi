@@ -1,10 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, createContext, useContext } from "react";
+import React, { useState, useEffect, useCallback, createContext, useContext } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
+import { Siren, Volume2, VolumeX, X } from "lucide-react";
 import { AdminSidebar } from "@/components/admin/layout/AdminSidebar";
 import { AdminTopbar } from "@/components/admin/layout/AdminTopbar";
+import { playSosSiren, stopSosSiren } from "@/lib/audio/siren";
+import { supabase } from "@/lib/supabase/client";
 
 export interface AdminAuthSession {
   nip: string;
@@ -24,6 +28,9 @@ interface AdminContextType {
   setActiveSosCount: React.Dispatch<React.SetStateAction<number>>;
   isLiveConnected: boolean;
   setIsLiveConnected: React.Dispatch<React.SetStateAction<boolean>>;
+  isSirenMuted: boolean;
+  setIsSirenMuted: React.Dispatch<React.SetStateAction<boolean>>;
+  triggerSiren: () => void;
   adminUser: AdminAuthSession | null;
   logout: () => void;
 }
@@ -32,10 +39,13 @@ const AdminContext = createContext<AdminContextType>({
   activeUnit: "semua",
   setActiveUnit: () => {},
   activeUnitName: "Posko Terpadu (Semua)",
-  activeSosCount: 2,
+  activeSosCount: 0,
   setActiveSosCount: () => {},
   isLiveConnected: true,
   setIsLiveConnected: () => {},
+  isSirenMuted: false,
+  setIsSirenMuted: () => {},
+  triggerSiren: () => {},
   adminUser: null,
   logout: () => {},
 });
@@ -48,8 +58,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const [activeUnit, setActiveUnit] = useState<string>("semua");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
-  const [activeSosCount, setActiveSosCount] = useState<number>(2);
+  const [activeSosCount, setActiveSosCount] = useState<number>(0);
   const [isLiveConnected, setIsLiveConnected] = useState<boolean>(true);
+  const [isSirenMuted, setIsSirenMuted] = useState<boolean>(false);
+  const [emergencyNotice, setEmergencyNotice] = useState<{
+    id: string;
+    text: string;
+    time: string;
+  } | null>(null);
   const [adminUser, setAdminUser] = useState<AdminAuthSession | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
 
@@ -80,6 +96,68 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       router.replace(`/admin/login?redirect=${encodeURIComponent(pathname)}`);
     }
   }, [isLoginPage, pathname, router]);
+
+  const triggerSiren = useCallback(() => {
+    if (!isSirenMuted) {
+      playSosSiren(4, 0.4);
+    }
+  }, [isSirenMuted]);
+
+  // Realtime channel listener untuk mendeteksi sinyal SOS baru secara global di dashboard
+  useEffect(() => {
+    if (isLoginPage) return;
+
+    const handleIncomingSos = (e?: CustomEvent<{ id?: string; assistanceType?: string }>) => {
+      setActiveSosCount((prev) => prev + 1);
+      triggerSiren();
+      setEmergencyNotice({
+        id: e?.detail?.id || `sos-${Date.now()}`,
+        text: `Panggilan Darurat Baru Masuk${
+          e?.detail?.assistanceType ? ` (Bantuan: ${e.detail.assistanceType.toUpperCase()})` : ""
+        }! Segera lakukan respons taktis.`,
+        time: "Baru saja",
+      });
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("sigapbumi:sos-created", handleIncomingSos as EventListener);
+    }
+
+    const channel = supabase
+      .channel("admin_shell_sos_siren")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "sos_alerts" },
+        (payload) => {
+          handleIncomingSos({
+            detail: {
+              id: payload.new?.id,
+              assistanceType: payload.new?.assistance_type,
+            },
+          } as unknown as CustomEvent);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "reports" },
+        (payload) => {
+          const row = payload.new;
+          if (row?.tracking_code?.startsWith("SOS-") || row?.title?.includes("SOS")) {
+            handleIncomingSos({
+              detail: { id: row?.id },
+            } as unknown as CustomEvent);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("sigapbumi:sos-created", handleIncomingSos as EventListener);
+      }
+      supabase.removeChannel(channel);
+    };
+  }, [isLoginPage, triggerSiren]);
 
   const logout = () => {
     try {
@@ -135,11 +213,65 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         setActiveSosCount,
         isLiveConnected,
         setIsLiveConnected,
+        isSirenMuted,
+        setIsSirenMuted,
+        triggerSiren,
         adminUser,
         logout,
       }}
     >
-      <div className="flex h-screen w-full bg-bg text-ink overflow-hidden">
+      <div className="flex h-screen w-full bg-bg text-ink overflow-hidden relative">
+        {/* Banner Darurat Mengambang Saat Ada Panggilan SOS Baru */}
+        {emergencyNotice && (
+          <div className="fixed top-4 right-4 z-50 max-w-md w-full bg-danger text-white p-4 rounded-xl shadow-2xl border-2 border-white/30 animate-pulse flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-white/20 rounded-full shrink-0">
+                <Siren className="w-5 h-5 text-white animate-bounce" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-sm uppercase tracking-wide flex items-center gap-1.5">
+                  <span>🚨 SIAGA SOS MASUK</span>
+                  <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono">
+                    {emergencyNotice.time}
+                  </span>
+                </h4>
+                <p className="text-xs text-white/90 mt-1 leading-snug">
+                  {emergencyNotice.text}
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <Link
+                    href="/admin/sos"
+                    onClick={() => setEmergencyNotice(null)}
+                    className="px-3 py-1.5 rounded-md bg-white text-danger font-bold text-xs hover:bg-slate-100 transition-colors shadow-sm"
+                  >
+                    Buka Radar SOS
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopSosSiren();
+                      setEmergencyNotice(null);
+                    }}
+                    className="px-2.5 py-1.5 rounded-md bg-white/20 hover:bg-white/30 text-white font-semibold text-xs transition-colors"
+                  >
+                    Hentikan Sirine
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                stopSosSiren();
+                setEmergencyNotice(null);
+              }}
+              className="p-1 hover:bg-white/20 rounded text-white/80 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Collapsible Left Dark Sidebar */}
         <React.Suspense fallback={<div className="w-64 bg-[#131722] min-h-screen shrink-0" />}>
           <AdminSidebar
@@ -158,6 +290,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             onSelectUnit={setActiveUnit}
             activeSosCount={activeSosCount}
             isLiveConnected={isLiveConnected}
+            isSirenMuted={isSirenMuted}
+            onToggleSiren={() => setIsSirenMuted((prev) => !prev)}
+            onTestSiren={() => playSosSiren(2, 0.35)}
           />
           <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-bg text-ink">
             {children}

@@ -22,13 +22,32 @@ import {
 import { useAdmin } from "@/components/layout/AdminShell";
 import type { SosAssistanceType } from "@/types";
 import { fetchLiveSosAlerts, updateSosAlertStatus, type LiveSosItem } from "@/lib/services/sos";
+import { playSosSiren, stopSosSiren } from "@/lib/audio/siren";
 import { supabase } from "@/lib/supabase/client";
 
 export default function AdminSosPage() {
-  const { activeUnit, activeUnitName, setActiveSosCount } = useAdmin();
+  const { activeUnit, activeUnitName, setActiveSosCount, isSirenMuted, setIsSirenMuted } = useAdmin();
   const [emergencies, setEmergencies] = useState<LiveSosItem[]>([]);
-  const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(isSirenMuted);
   const [filterTab, setFilterTab] = useState<"semua" | "aktif" | "ditangani" | "palsu">("semua");
+  const knownIdsRef = React.useRef<Set<string>>(new Set());
+  const isFirstLoadRef = React.useRef<boolean>(true);
+
+  // Sinkronkan state mute dengan context
+  useEffect(() => {
+    setIsMuted(isSirenMuted);
+  }, [isSirenMuted]);
+
+  const toggleMute = () => {
+    setIsMuted((prev) => {
+      const next = !prev;
+      setIsSirenMuted(next);
+      if (next) {
+        stopSosSiren();
+      }
+      return next;
+    });
+  };
 
   const loadData = useCallback(async () => {
     try {
@@ -44,13 +63,27 @@ export default function AdminSosPage() {
           e.id !== "sos-sample" &&
           !e.address?.includes("Citra 2")
       );
+
+      // Cek apakah ada panggilan SOS baru aktif yang belum pernah terdengar
+      const hasNewIncomingActive = cleanReal.some(
+        (e) => e.status === "aktif" && !knownIdsRef.current.has(e.id)
+      );
+
+      if (!isFirstLoadRef.current && hasNewIncomingActive && !isMuted) {
+        playSosSiren(4, 0.4);
+      }
+
+      // Perbarui daftar ID yang telah diketahui
+      cleanReal.forEach((e) => knownIdsRef.current.add(e.id));
+      isFirstLoadRef.current = false;
+
       setEmergencies(cleanReal);
       const activeCount = cleanReal.filter((e) => e.status === "aktif").length;
       setActiveSosCount(activeCount);
     } catch (err) {
       console.warn("Gagal memuat panggilan SOS:", err);
     }
-  }, [setActiveSosCount]);
+  }, [setActiveSosCount, isMuted]);
 
   useEffect(() => {
     // Bersihkan cache lokal dari sisa demo mock sebelumnya
@@ -212,11 +245,21 @@ export default function AdminSosPage() {
           </p>
         </div>
 
-        {/* Audio Mute/Unmute toggle */}
+        {/* Audio Mute/Unmute & Test Siren buttons */}
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsMuted((prev) => !prev)}
+            onClick={() => playSosSiren(2, 0.4)}
+            className="h-10 px-3.5 rounded-md border border-line bg-surface hover:bg-bg text-ink text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors"
+            title="Dengarkan contoh suara sirine darurat"
+          >
+            <Volume2 className="w-3.5 h-3.5 text-danger" />
+            <span>Uji Bunyi Sirine</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleMute}
             className={`h-10 px-4 rounded-md border text-xs font-semibold inline-flex items-center gap-2 transition-colors ${
               isMuted
                 ? "border-line bg-surface text-ink hover:bg-bg"
