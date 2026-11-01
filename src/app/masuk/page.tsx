@@ -18,6 +18,7 @@ import {
   setCurrentUser,
   logoutUser,
   subscribeToAuth,
+  getFirstName,
   UserSession,
 } from "@/lib/auth";
 import { supabase } from "@/lib/supabase/client";
@@ -55,17 +56,46 @@ export default function MasukPage() {
         console.warn("Supabase auth login fallback/notice:", authError.message);
       }
 
-      // Ambil metadata jika ada dari Supabase
-      const userName =
-        authData?.user?.user_metadata?.full_name ||
-        email.split("@")[0].replace(/[._]/g, " ");
+      // Cari nama resmi warga: 1) Metadata Supabase, 2) DB Profiles, 3) localStorage, 4) Bersihkan email
+      let resolvedName = authData?.user?.user_metadata?.full_name;
 
-      const capitalizedName =
-        userName.charAt(0).toUpperCase() + userName.slice(1);
+      if (!resolvedName && authData?.user?.id) {
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", authData.user.id)
+            .maybeSingle();
+          if (profile?.full_name) {
+            resolvedName = profile.full_name;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!resolvedName && typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("sigapbumi_current_user");
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.email === email.trim() && parsed.full_name) {
+              resolvedName = parsed.full_name;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!resolvedName) {
+        resolvedName = email.split("@")[0].replace(/[0-9]/g, "").replace(/[._-]/g, " ").trim();
+        resolvedName = resolvedName ? resolvedName.charAt(0).toUpperCase() + resolvedName.slice(1) : "Warga";
+      }
 
       const userSession: UserSession = {
         id: authData?.user?.id || `warga-${Date.now()}`,
-        full_name: capitalizedName,
+        full_name: resolvedName,
         email: email.trim(),
         role: "warga",
         loginAt: new Date().toISOString(),
@@ -76,10 +106,11 @@ export default function MasukPage() {
     } catch (err) {
       console.error("Login error:", err);
       // Fallback tetap izinkan sesi login tersimpan
-      const userName = email.split("@")[0];
+      const cleanEmailName = email.split("@")[0].replace(/[0-9]/g, "").replace(/[._-]/g, " ").trim();
+      const fallbackName = cleanEmailName ? cleanEmailName.charAt(0).toUpperCase() + cleanEmailName.slice(1) : "Warga";
       const userSession: UserSession = {
         id: `warga-${Date.now()}`,
-        full_name: userName.charAt(0).toUpperCase() + userName.slice(1),
+        full_name: fallbackName,
         email: email.trim(),
         role: "warga",
         loginAt: new Date().toISOString(),
@@ -130,7 +161,7 @@ export default function MasukPage() {
                 ● Sedang Masuk
               </span>
               <h2 className="text-base font-bold text-ink">
-                Halo, {currentUser.full_name}!
+                Halo, {getFirstName(currentUser.full_name)}!
               </h2>
               <p className="text-xs text-ink-soft mt-1">
                 Anda telah masuk dengan email:{" "}

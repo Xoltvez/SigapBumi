@@ -17,6 +17,7 @@ import {
   getCurrentUser,
   subscribeToAuth,
   logoutUser,
+  getFirstName,
   UserSession,
 } from "@/lib/auth";
 
@@ -25,6 +26,8 @@ export function Header() {
   const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const firstName = currentUser ? getFirstName(currentUser.full_name) : "";
 
   useEffect(() => {
     setCurrentUser(getCurrentUser());
@@ -142,13 +145,13 @@ export function Header() {
               >
                 <div className="relative">
                   <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] sm:text-xs font-bold uppercase">
-                    {currentUser.full_name?.charAt(0) || "W"}
+                    {firstName.charAt(0) || "W"}
                   </div>
                   <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-success ring-1 ring-surface" />
                 </div>
                 <div className="hidden sm:flex flex-col text-left leading-tight">
-                  <span className="text-xs font-bold text-ink max-w-[90px] truncate">
-                    {currentUser.full_name?.split(" ")[0]}
+                  <span className="text-xs font-bold text-ink max-w-[85px] truncate">
+                    {firstName}
                   </span>
                   <span className="text-[10px] text-primary font-medium">
                     Warga Aktif

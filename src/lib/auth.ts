@@ -60,3 +60,29 @@ export function subscribeToAuth(callback: (user: UserSession | null) => void): (
     window.removeEventListener("storage", handleUpdate);
   };
 }
+
+export function getFirstName(fullName?: string): string {
+  if (!fullName) return "Warga";
+
+  // 1. Pisahkan camelCase jika ada (misal FaizAzzahra -> Faiz Azzahra)
+  const withSpaces = fullName.replace(/([a-z])([A-Z])/g, "$1 $2");
+
+  // 2. Ambil kata pertama berdasarkan pemisah spasi, titik, underscore, tanda minus
+  let first = withSpaces.trim().split(/[\s._-]+/)[0] || "";
+
+  // 3. Buang angka (misal Faizazzahra88 -> Faizazzahra)
+  first = first.replace(/[0-9]/g, "").trim();
+
+  // 4. Deteksi gabungan nama depan populer jika berasal dari username email tanpa spasi
+  const compoundMatch = first.match(
+    /^(faiz|muhamm?ad|ahmad|siti|nur|adi|dwi|tri|arya|bayu|budi|rizky|dimas|agus|dewi|putri|eka|fajar|ilham|reza|yoga|kevin|david)(.+)$/i
+  );
+  if (compoundMatch && compoundMatch[1]) {
+    first = compoundMatch[1];
+  }
+
+  if (!first) return "Warga";
+
+  // Format Titlecase
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
