@@ -376,39 +376,39 @@ export default function HomePage() {
                 <div className="flex items-center gap-2.5">
                   {/* Overlapping Citizen Avatars */}
                   <div className="flex -space-x-2 overflow-hidden shrink-0">
-                    <div className="relative inline-block h-7 w-7 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-xs">
+                    <div className="relative inline-block h-8 w-8 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-sm">
                       <Image
-                        src="/avatars/avatar-1.svg"
+                        src="/avatars/avatar-1.png"
                         alt="Foto Profil Warga Pelapor 1"
-                        width={28}
-                        height={28}
+                        width={32}
+                        height={32}
                         className="object-cover h-full w-full"
                       />
                     </div>
-                    <div className="relative inline-block h-7 w-7 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-xs">
+                    <div className="relative inline-block h-8 w-8 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-sm">
                       <Image
-                        src="/avatars/avatar-2.svg"
+                        src="/avatars/avatar-2.png"
                         alt="Foto Profil Warga Pelapor 2"
-                        width={28}
-                        height={28}
+                        width={32}
+                        height={32}
                         className="object-cover h-full w-full"
                       />
                     </div>
-                    <div className="relative inline-block h-7 w-7 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-xs">
+                    <div className="relative inline-block h-8 w-8 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-sm">
                       <Image
-                        src="/avatars/avatar-3.svg"
+                        src="/avatars/avatar-3.png"
                         alt="Foto Profil Warga Pelapor 3"
-                        width={28}
-                        height={28}
+                        width={32}
+                        height={32}
                         className="object-cover h-full w-full"
                       />
                     </div>
-                    <div className="relative inline-block h-7 w-7 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-xs">
+                    <div className="relative inline-block h-8 w-8 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-sm">
                       <Image
-                        src="/avatars/avatar-4.svg"
+                        src="/avatars/avatar-4.png"
                         alt="Foto Profil Warga Pelapor 4"
-                        width={28}
-                        height={28}
+                        width={32}
+                        height={32}
                         className="object-cover h-full w-full"
                       />
                     </div>
