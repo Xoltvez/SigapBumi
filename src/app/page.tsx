@@ -74,7 +74,7 @@ export default function HomePage() {
     }
   };
 
-  // Metrics
+  // Metrics for hero status
   const totalCount = DEFAULT_MOCK_REPORTS.length;
   const resolvedCount = DEFAULT_MOCK_REPORTS.filter((r) => r.status === "selesai").length;
   const resolvedRate = ((resolvedCount / totalCount) * 100).toFixed(1);
@@ -597,87 +597,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. Statistik Transparansi & Efektivitas Tanggap Bencana */}
-      <section aria-labelledby="stats-title" className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
-          <div>
-            <h2 id="stats-title" className="text-xl md:text-2xl font-bold text-ink">
-              Ringkasan Penanganan & Efektivitas Posko
-            </h2>
-            <p className="text-xs sm:text-sm text-ink-soft mt-1">
-              Data agregat dihitung secara transparan dari laporan terverifikasi di seluruh Indonesia
-            </p>
-          </div>
-
-          <Link
-            href="/statistik"
-            className="text-xs sm:text-sm font-bold text-primary hover:text-primary-hover inline-flex items-center gap-1 self-start sm:self-auto"
-          >
-            <span>Buka Analitik Lengkap</span>
-            <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1 */}
-          <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
-              Total Laporan Terdata
-            </span>
-            <p className="text-3xl sm:text-4xl font-extrabold text-ink mt-3 tabular-nums">
-              {totalCount}
-            </p>
-            <div className="mt-3 pt-2 border-t border-line text-xs font-semibold text-success flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-              <span>{resolvedRate}% Laporan Berhasil Ditangani</span>
-            </div>
-          </div>
-
-          {/* Card 2 */}
-          <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
-              Target Respons Awal
-            </span>
-            <p className="text-3xl sm:text-4xl font-extrabold text-ink mt-3 tabular-nums">
-              18 <span className="text-base font-normal text-ink-soft">menit</span>
-            </p>
-            <div className="mt-3 pt-2 border-t border-line text-xs text-ink-soft flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-primary" />
-              <span>Standar Verifikasi Posko Komando</span>
-            </div>
-          </div>
-
-          {/* Card 3 */}
-          <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
-              Cakupan Wilayah Siaga
-            </span>
-            <p className="text-3xl sm:text-4xl font-extrabold text-ink mt-3 tabular-nums">
-              9 <span className="text-base font-normal text-ink-soft">provinsi</span>
-            </p>
-            <div className="mt-3 pt-2 border-t border-line text-xs text-ink-soft flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-primary" />
-              <span>Jaringan Posko Terpadu Nasional</span>
-            </div>
-          </div>
-
-          {/* Card 4 */}
-          <div className="bg-gradient-to-br from-primary-soft to-orange-100/60 border border-primary/20 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-primary-text">
-              Status Sistem Darurat
-            </span>
-            <p className="text-2xl sm:text-3xl font-extrabold text-primary-text mt-3">
-              100% Aktif
-            </p>
-            <div className="mt-3 pt-2 border-t border-primary/20 text-xs font-bold text-primary-text flex items-center gap-1.5">
-              <Radio className="w-3.5 h-3.5 text-primary animate-pulse" />
-              <span>Sinkronisasi Realtime Terhubung</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. Citizen Preparedness Bento Grid: Interactive TSB & Steps */}
+      {/* 5. Citizen Preparedness Bento Grid: Interactive TSB & Steps */}
       <section aria-labelledby="edukasi-title" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
