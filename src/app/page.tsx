@@ -175,12 +175,6 @@ export default function HomePage() {
         <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
           {/* Left Column: Headline, Description, Quick Tracking Form & Primary CTAs */}
           <div className="lg:col-span-7 flex flex-col items-start space-y-6">
-            {/* Trust Pill */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-soft border border-primary/20 text-xs font-semibold text-primary-text shadow-xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-              <span>Sistem Tanggap Bencana & Posko Terpadu Indonesia</span>
-            </div>
-
             {/* Main Headline */}
             <div>
               <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-ink leading-[1.18] tracking-tight">
