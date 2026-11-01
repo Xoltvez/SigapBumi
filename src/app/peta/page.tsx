@@ -146,9 +146,6 @@ export default function PetaPage() {
               <Layers className="w-6 h-6 text-primary" />
               <span>Peta Bencana Publik Terbuka</span>
             </h1>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-hover border border-primary/20">
-              {isLiveConnected ? "Terhubung ke Database Posko" : "Data Demonstrasi & Riil"}
-            </span>
           </div>
           <p className="text-xs text-ink-soft mt-0.5">
             Peta sebaran laporan kebencanaan dan titik panggilan darurat SOS terverifikasi di seluruh wilayah.
