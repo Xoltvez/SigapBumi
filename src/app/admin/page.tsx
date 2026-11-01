@@ -22,7 +22,7 @@ import { PriorityBadge } from "@/components/admin/common/PriorityBadge";
 import type { ReportStatus, DisasterType, SosAssistanceType, PriorityLabel } from "@/types";
 import { supabase } from "@/lib/supabase/client";
 import { fetchLiveReports, DEFAULT_MOCK_REPORTS } from "@/lib/services/reports";
-import { fetchLiveSosAlerts, DEFAULT_MOCK_SOS } from "@/lib/services/sos";
+import { fetchLiveSosAlerts } from "@/lib/services/sos";
 
 interface AdminReportItem {
   id: string;
@@ -48,24 +48,7 @@ interface SosAlertItem {
   created_at: string;
 }
 
-const INITIAL_SOS_ALERTS: SosAlertItem[] = DEFAULT_MOCK_SOS.filter(
-  (s) => s.status !== "selesai"
-)
-  .map((s) => ({
-    id: s.id,
-    sender_name: s.source,
-    assistance_type: s.assistance_type,
-    location: s.address,
-    coordinates: s.coordinates,
-    time: s.time_ago,
-    status: s.status as "aktif" | "ditangani",
-    created_at: s.created_at,
-  }))
-  .sort((a, b) => {
-    const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-    const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-    return timeB - timeA;
-  });
+const INITIAL_SOS_ALERTS: SosAlertItem[] = [];
 
 const INITIAL_REPORTS: AdminReportItem[] = DEFAULT_MOCK_REPORTS.map((r) => {
   let pLabel: PriorityLabel = "Sedang";
@@ -123,10 +106,20 @@ export default function AdminRingkasanPage() {
           setIsLiveConnected(true);
         }
 
-        // Muat live SOS
+        // Muat live SOS (hanya data darurat riil warga)
         const liveSos = await fetchLiveSosAlerts();
-        if (isMounted && liveSos && liveSos.length > 0) {
-          const activeOnly = liveSos.filter((s) => s.status !== "selesai");
+        if (isMounted) {
+          const cleanSos = (liveSos || []).filter(
+            (s) =>
+              s &&
+              s.id &&
+              !s.id.startsWith("sos-10") &&
+              s.id !== "sos-1" &&
+              s.id !== "sos-2" &&
+              s.id !== "sos-sample" &&
+              !s.address?.includes("Citra 2")
+          );
+          const activeOnly = cleanSos.filter((s) => s.status !== "selesai");
           setSosAlerts(
             activeOnly
               .map((s) => ({

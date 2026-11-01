@@ -19,7 +19,7 @@ import {
   reportsToMapPoints,
   fetchLiveReports,
 } from "@/lib/services/reports";
-import { DEFAULT_MOCK_SOS, fetchLiveSosAlerts } from "@/lib/services/sos";
+import { fetchLiveSosAlerts } from "@/lib/services/sos";
 
 // Dynamic import for Leaflet client component
 const DisasterMap = dynamic(() => import("@/components/peta/DisasterMap"), {
@@ -48,23 +48,7 @@ const PROVINCE_OPTIONS = [
 
 export default function AdminPetaPage() {
   const [points, setPoints] = useState<MapPoint[]>(() => {
-    const reportPoints = reportsToMapPoints(DEFAULT_MOCK_REPORTS);
-    const sosPoints: MapPoint[] = DEFAULT_MOCK_SOS.filter((s) => s.status === "aktif").map((s) => ({
-      id: s.id,
-      tracking_code: `SOS-${s.id.toUpperCase()}`,
-      disaster_type: "banjir",
-      title: `Panggilan Darurat: Bantuan ${s.assistance_type.toUpperCase()}`,
-      location_name: s.address,
-      lat: s.lat,
-      lng: s.lng,
-      status: "ditindaklanjuti" as ReportStatus,
-      created_at: s.time_ago,
-      confirmation_count: 1,
-      is_sos: true,
-      is_demo: true,
-      province: s.address.includes("Jakarta") ? "DKI Jakarta" : "Jawa Barat",
-    }));
-    return [...sosPoints, ...reportPoints];
+    return reportsToMapPoints(DEFAULT_MOCK_REPORTS);
   });
 
   const [selectedPointId, setSelectedPointId] = useState<string | undefined>(undefined);
@@ -83,8 +67,16 @@ export default function AdminPetaPage() {
 
         if (isMounted && liveReports && liveReports.length > 0) {
           const reportPoints = reportsToMapPoints(liveReports);
-          const activeSos = (liveSos || DEFAULT_MOCK_SOS)
-            .filter((s) => s.status === "aktif")
+          const activeSos = (liveSos || [])
+            .filter(
+              (s) =>
+                s.status === "aktif" &&
+                !s.id.startsWith("sos-10") &&
+                s.id !== "sos-1" &&
+                s.id !== "sos-2" &&
+                s.id !== "sos-sample" &&
+                !s.address?.includes("Citra 2")
+            )
             .sort((a, b) => {
               const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
               const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;

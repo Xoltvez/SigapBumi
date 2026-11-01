@@ -19,62 +19,34 @@ export interface LiveSosItem {
   created_at: string;
 }
 
-export const DEFAULT_MOCK_SOS: LiveSosItem[] = [
-  {
-    id: "sos-101",
-    source: "Ponsel Warga (GPS Sensor)",
-    assistance_type: "damkar",
-    address: "Perumahan Citra 2 Blok B4, Kalideres, Jakarta Barat",
-    coordinates: "-6.1552, 106.7231",
-    lat: -6.1552,
-    lng: 106.7231,
-    time_ago: "1 menit lalu",
-    battery_level: "34%",
-    status: "aktif",
-    phone_number: "0812-8877-6655",
-    created_at: new Date(Date.now() - 60000).toISOString(),
-  },
-  {
-    id: "sos-102",
-    source: "Ponsel Warga (GPS Sensor)",
-    assistance_type: "medis",
-    address: "Jalan Puncak Raya KM 82, Desa Tugu Selatan, Bogor",
-    coordinates: "-6.6984, 106.9425",
-    lat: -6.6984,
-    lng: 106.9425,
-    time_ago: "6 menit lalu",
-    battery_level: "68%",
-    status: "aktif",
-    phone_number: "0857-1234-9876",
-    created_at: new Date(Date.now() - 360000).toISOString(),
-  },
-  {
-    id: "sos-103",
-    source: "Ponsel Warga (GPS Sensor)",
-    assistance_type: "polisi",
-    address: "Akses Jembatan Kali Sunter, Jakarta Utara",
-    coordinates: "-6.1492, 106.8041",
-    lat: -6.1492,
-    lng: 106.8041,
-    time_ago: "15 menit lalu",
-    battery_level: "82%",
-    status: "ditangani",
-    phone_number: undefined,
-    dispatched_team: "Patroli Polsek Tanjung Priok",
-    created_at: new Date(Date.now() - 900000).toISOString(),
-  },
-];
+export const DEFAULT_MOCK_SOS: LiveSosItem[] = [];
 
 const LOCAL_STORAGE_SOS_KEY = "sigapbumi_sos_alerts_cache";
 
 /**
- * Mengambil daftar sinyal SOS dari cache lokal
+ * Mengambil daftar sinyal SOS dari cache lokal (hanya data riil dari warga)
  */
 function getLocalSosCache(): LiveSosItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_SOS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed: LiveSosItem[] = JSON.parse(raw);
+    // Hapus data demo/mock agar hanya data darurat riil yang tersimpan
+    const realOnly = parsed.filter(
+      (item) =>
+        item &&
+        item.id &&
+        !item.id.startsWith("sos-10") &&
+        item.id !== "sos-1" &&
+        item.id !== "sos-2" &&
+        item.id !== "sos-sample" &&
+        !item.address?.includes("Citra 2")
+    );
+    if (realOnly.length !== parsed.length) {
+      localStorage.setItem(LOCAL_STORAGE_SOS_KEY, JSON.stringify(realOnly));
+    }
+    return realOnly;
   } catch {
     return [];
   }
@@ -409,22 +381,41 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
     console.warn("fetchLiveSosAlerts from reports error:", err);
   }
 
-  // Gabungkan hasil: Supabase live + Local Cache + Default Mock
+  // Gabungkan hasil: Supabase live + Local Cache (HANYA DATA RIIL WARGA)
   const mergedMap = new Map<string, LiveSosItem>();
 
-  // 1. Masukkan default mock
-  DEFAULT_MOCK_SOS.forEach((item) => mergedMap.set(item.id, item));
+  // 1. Masukkan sinyal darurat riil dari local cache
+  localItems.forEach((item) => {
+    if (
+      item &&
+      item.id &&
+      !item.id.startsWith("sos-10") &&
+      item.id !== "sos-1" &&
+      item.id !== "sos-2" &&
+      item.id !== "sos-sample" &&
+      !item.address?.includes("Citra 2")
+    ) {
+      mergedMap.set(item.id, item);
+    }
+  });
 
-  // 2. Timpa dengan local items
-  localItems.forEach((item) => mergedMap.set(item.id, item));
-
-  // 3. Timpa dengan supabase items (ground truth jika ada)
+  // 2. Timpa dengan sinyal darurat riil dari Supabase
   supabaseItems.forEach((item) => {
-    const prev = mergedMap.get(item.id);
-    mergedMap.set(item.id, {
-      ...item,
-      phone_number: item.phone_number || prev?.phone_number,
-    });
+    if (
+      item &&
+      item.id &&
+      !item.id.startsWith("sos-10") &&
+      item.id !== "sos-1" &&
+      item.id !== "sos-2" &&
+      item.id !== "sos-sample" &&
+      !item.address?.includes("Citra 2")
+    ) {
+      const prev = mergedMap.get(item.id);
+      mergedMap.set(item.id, {
+        ...item,
+        phone_number: item.phone_number || prev?.phone_number,
+      });
+    }
   });
 
   const sorted = Array.from(mergedMap.values()).sort((a, b) => {
@@ -468,17 +459,6 @@ export async function updateSosAlertStatus(
     existing.status = newStatus;
     if (dispatchedTeam) existing.dispatched_team = dispatchedTeam;
     saveLocalSosCache(localItems);
-  } else {
-    // Cari dari default mock jika belum di cache
-    const mockFound = DEFAULT_MOCK_SOS.find((x) => x.id === id);
-    if (mockFound) {
-      const updated = {
-        ...mockFound,
-        status: newStatus,
-        dispatched_team: dispatchedTeam || mockFound.dispatched_team,
-      };
-      saveLocalSosCache([updated, ...localItems]);
-    }
   }
 
   // Coba update ke Supabase

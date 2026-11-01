@@ -74,30 +74,7 @@ export function saveLocalReport(report: LiveReportItem): void {
 // Dataset awal terstruktur 90 kejadian bencana di seluruh Indonesia
 export const DEFAULT_MOCK_REPORTS: LiveReportItem[] = MASTER_MOCK_REPORTS;
 
-export const DEFAULT_MOCK_SOS: LiveSosAlertItem[] = [
-  {
-    id: "sos-1",
-    sender_name: "Warga Kalideres (via GPS)",
-    assistance_type: "damkar",
-    location: "Kelurahan Semanan, Kalideres, Jakarta Barat",
-    coordinates: "-6.155, 106.723",
-    lat: -6.155,
-    lng: 106.723,
-    time: "2 menit lalu",
-    status: "aktif",
-  },
-  {
-    id: "sos-2",
-    sender_name: "Warga Cisarua (via GPS)",
-    assistance_type: "medis",
-    location: "Jalan Raya Puncak KM 82, Cisarua, Bogor",
-    coordinates: "-6.698, 106.942",
-    lat: -6.698,
-    lng: 106.942,
-    time: "8 menit lalu",
-    status: "aktif",
-  },
-];
+export const DEFAULT_MOCK_SOS: LiveSosAlertItem[] = [];
 
 /**
  * Menentukan instansi terkait berdasarkan tipe bencana

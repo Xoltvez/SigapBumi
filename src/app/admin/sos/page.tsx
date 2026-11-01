@@ -21,29 +21,62 @@ import {
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import type { SosAssistanceType } from "@/types";
-import { fetchLiveSosAlerts, updateSosAlertStatus, DEFAULT_MOCK_SOS, type LiveSosItem } from "@/lib/services/sos";
+import { fetchLiveSosAlerts, updateSosAlertStatus, type LiveSosItem } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
 
 export default function AdminSosPage() {
   const { activeUnit, activeUnitName, setActiveSosCount } = useAdmin();
-  const [emergencies, setEmergencies] = useState<LiveSosItem[]>(DEFAULT_MOCK_SOS);
+  const [emergencies, setEmergencies] = useState<LiveSosItem[]>([]);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [filterTab, setFilterTab] = useState<"semua" | "aktif" | "ditangani" | "palsu">("semua");
 
   const loadData = useCallback(async () => {
     try {
       const live = await fetchLiveSosAlerts();
-      if (live && live.length > 0) {
-        setEmergencies(live);
-        const activeCount = live.filter((e) => e.status === "aktif").length;
-        setActiveSosCount(activeCount);
-      }
+      // Pastikan HANYA data SOS riil (bukan mock/demo lama)
+      const cleanReal = (live || []).filter(
+        (e) =>
+          e &&
+          e.id &&
+          !e.id.startsWith("sos-10") &&
+          e.id !== "sos-1" &&
+          e.id !== "sos-2" &&
+          e.id !== "sos-sample" &&
+          !e.address?.includes("Citra 2")
+      );
+      setEmergencies(cleanReal);
+      const activeCount = cleanReal.filter((e) => e.status === "aktif").length;
+      setActiveSosCount(activeCount);
     } catch (err) {
       console.warn("Gagal memuat panggilan SOS:", err);
     }
   }, [setActiveSosCount]);
 
   useEffect(() => {
+    // Bersihkan cache lokal dari sisa demo mock sebelumnya
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("sigapbumi_sos_alerts_cache");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(
+              (item: LiveSosItem) =>
+                item &&
+                item.id &&
+                !item.id.startsWith("sos-10") &&
+                item.id !== "sos-1" &&
+                item.id !== "sos-2" &&
+                item.id !== "sos-sample" &&
+                !item.address?.includes("Citra 2")
+            );
+            localStorage.setItem("sigapbumi_sos_alerts_cache", JSON.stringify(clean));
+          }
+        }
+      } catch {
+        // Abaikan
+      }
+    }
     const timer = setTimeout(() => {
       loadData();
     }, 0);
@@ -255,7 +288,18 @@ export default function AdminSosPage() {
 
       {/* Emergency Radar Cards Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filteredEmergencies.map((emg) => {
+        {filteredEmergencies.length === 0 ? (
+          <div className="col-span-full py-16 px-6 text-center rounded-xl bg-surface border border-line flex flex-col items-center justify-center shadow-xs">
+            <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8 text-success" />
+            </div>
+            <h3 className="text-base font-bold text-ink">Tidak Ada Panggilan Darurat SOS Aktif</h3>
+            <p className="text-xs text-ink-muted max-w-md mt-1.5 leading-relaxed">
+              Semua sinyal darurat warga telah ditangani, atau belum ada warga yang memicu panggilan darurat saat ini. Layanan radar siaga siap menerima laporan riil warga secara live.
+            </p>
+          </div>
+        ) : (
+          filteredEmergencies.map((emg) => {
           const isPending = emg.status === "aktif";
           const isHandling = emg.status === "ditangani";
           const isFinished = emg.status === "selesai";
@@ -479,7 +523,8 @@ export default function AdminSosPage() {
               </div>
             </div>
           );
-        })}
+        })
+        )}
       </div>
     </div>
   );

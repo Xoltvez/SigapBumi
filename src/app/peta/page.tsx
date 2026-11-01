@@ -35,27 +35,7 @@ const DisasterMap = dynamic(() => import("@/components/peta/DisasterMap"), {
   ),
 });
 
-const SOS_SAMPLE_POINT: MapPoint = {
-  id: "sos-1",
-  tracking_code: "SOS-DARURAT-01",
-  disaster_type: "banjir",
-  title: "Panggilan Darurat: Butuh Evakuasi Lansia & Bayi",
-  location_name: "Duri Kosambi, Jakarta Barat",
-  lat: -6.168,
-  lng: 106.719,
-  status: "ditindaklanjuti",
-  created_at: "5 menit lalu",
-  confirmation_count: 0,
-  is_sos: true,
-  is_demo: true,
-  province: "DKI Jakarta",
-  regency: "Jakarta Barat",
-};
-
-const INITIAL_POINTS: MapPoint[] = [
-  SOS_SAMPLE_POINT,
-  ...reportsToMapPoints(DEFAULT_MOCK_REPORTS),
-];
+const INITIAL_POINTS: MapPoint[] = reportsToMapPoints(DEFAULT_MOCK_REPORTS);
 
 function PetaContent() {
   const searchParams = useSearchParams();
@@ -131,7 +111,7 @@ function PetaContent() {
         const liveReports = await fetchLiveReports();
         if (isMounted && liveReports && liveReports.length > 0) {
           const mapPoints = reportsToMapPoints(liveReports);
-          setPoints([SOS_SAMPLE_POINT, ...mapPoints]);
+          setPoints(mapPoints);
           setIsLiveConnected(true);
         }
       } catch (err) {
