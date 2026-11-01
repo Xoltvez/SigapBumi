@@ -111,15 +111,8 @@ export function AdminSidebar({
               ? pathname === "/admin"
               : pathname.startsWith(item.href);
 
-          const isBlueActive =
-            item.href === "/admin/laporan" ||
-            item.href === "/admin/sos" ||
-            item.href === "/admin/peta" ||
-            item.href === "/admin/statistik";
-          const activeClasses = isBlueActive
-            ? "bg-[#EFF6FF] text-[#2563EB] font-semibold"
-            : "bg-[#FFF4EC] text-[#EA580C] font-semibold";
-          const iconActiveColor = isBlueActive ? "text-[#2563EB]" : "text-[#EA580C]";
+          const activeClasses = "bg-[#FFF4EC] text-[#EA580C] font-semibold";
+          const iconActiveColor = "text-[#EA580C]";
 
           return (
             <Link
