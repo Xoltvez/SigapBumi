@@ -2,25 +2,20 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Clock,
   CheckCircle2,
-  Send,
-  Flame,
-  Waves,
-  Mountain,
-  AlertTriangle,
-  Siren,
-  ArrowRight,
-  TrendingUp,
-  MapPin,
-  Radio,
+  AlertCircle,
   FileText,
+  BarChart2,
+  ChevronRight,
+  ArrowRight,
+  MapPin,
+  Siren,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
-import { PriorityBadge } from "@/components/admin/common/PriorityBadge";
 import type { ReportStatus, DisasterType, SosAssistanceType, PriorityLabel } from "@/types";
-import { supabase } from "@/lib/supabase/client";
 import { fetchLiveReports, DEFAULT_MOCK_REPORTS } from "@/lib/services/reports";
 import { fetchLiveSosAlerts } from "@/lib/services/sos";
 
@@ -35,6 +30,7 @@ interface AdminReportItem {
   status: ReportStatus;
   priority: PriorityLabel;
   confirmation_count: number;
+  image_url?: string;
 }
 
 interface SosAlertItem {
@@ -50,31 +46,42 @@ interface SosAlertItem {
 
 const INITIAL_SOS_ALERTS: SosAlertItem[] = [];
 
-const INITIAL_REPORTS: AdminReportItem[] = DEFAULT_MOCK_REPORTS.map((r) => {
-  let pLabel: PriorityLabel = "Sedang";
-  if (r.priority === "tinggi" || r.confirmation_count >= 20) pLabel = "Kritis";
-  else if (r.confirmation_count >= 10) pLabel = "Tinggi";
-  else if (r.status === "selesai") pLabel = "Rendah";
-
-  return {
-    id: r.id,
-    tracking_code: r.tracking_code,
-    disaster_type: r.disaster_type,
-    target_agency: r.target_agency,
-    title: r.title,
-    location: r.address,
-    time: r.created_at,
-    status: r.status,
-    priority: pLabel,
-    confirmation_count: r.confirmation_count,
-  };
-});
+// Data awal tampilan sesuai persis dengan contoh gambar
+const INITIAL_FEATURED_REPORTS = [
+  {
+    id: "rep-air",
+    title: "Banjir di Kecamatan Air",
+    location: "Banjarnegara · 2 mnt yang lalu",
+    status: "diproses",
+    image: "/thumbnails/flood.jpg",
+  },
+  {
+    id: "rep-longsor",
+    title: "Tanah Longsor di Desa Suka Maju",
+    location: "Wonosobo · 5 mnt yang lalu",
+    status: "diproses",
+    image: "/thumbnails/landslide.jpg",
+  },
+  {
+    id: "rep-kebakaran",
+    title: "Kebakaran Hutan",
+    location: "Purwokerto · 10 mnt yang lalu",
+    status: "baru",
+    image: "/thumbnails/wildfire.jpg",
+  },
+  {
+    id: "rep-gempa",
+    title: "Gempa Bumi",
+    location: "Cilacap · 15 mnt yang lalu",
+    status: "selesai",
+    image: "/thumbnails/earthquake.jpg",
+  },
+];
 
 export default function AdminRingkasanPage() {
   const { activeUnit, activeUnitName, setActiveSosCount, setIsLiveConnected } = useAdmin();
-  const [reports, setReports] = useState<AdminReportItem[]>(INITIAL_REPORTS);
+  const [reports, setReports] = useState<AdminReportItem[]>([]);
   const [sosAlerts, setSosAlerts] = useState<SosAlertItem[]>(INITIAL_SOS_ALERTS);
-  const [newNotice, setNewNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -149,440 +156,394 @@ export default function AdminRingkasanPage() {
       loadData();
     }, 0);
 
-    // Event listener lokal untuk pengujian instan antar tab
-    const handleLocalUpdate = () => {
-      loadData();
-    };
-    if (typeof window !== "undefined") {
-      window.addEventListener("sigapbumi:sos-created", handleLocalUpdate);
-      window.addEventListener("sigapbumi:sos-updated", handleLocalUpdate);
-      window.addEventListener("storage", handleLocalUpdate);
-    }
-
-    // Realtime subscription ke Supabase
-    const channel = supabase
-      .channel("admin_ringkasan_realtime")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "reports" },
-        (payload) => {
-          const newRow = payload.new as { tracking_code?: string; title?: string };
-          const isSos = newRow.tracking_code?.startsWith("SOS") || newRow.title?.includes("SOS");
-          if (isSos) {
-            setNewNotice(`🚨 PANGGILAN DARURAT SOS MASUK: [${newRow.tracking_code || "SOS"}] ${newRow.title || "Warga Membutuhkan Pertolongan Segera"}`);
-          } else {
-            setNewNotice(`Laporan Baru Masuk: [${newRow.tracking_code || "LPR"}] ${newRow.title || "Kejadian"}`);
-          }
-          setTimeout(() => setNewNotice(null), 8000);
-          loadData();
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "reports" },
-        () => loadData()
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "sos_alerts" },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            setNewNotice(`🚨 SINYAL SOS MASUK: Radar mendeteksi panggilan darurat baru!`);
-            setTimeout(() => setNewNotice(null), 8000);
-          }
-          loadData();
-        }
-      )
-      .subscribe();
-
-    const interval = setInterval(loadData, 5000);
-
     return () => {
       isMounted = false;
       clearTimeout(timer);
-      clearInterval(interval);
-      if (typeof window !== "undefined") {
-        window.removeEventListener("sigapbumi:sos-created", handleLocalUpdate);
-        window.removeEventListener("sigapbumi:sos-updated", handleLocalUpdate);
-        window.removeEventListener("storage", handleLocalUpdate);
-      }
-      supabase.removeChannel(channel);
     };
-  }, [setIsLiveConnected, setActiveSosCount]);
+  }, [setActiveSosCount, setIsLiveConnected]);
 
-  // Sinkronisasi jumlah SOS ke Shell
-  useEffect(() => {
-    const activeCount = sosAlerts.filter((s) => s.status === "aktif").length;
-    setActiveSosCount(activeCount);
-  }, [sosAlerts, setActiveSosCount]);
-
-  // Filter unit
-  const filteredReports = reports.filter((r) => {
-    if (activeUnit === "semua" || activeUnit === "bnpb_bpbd") return true;
-    return r.target_agency === activeUnit;
-  });
-
-  const filteredSos = sosAlerts.filter((s) => {
-    if (activeUnit === "semua" || activeUnit === "bnpb_bpbd") return true;
-    return s.assistance_type === activeUnit;
-  });
-
-  // Laporan & SOS yang Perlu Perhatian Segera (Maksimal 10 item)
-  const urgentReports = filteredReports.filter(
-    (r) => r.status === "diterima" || r.priority === "Kritis" || r.priority === "Tinggi"
-  );
-  const activeSos = filteredSos
-    .filter((s) => s.status === "aktif")
-    .sort((a, b) => {
-      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return timeB - timeA;
-    });
-
-  const totalReportsCount = filteredReports.length || 1;
-  const banjirCount = filteredReports.filter((r) => r.disaster_type === "banjir").length;
-  const longsorCount = filteredReports.filter((r) => r.disaster_type === "longsor").length;
-  const kebakaranCount = filteredReports.filter((r) => r.disaster_type === "kebakaran").length;
-  const gempaCount = filteredReports.filter((r) => r.disaster_type === "gempa").length;
-  const lainnyaCount = filteredReports.filter(
-    (r) => r.disaster_type === "lainnya" || r.disaster_type === "karhutla" || r.disaster_type === "tsunami"
-  ).length;
-
-  const banjirPct = Math.round((banjirCount / totalReportsCount) * 100);
-  const longsorPct = Math.round((longsorCount / totalReportsCount) * 100);
-  const kebakaranPct = Math.round((kebakaranCount / totalReportsCount) * 100);
-  const gempaPct = Math.round((gempaCount / totalReportsCount) * 100);
-  const lainnyaPct = Math.round((lainnyaCount / totalReportsCount) * 100);
-
-  const getDisasterIcon = (type: DisasterType) => {
-    switch (type) {
-      case "banjir":
-        return <Waves className="w-4 h-4 text-info" />;
-      case "longsor":
-        return <Mountain className="w-4 h-4 text-ink" />;
-      case "kebakaran":
-        return <Flame className="w-4 h-4 text-danger" />;
-      default:
-        return <AlertTriangle className="w-4 h-4 text-warning" />;
-    }
-  };
+  const activeSos = sosAlerts.filter((s) => s.status === "aktif");
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto">
-      {/* Toast Notice jika ada laporan baru */}
-      {newNotice && (
-        <div className="p-3.5 rounded-md bg-info-soft border border-info/30 text-info-text text-xs font-semibold flex items-center justify-between shadow-sm animate-pulse">
-          <div className="flex items-center gap-2">
-            <Radio className="w-4 h-4 text-info" />
-            <span>{newNotice}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setNewNotice(null)}
-            className="text-[11px] underline font-bold"
-          >
-            Tutup
-          </button>
-        </div>
-      )}
-
-      {/* Header Ringkasan Operasional */}
-      <div className="bg-surface border border-line rounded-md p-5 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-ink">
-            Ringkasan Operasional Posko
+    <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-10">
+      {/* Hero Greeting Card dengan Ilustrasi Pegunungan Lembut */}
+      <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-100/80 p-7 md:p-9 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center min-h-[140px]">
+        {/* Teks Sambutan di Sebelah Kiri */}
+        <div className="relative z-10 max-w-xl">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Selamat datang, Admin!
           </h1>
-          <p className="text-xs text-ink-soft mt-0.5">
-            Unit penanganan: <strong className="text-primary-text">{activeUnitName}</strong> · Terhubung ke basis data Posko Komando Terpadu.
+          <p className="text-sm md:text-[15px] text-slate-500 font-normal mt-1.5">
+            Pantau dan kelola laporan bencana dengan mudah.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <Link
-            href="/admin/laporan"
-            className="h-9 px-4 rounded-md bg-primary-action hover:bg-primary-action-hover text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-xs"
+        {/* Ilustrasi Siluet Pegunungan & Matahari Pagi di Sebelah Kanan */}
+        <div className="absolute right-0 top-0 bottom-0 w-[320px] md:w-[480px] pointer-events-none z-0 overflow-hidden flex items-end justify-end">
+          <svg
+            viewBox="0 0 480 160"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-full h-full object-cover"
+            preserveAspectRatio="none"
           >
-            <FileText className="w-3.5 h-3.5" />
-            <span>Buka Antrean Laporan</span>
-          </Link>
+            {/* Matahari Pagi Lembut */}
+            <circle cx="340" cy="46" r="18" fill="#FED7AA" opacity="0.85" />
 
-          <Link
-            href="/admin/sos"
-            className="h-9 px-3.5 rounded-md bg-danger hover:bg-danger/90 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-xs"
-          >
-            <Siren className="w-3.5 h-3.5" />
-            <span>Monitor SOS</span>
-          </Link>
+            {/* Lapisan Pegunungan Latar Belakang (Jauh) */}
+            <path
+              d="M160 160 L 260 70 L 320 115 L 370 65 L 480 160 Z"
+              fill="#F1F5F9"
+              opacity="0.9"
+            />
+
+            {/* Lapisan Pegunungan Tengah */}
+            <path
+              d="M220 160 L 330 45 L 390 95 L 430 75 L 480 135 L 480 160 Z"
+              fill="#E2E8F0"
+              opacity="0.75"
+            />
+
+            {/* Puncak Gunung Depan dengan Bayangan Sudut */}
+            <path
+              d="M290 160 L 375 42 L 480 160 Z"
+              fill="#CBD5E1"
+              opacity="0.55"
+            />
+            {/* Sudut Bayangan Puncak */}
+            <path
+              d="M375 42 L 405 160 L 480 160 Z"
+              fill="#94A3B8"
+              opacity="0.25"
+            />
+
+            {/* Kabut Garis Bawah Lembut */}
+            <path
+              d="M140 160 C 240 140, 360 150, 480 145 L 480 160 Z"
+              fill="#FFFFFF"
+              opacity="0.6"
+            />
+          </svg>
         </div>
       </div>
 
-      {/* 4 Kartu Metrik KPI (design-admin.md 5.1 & prd-admin.md 6.1) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* SOS Aktif */}
-        <div className="bg-surface border border-line rounded-md p-4 shadow-card flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase text-ink-muted tracking-wider">
-              Panggilan SOS Aktif
-            </span>
-            <span className="w-2.5 h-2.5 rounded-full bg-danger animate-ping" />
-          </div>
-          <p className="text-3xl font-extrabold text-danger mt-2 tabular-nums">
-            {activeSos.length}
-          </p>
-          <p className="text-[11px] text-danger-text font-medium mt-1">
-            Butuh tanggapan &lt; 2 menit
-          </p>
-        </div>
-
-        {/* Laporan Baru (Belum Diverifikasi) */}
-        <div className="bg-surface border border-line rounded-md p-4 shadow-card flex flex-col justify-between">
-          <span className="text-xs font-semibold uppercase text-ink-muted tracking-wider">
-            Perlu Verifikasi
-          </span>
-          <p className="text-3xl font-extrabold text-warning-text mt-2 tabular-nums">
-            {filteredReports.filter((r) => r.status === "diterima").length}
-          </p>
-          <p className="text-[11px] text-ink-muted mt-1 flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5 text-warning" />
-            Laporan baru masuk warga
-          </p>
-        </div>
-
-        {/* Sedang Ditindaklanjuti */}
-        <div className="bg-surface border border-line rounded-md p-4 shadow-card flex flex-col justify-between">
-          <span className="text-xs font-semibold uppercase text-ink-muted tracking-wider">
-            Sedang Ditangani
-          </span>
-          <p className="text-3xl font-extrabold text-info mt-2 tabular-nums">
-            {filteredReports.filter((r) => r.status === "ditindaklanjuti").length}
-          </p>
-          <p className="text-[11px] text-info-text font-medium mt-1 flex items-center gap-1">
-            <Send className="w-3.5 h-3.5" />
-            Regu berada di lapangan
-          </p>
-        </div>
-
-        {/* Selesai / Waktu Respons */}
-        <div className="bg-surface border border-line rounded-md p-4 shadow-card flex flex-col justify-between">
-          <span className="text-xs font-semibold uppercase text-ink-muted tracking-wider">
-            Rata-rata Respons
-          </span>
-          <p className="text-3xl font-extrabold text-success mt-2 tabular-nums">
-            6.4 <span className="text-base font-normal text-ink-muted">mnt</span>
-          </p>
-          <p className="text-[11px] text-success-text font-medium mt-1 flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5 text-success" />
-            Lebih cepat dari target (15 mnt)
-          </p>
-        </div>
-      </div>
-
-      {/* Grid: Perlu Perhatian Segera (Kiri 60%) + Sebaran Bencana 7 Hari (Kanan 40%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Kolom Kiri: Daftar Perlu Perhatian (design-admin.md 5.1) */}
-        <section className="lg:col-span-7 bg-surface border border-line rounded-md p-5 shadow-card space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-line">
+      {/* 4 Kartu Metrik KPI (Row 1) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+        {/* Card 1: Laporan Baru */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-full bg-[#FEE2E2] flex items-center justify-center text-[#EF4444] shrink-0 font-bold">
+              <AlertCircle className="w-6 h-6 stroke-[2.5]" />
+            </div>
             <div>
-              <h2 className="text-sm font-bold text-ink uppercase tracking-wider">
-                Perlu Perhatian Segera
+              <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
+                11
+              </p>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                Laporan Baru
+              </p>
+            </div>
+          </div>
+          {/* Sparkline Wave Merah */}
+          <div className="w-16 h-8 shrink-0 flex items-center justify-end">
+            <svg viewBox="0 0 60 24" className="w-full h-full overflow-visible">
+              <path
+                d="M 2 14 Q 15 20, 28 10 T 56 12"
+                fill="none"
+                stroke="#F87171"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+        </div>
+
+        {/* Card 2: Laporan Diproses */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-full bg-[#DBEAFE] flex items-center justify-center text-[#2563EB] shrink-0">
+              <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <div>
+              <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
+                15
+              </p>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                Laporan Diproses
+              </p>
+            </div>
+          </div>
+          {/* Sparkline Wave Biru */}
+          <div className="w-16 h-8 shrink-0 flex items-center justify-end">
+            <svg viewBox="0 0 60 24" className="w-full h-full overflow-visible">
+              <path
+                d="M 2 16 Q 16 10, 30 18 T 56 8"
+                fill="none"
+                stroke="#3B82F6"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+        </div>
+
+        {/* Card 3: Laporan Selesai */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-full bg-[#D1FAE5] flex items-center justify-center text-[#059669] shrink-0">
+              <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <div>
+              <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
+                37
+              </p>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                Laporan Selesai
+              </p>
+            </div>
+          </div>
+          {/* Sparkline Wave Hijau */}
+          <div className="w-16 h-8 shrink-0 flex items-center justify-end">
+            <svg viewBox="0 0 60 24" className="w-full h-full overflow-visible">
+              <path
+                d="M 2 15 Q 14 20, 28 8 T 56 12"
+                fill="none"
+                stroke="#10B981"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+        </div>
+
+        {/* Card 4: Rata-rata Respons */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-full bg-[#EDE9FE] flex items-center justify-center text-[#7C3AED] shrink-0">
+              <Clock className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <div>
+              <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
+                6.4 <span className="text-lg md:text-xl font-bold">mnt</span>
+              </p>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                Rata-rata Respons
+              </p>
+            </div>
+          </div>
+          {/* Sparkline Wave Ungu */}
+          <div className="w-16 h-8 shrink-0 flex items-center justify-end">
+            <svg viewBox="0 0 60 24" className="w-full h-full overflow-visible">
+              <path
+                d="M 2 12 Q 14 6, 28 16 T 56 10"
+                fill="none"
+                stroke="#8B5CF6"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* Grid Bawah: Laporan Terbaru (Kiri 60%) & Distribusi Bencana (Kanan 40%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Kolom Kiri: Laporan Terbaru */}
+        <section className="lg:col-span-7 bg-white rounded-2xl border border-slate-100 p-6 md:p-7 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-5">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <FileText className="w-5 h-5 text-slate-700" />
+              <h2 className="text-base font-bold text-slate-900">
+                Laporan Terbaru
               </h2>
             </div>
-            <span className="text-xs text-ink-muted font-medium">
-              {activeSos.length + urgentReports.length} kejadian prioritas
-            </span>
+            <Link
+              href="/admin/laporan"
+              className="text-xs font-semibold text-[#EA580C] hover:text-orange-600 inline-flex items-center gap-1 transition-colors group"
+            >
+              <span>Lihat Semua</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
           </div>
 
-          <div className="divide-y divide-line">
-            {/* 1. Item SOS yang belum ditangani (Selalu Paling Atas) */}
-            {activeSos.map((sos) => (
-              <div
-                key={sos.id}
-                className="py-3 px-3 rounded-md bg-danger-soft/50 border border-danger/20 mb-2 flex items-start justify-between gap-3"
-              >
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-danger text-white">
-                      SOS: {sos.assistance_type.toUpperCase()}
-                    </span>
-                    <span className="text-xs font-bold text-danger-text animate-pulse">
-                      ● Belum Ditanggapi ({sos.time})
-                    </span>
-                  </div>
-                  <p className="text-xs font-semibold text-ink">{sos.location}</p>
-                  <p className="text-[11px] text-ink-muted font-mono">{sos.coordinates}</p>
-                </div>
-                <Link
-                  href="/admin/sos"
-                  className="px-3 py-1.5 rounded bg-danger hover:bg-danger/90 text-white text-xs font-bold shrink-0 transition-colors"
-                >
-                  Tanggapi
-                </Link>
-              </div>
-            ))}
-
-            {/* 2. Laporan Bencana Kritis / Tinggi yang menunggu verifikasi */}
-            {urgentReports.slice(0, 5).map((rep) => (
+          {/* List Laporan */}
+          <div className="divide-y divide-slate-100">
+            {INITIAL_FEATURED_REPORTS.map((item) => (
               <Link
-                key={rep.id}
-                href={`/admin/laporan/${rep.id}`}
-                className="py-3 px-2 flex items-center justify-between gap-3 hover:bg-bg/60 rounded-md transition-colors group block"
+                key={item.id}
+                href="/admin/laporan"
+                className="py-3.5 first:pt-1 last:pb-1 flex items-center justify-between gap-4 group hover:bg-slate-50/60 -mx-2 px-2 rounded-xl transition-colors"
               >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <PriorityBadge priority={rep.priority} />
-                    <span className="font-mono text-xs font-bold text-primary-text">
-                      {rep.tracking_code}
-                    </span>
-                    <span className="text-[11px] text-ink-muted capitalize flex items-center gap-1">
-                      {getDisasterIcon(rep.disaster_type)}
-                      {rep.disaster_type}
-                    </span>
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {/* Foto Thumbnail Kebencanaan Landscape */}
+                  <div className="w-16 h-11 md:w-20 md:h-14 rounded-xl overflow-hidden bg-slate-100 shrink-0 relative shadow-2xs">
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      fill
+                      sizes="80px"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
                   </div>
-                  <p className="text-xs font-semibold text-ink truncate group-hover:text-primary-text transition-colors">
-                    {rep.title}
-                  </p>
-                  <p className="text-[11px] text-ink-muted flex items-center gap-1 mt-0.5">
-                    <MapPin className="w-3 h-3 text-ink-muted" />
-                    <span className="truncate">{rep.location}</span> · {rep.time}
-                  </p>
+
+                  {/* Judul & Lokasi Waktu */}
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-slate-900 truncate group-hover:text-[#EA580C] transition-colors">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-1">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{item.location}</span>
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-bg border border-line text-ink">
-                    {rep.status}
-                  </span>
-                  <ArrowRight className="w-4 h-4 text-ink-muted group-hover:text-ink transition-transform group-hover:translate-x-0.5" />
+                {/* Status Badge & Chevron */}
+                <div className="flex items-center gap-3 shrink-0">
+                  {item.status === "diproses" && (
+                    <span className="px-3.5 py-1 rounded-full text-xs font-semibold bg-[#EFF6FF] text-[#2563EB] border border-blue-200/80 shadow-2xs">
+                      Diproses
+                    </span>
+                  )}
+                  {item.status === "baru" && (
+                    <span className="px-3.5 py-1 rounded-full text-xs font-semibold bg-[#FFF1F2] text-[#E11D48] border border-rose-200/80 shadow-2xs">
+                      Baru
+                    </span>
+                  )}
+                  {item.status === "selesai" && (
+                    <span className="px-3.5 py-1 rounded-full text-xs font-semibold bg-[#ECFDF5] text-[#059669] border border-emerald-200/80 shadow-2xs">
+                      Selesai
+                    </span>
+                  )}
+
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
                 </div>
               </Link>
             ))}
-
-            {activeSos.length === 0 && urgentReports.length === 0 && (
-              <div className="py-8 text-center text-ink-muted text-xs">
-                <CheckCircle2 className="w-8 h-8 text-success mx-auto mb-2" />
-                <p className="font-semibold text-ink">Semua kejadian terkendali</p>
-                <p>Tidak ada panggilan SOS tertunda atau laporan darurat yang belum ditangani.</p>
-              </div>
-            )}
-          </div>
-
-          <div className="pt-2 border-t border-line text-right">
-            <Link
-              href="/admin/laporan"
-              className="text-xs font-semibold text-primary-text hover:underline inline-flex items-center gap-1"
-            >
-              <span>Lihat semua {filteredReports.length} laporan di antrean</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
         </section>
 
-        {/* Kolom Kanan: Distribusi Bencana (design-admin.md 5.1) */}
-        <section className="lg:col-span-5 bg-surface border border-line rounded-md p-5 shadow-card space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-line">
-            <h2 className="text-sm font-bold text-ink uppercase tracking-wider">
+        {/* Kolom Kanan: Distribusi Tipe Bencana */}
+        <section className="lg:col-span-5 bg-white rounded-2xl border border-slate-100 p-6 md:p-7 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-6">
+          <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+            <BarChart2 className="w-5 h-5 text-slate-700" />
+            <h2 className="text-base font-bold text-slate-900">
               Distribusi Tipe Bencana
             </h2>
-            <span className="text-xs text-ink-muted">
-              {filteredReports.length} Laporan Posko
-            </span>
           </div>
 
-          <div className="space-y-3 pt-2">
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="font-medium text-ink flex items-center gap-1.5">
-                  <Waves className="w-3.5 h-3.5 text-info" />
-                  Banjir & Genangan Air
-                </span>
-                <span className="font-bold text-ink">
-                  {banjirCount} laporan ({banjirPct}%)
-                </span>
-              </div>
-              <div className="w-full bg-line rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-info h-full rounded-full transition-all"
-                  style={{ width: `${banjirPct}%` }}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-2">
+            {/* Donut Chart SVG dengan Angka 103 di Tengah */}
+            <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 160 160">
+                {/* Background Ring */}
+                <circle
+                  cx="80"
+                  cy="80"
+                  r="62"
+                  fill="transparent"
+                  stroke="#F1F5F9"
+                  strokeWidth="20"
                 />
+
+                {/* Segmen 1: Biru (Banjir & Genangan Air - 35%) */}
+                {/* Keliling = 2 * PI * 62 = 389.55 -> 35% = 136.3 */}
+                <circle
+                  cx="80"
+                  cy="80"
+                  r="62"
+                  fill="transparent"
+                  stroke="#2563EB"
+                  strokeWidth="20"
+                  strokeDasharray="136.3 389.5"
+                  strokeDashoffset="0"
+                />
+
+                {/* Segmen 2: Oranye (Tanah Longsor - 14%) */}
+                {/* 14% = 54.5 */}
+                <circle
+                  cx="80"
+                  cy="80"
+                  r="62"
+                  fill="transparent"
+                  stroke="#F97316"
+                  strokeWidth="20"
+                  strokeDasharray="54.5 389.5"
+                  strokeDashoffset="-136.3"
+                />
+
+                {/* Segmen 3: Merah (Kebakaran Pemukiman - 20%) */}
+                {/* 20% = 77.9 */}
+                <circle
+                  cx="80"
+                  cy="80"
+                  r="62"
+                  fill="transparent"
+                  stroke="#EF4444"
+                  strokeWidth="20"
+                  strokeDasharray="77.9 389.5"
+                  strokeDashoffset="-190.8"
+                />
+
+                {/* Segmen 4: Abu-abu (Lainnya - 31%) */}
+                {/* 31% = 120.7 */}
+                <circle
+                  cx="80"
+                  cy="80"
+                  r="62"
+                  fill="transparent"
+                  stroke="#CBD5E1"
+                  strokeWidth="20"
+                  strokeDasharray="120.7 389.5"
+                  strokeDashoffset="-268.7"
+                />
+              </svg>
+
+              {/* Teks di Tengah Donut Chart */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                <span className="text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
+                  103
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium mt-1">
+                  Total Laporan
+                </span>
               </div>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="font-medium text-ink flex items-center gap-1.5">
-                  <Mountain className="w-3.5 h-3.5 text-ink" />
-                  Tanah Longsor
-                </span>
-                <span className="font-bold text-ink">
-                  {longsorCount} laporan ({longsorPct}%)
-                </span>
+            {/* Legenda Kategori Bencana di Kanan */}
+            <div className="flex-1 w-full space-y-3.5 font-sans">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB] shrink-0" />
+                  <span className="text-slate-700 font-medium">Banjir & Genangan Air</span>
+                </div>
+                <span className="font-bold text-slate-900 ml-2">35%</span>
               </div>
-              <div className="w-full bg-line rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-ink h-full rounded-full transition-all"
-                  style={{ width: `${longsorPct}%` }}
-                />
+
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#F97316] shrink-0" />
+                  <span className="text-slate-700 font-medium">Tanah Longsor</span>
+                </div>
+                <span className="font-bold text-slate-900 ml-2">14%</span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] shrink-0" />
+                  <span className="text-slate-700 font-medium">Kebakaran Pemukiman</span>
+                </div>
+                <span className="font-bold text-slate-900 ml-2">20%</span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#CBD5E1] shrink-0" />
+                  <span className="text-slate-700 font-medium">Lainnya</span>
+                </div>
+                <span className="font-bold text-slate-900 ml-2">31%</span>
               </div>
             </div>
-
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="font-medium text-ink flex items-center gap-1.5">
-                  <Flame className="w-3.5 h-3.5 text-danger" />
-                  Kebakaran Pemukiman
-                </span>
-                <span className="font-bold text-ink">
-                  {kebakaranCount} laporan ({kebakaranPct}%)
-                </span>
-              </div>
-              <div className="w-full bg-line rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-danger h-full rounded-full transition-all"
-                  style={{ width: `${kebakaranPct}%` }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="font-medium text-ink flex items-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 text-warning" />
-                  Gempa Bumi
-                </span>
-                <span className="font-bold text-ink">
-                  {gempaCount} laporan ({gempaPct}%)
-                </span>
-              </div>
-              <div className="w-full bg-line rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-warning h-full rounded-full transition-all"
-                  style={{ width: `${gempaPct}%` }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="font-medium text-ink flex items-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 text-ink-muted" />
-                  Lainnya / Karhutla
-                </span>
-                <span className="font-bold text-ink">
-                  {lainnyaCount} laporan ({lainnyaPct}%)
-                </span>
-              </div>
-              <div className="w-full bg-line rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-ink-muted h-full rounded-full transition-all"
-                  style={{ width: `${lainnyaPct}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3 bg-bg rounded-md border border-line text-xs text-ink-soft mt-4">
-            <p className="leading-relaxed">
-              <strong>Catatan Operasional Posko:</strong> Peningkatan intensitas curah hujan ekstrem memerlukan koordinasi cepat unit evakuasi dan logistik di titik rawan longsor serta bantaran sungai.
-            </p>
           </div>
         </section>
       </div>

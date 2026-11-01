@@ -7,15 +7,13 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FileText,
-  Siren,
-  Map,
-  BarChart3,
+  Bell,
+  MapPin,
+  BarChart2,
   Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
-  ShieldCheck,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 
@@ -31,7 +29,7 @@ export function AdminSidebar({
   activeSosCount = 0,
 }: AdminSidebarProps) {
   const pathname = usePathname();
-  const { adminUser, logout } = useAdmin();
+  const { logout } = useAdmin();
 
   const navItems = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -39,59 +37,60 @@ export function AdminSidebar({
     {
       href: "/admin/sos",
       label: "Monitor SOS",
-      icon: Siren,
-      badge: activeSosCount > 0 ? `${activeSosCount}` : undefined,
+      icon: Bell,
+      badge: activeSosCount > 0 ? `${activeSosCount}` : "11",
     },
-    { href: "/admin/peta", label: "Peta Operasional", icon: Map },
-    { href: "/admin/statistik", label: "Rekap & Statistik", icon: BarChart3 },
+    { href: "/admin/peta", label: "Peta Operasional", icon: MapPin },
+    { href: "/admin/statistik", label: "Rekap & Statistik", icon: BarChart2 },
   ];
 
   return (
     <aside
-      className={`bg-[#131722] text-white font-sans flex flex-col shrink-0 min-h-screen transition-all duration-300 border-r border-slate-800 relative z-30 select-none ${
+      className={`bg-white text-slate-800 font-sans flex flex-col shrink-0 min-h-screen transition-all duration-300 border-r border-slate-200/80 shadow-[1px_0_10px_rgba(0,0,0,0.02)] relative z-30 select-none ${
         isCollapsed ? "w-[76px]" : "w-64"
       }`}
     >
       {/* Brand & Logo Header */}
-      <div className="h-16 border-b border-slate-800/80 flex items-center px-4 justify-between gap-2 relative">
+      <div className="h-20 border-b border-slate-100 flex items-center px-6 justify-between gap-2 relative">
         <Link
           href="/admin"
           className={`flex items-center gap-3 overflow-hidden ${
             isCollapsed ? "justify-center w-full" : ""
           }`}
-          title="SigapBumi - Posko Terpadu"
+          title="Sigap Bumi Admin Panel"
         >
-          {/* Circular Gold Emblem */}
-          <div className="w-10 h-10 rounded-full border border-amber-500/60 p-1 flex items-center justify-center bg-black/50 shadow-inner shrink-0 group-hover:border-amber-400 transition-colors">
+          {/* Logo Mark */}
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0">
             <Image
               src="/logo_sigapbumi.png"
-              alt="SigapBumi"
-              width={26}
-              height={26}
+              alt="Sigap Bumi"
+              width={34}
+              height={34}
               style={{ width: "auto" }}
-              className="h-6 object-contain"
+              className="h-8 object-contain"
+              priority
             />
           </div>
 
           {!isCollapsed && (
             <div className="truncate flex-1 font-sans">
-              <span className="font-sans font-extrabold tracking-[0.14em] text-xs sm:text-[13px] text-amber-200 block uppercase leading-tight">
-                SIGAP BUMI
+              <span className="font-sans font-bold text-base text-slate-900 block leading-tight tracking-tight">
+                Sigap Bumi
               </span>
-              <span className="font-sans text-[9px] tracking-[0.2em] text-slate-400 uppercase font-semibold block mt-0.5">
-                POSKO TERPADU
+              <span className="font-sans text-[11px] text-slate-400 font-normal block mt-0.5">
+                Admin Panel
               </span>
             </div>
           )}
         </Link>
 
-        {/* Single Circular Collapse/Expand Button exactly on border line */}
+        {/* Circular Collapse/Expand Button positioned on border line */}
         {onToggleCollapse && (
           <button
             type="button"
             onClick={onToggleCollapse}
             title={isCollapsed ? "Perluas Sidebar" : "Ciutkan Sidebar"}
-            className="absolute -right-3 top-5 z-40 w-6 h-6 rounded-full border border-amber-500/60 bg-[#131722] hover:bg-slate-800 text-amber-400 hover:text-amber-300 flex items-center justify-center text-xs shadow-md transition-all cursor-pointer"
+            className="absolute -right-3 top-7 z-40 w-6 h-6 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 flex items-center justify-center text-xs shadow-sm transition-all cursor-pointer"
           >
             {isCollapsed ? (
               <ChevronRight className="w-3.5 h-3.5" />
@@ -103,7 +102,7 @@ export function AdminSidebar({
       </div>
 
       {/* Main Navigation Menu */}
-      <nav className="flex-1 py-5 px-3 space-y-1.5 overflow-y-auto">
+      <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -116,26 +115,26 @@ export function AdminSidebar({
               key={item.href}
               href={item.href}
               title={isCollapsed ? item.label : undefined}
-              className={`group flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs transition-all relative ${
+              className={`group flex items-center gap-3.5 px-4 py-3 rounded-xl text-[13px] transition-all relative ${
                 isActive
-                  ? "bg-[#252018] border border-amber-500/40 text-amber-400 font-bold shadow-sm"
-                  : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/40 font-medium border border-transparent"
+                  ? "bg-[#FFF4EC] text-[#EA580C] font-semibold"
+                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
               } ${isCollapsed ? "justify-center px-0" : ""}`}
             >
               <Icon
-                className={`w-4 h-4 shrink-0 transition-colors ${
+                className={`w-[18px] h-[18px] shrink-0 transition-colors ${
                   isActive
-                    ? "text-amber-400"
-                    : "text-slate-400 group-hover:text-slate-200"
+                    ? "text-[#EA580C]"
+                    : "text-slate-400 group-hover:text-slate-600"
                 }`}
               />
 
               {!isCollapsed && (
-                <span className="flex-1 truncate tracking-wide">{item.label}</span>
+                <span className="flex-1 truncate">{item.label}</span>
               )}
 
               {!isCollapsed && item.badge && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white bg-red-500 animate-pulse">
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold text-white bg-[#EF4444] shadow-xs">
                   {item.badge}
                 </span>
               )}
@@ -144,59 +143,64 @@ export function AdminSidebar({
         })}
       </nav>
 
-      {/* Footer: Officer info & Settings & Logout Action */}
-      <div className="p-3 border-t border-slate-800/80 space-y-2">
+      {/* Subtle Topo Contour Lines Watermark at Bottom Left */}
+      <div className="pointer-events-none absolute bottom-0 left-0 w-36 h-36 overflow-hidden opacity-35 z-0">
+        <svg
+          viewBox="0 0 160 160"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full h-full text-amber-500/50"
+        >
+          <path
+            d="M-20 160 C 20 120, 60 140, 100 110 C 130 90, 150 120, 180 80"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M-30 140 C 10 100, 50 120, 90 90 C 120 70, 140 100, 170 60"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M-40 120 C 0 80, 40 100, 80 70 C 110 50, 130 80, 160 40"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M-50 100 C -10 60, 30 80, 70 50 C 100 30, 120 60, 150 20"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+        </svg>
+      </div>
+
+      {/* Footer: Settings & Keluar */}
+      <div className="p-4 border-t border-slate-100 space-y-1 relative z-10 bg-white/90">
         {/* Settings Item */}
         <Link
           href="/admin"
           title={isCollapsed ? "Pengaturan" : undefined}
-          className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800/40 transition-colors ${
+          className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors ${
             isCollapsed ? "justify-center px-0" : ""
           }`}
         >
-          <Settings className="w-4 h-4 shrink-0 text-slate-400" />
+          <Settings className="w-[18px] h-[18px] shrink-0 text-slate-400" />
           {!isCollapsed && <span className="truncate">Pengaturan</span>}
         </Link>
 
-        {/* Officer Active Badge (if expanded) */}
-        {!isCollapsed && adminUser && (
-          <div className="px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800/80 mb-1">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-400">
-              <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{adminUser.unitName}</span>
-            </div>
-            <div className="text-[11px] text-slate-200 font-medium truncate mt-0.5">
-              {adminUser.name}
-            </div>
-          </div>
-        )}
-
-        {/* Portal Publik Link */}
-        <Link
-          href="/"
-          title={isCollapsed ? "Portal Publik Warga" : undefined}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] text-slate-500 hover:text-slate-300 transition-colors ${
-            isCollapsed ? "justify-center px-0" : ""
-          }`}
-        >
-          <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-          {!isCollapsed && <span className="truncate">Portal Publik</span>}
-        </Link>
-
-        {/* Pill Keluar Button */}
+        {/* Keluar Action */}
         <button
           type="button"
           onClick={logout}
-          title={isCollapsed ? "Keluar Sesi" : undefined}
-          className={`w-full flex items-center justify-center gap-2 py-2 rounded-full border border-slate-700/80 bg-slate-900/40 hover:bg-slate-800 hover:border-amber-500/50 text-slate-300 hover:text-amber-400 text-xs font-semibold transition-all shadow-sm ${
-            isCollapsed ? "px-2" : "px-4"
+          title={isCollapsed ? "Keluar" : undefined}
+          className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-[13px] font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors ${
+            isCollapsed ? "justify-center px-0" : ""
           }`}
         >
-          <LogOut className="w-3.5 h-3.5 shrink-0" />
-          {!isCollapsed && <span>Keluar</span>}
+          <LogOut className="w-[18px] h-[18px] shrink-0 text-slate-400 group-hover:text-red-500" />
+          {!isCollapsed && <span className="truncate">Keluar</span>}
         </button>
       </div>
     </aside>
   );
 }
-
