@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import {
   Search,
   RotateCw,
@@ -114,21 +113,25 @@ const DEFAULT_REPORTS: AdminReportRow[] = [
 ];
 
 function LaporanContent() {
-  const searchParams = useSearchParams();
-  const initialSearch = searchParams.get("cari") || "";
-
   const { activeUnit } = useAdmin();
   const [reports, setReports] = useState<AdminReportRow[]>(DEFAULT_REPORTS);
   const [isLoading, setIsLoading] = useState(false);
 
   // Filters
-  const [searchCode, setSearchCode] = useState(initialSearch);
+  const [searchCode, setSearchCode] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | "semua">("semua");
   const [selectedPriority, setSelectedPriority] = useState<PriorityLabel | "semua">("semua");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 5;
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search).get("cari");
+      if (q) setSearchCode(q);
+    }
+  }, []);
 
   async function loadData() {
     setIsLoading(true);
@@ -219,13 +222,6 @@ function LaporanContent() {
       supabase.removeChannel(channel);
     };
   }, []);
-
-  useEffect(() => {
-    if (initialSearch !== undefined) {
-      setSearchCode(initialSearch);
-      setCurrentPage(1);
-    }
-  }, [initialSearch]);
 
   // Hitung jumlah untuk 4 KPI card
   const totalCount = reports.length === 5 ? 142 : reports.length;

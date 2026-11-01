@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   Calendar,
   ChevronDown,
@@ -31,9 +31,15 @@ export function AdminTopbar({
   onToggleSiren,
 }: AdminTopbarProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const urlCari = searchParams.get("cari") || "";
+  const [urlCari, setUrlCari] = useState("");
   const { adminUser, logout } = useAdmin();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search).get("cari") || "";
+      setUrlCari(q);
+    }
+  }, []);
 
   const [formattedDate, setFormattedDate] = useState("1 Nov 2026");
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
