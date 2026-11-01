@@ -262,7 +262,8 @@ function LaporForm() {
   };
 
   return (
-    <main className="flex-1 w-full max-w-[800px] mx-auto px-4 md:px-8 py-6 md:py-10 pb-28 md:pb-12">
+    <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 pb-28 md:pb-12">
+      <div className="max-w-[800px] mx-auto">
       {/* Header Form */}
       <div className="text-center mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-ink">
@@ -730,6 +731,7 @@ function LaporForm() {
           )}
         </div>
       </div>
+      </div>
     </main>
   );
 }
@@ -738,7 +740,7 @@ export default function LaporPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex-1 max-w-[800px] mx-auto p-12 text-center text-ink-muted">
+        <div className="flex-1 max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 p-12 text-center text-ink-muted">
           Memuat formulir pelaporan...
         </div>
       }

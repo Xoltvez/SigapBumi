@@ -137,7 +137,7 @@ export default function PetaPage() {
   };
 
   return (
-    <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 md:px-8 py-4 md:py-6 pb-28 md:pb-12 flex flex-col space-y-4">
+    <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 pb-28 md:pb-12 flex flex-col space-y-4">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-line">
         <div>

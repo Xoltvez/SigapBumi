@@ -292,7 +292,8 @@ function LacakContent() {
   };
 
   return (
-    <main className="flex-1 w-full max-w-[900px] mx-auto px-4 md:px-8 py-6 md:py-10 pb-28 md:pb-12 space-y-8">
+    <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 pb-28 md:pb-12 space-y-8">
+      <div className="max-w-[900px] mx-auto space-y-8">
       {/* Search Header */}
       <section className="text-center max-w-xl mx-auto">
         <h1 className="text-2xl md:text-3xl font-bold text-ink mb-2">
@@ -520,6 +521,7 @@ function LacakContent() {
           </button>
         </section>
       ) : null}
+      </div>
     </main>
   );
 }
@@ -528,7 +530,7 @@ export default function LacakPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex-1 w-full max-w-[900px] mx-auto px-4 py-16 text-center animate-pulse">
+        <div className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center animate-pulse">
           <div className="w-12 h-12 rounded-full bg-primary/20 mx-auto mb-3" />
           <p className="text-sm font-semibold text-ink">Memuat Sistem Pelacakan...</p>
         </div>

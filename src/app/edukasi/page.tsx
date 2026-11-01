@@ -206,7 +206,7 @@ export default function EdukasiPage() {
   const checkedCount = Object.values(checkedItems).filter(Boolean).length;
 
   return (
-    <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 md:px-8 py-6 md:py-10 pb-28 md:pb-12 space-y-10">
+    <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 pb-28 md:pb-12 space-y-10">
       {/* Top Header */}
       <div className="text-center max-w-2xl mx-auto">
         <span className="inline-block px-3 py-1 rounded-full bg-primary-soft text-primary-hover text-xs font-semibold mb-3">

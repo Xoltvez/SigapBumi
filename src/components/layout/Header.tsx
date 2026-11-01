@@ -25,8 +25,8 @@ export function Header() {
   const isAuthActive = pathname.startsWith("/masuk") || pathname.startsWith("/daftar");
 
   return (
-    <header className="sticky top-0 z-30 h-14 md:h-16 bg-surface/95 backdrop-blur-md border-b border-line px-4 md:px-8 shadow-xs">
-      <div className="max-w-[1240px] h-full mx-auto flex items-center justify-between">
+    <header className="sticky top-0 z-30 h-14 md:h-16 bg-surface/95 backdrop-blur-md border-b border-line shadow-xs">
+      <div className="max-w-[1240px] h-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         {/* Brand Logo */}
         <Link
           href="/"
