@@ -20,6 +20,7 @@ export interface MapPoint {
   is_demo?: boolean;
   province?: string;
   regency?: string;
+  description?: string;
 }
 
 interface DisasterMapProps {
@@ -233,7 +234,11 @@ export default function DisasterMap({
 
   return (
     <div
-      className={`w-full h-full min-h-[500px] md:min-h-[600px] relative rounded-lg overflow-hidden border border-line shadow-card ${className}`}
+      className={`w-full h-full relative overflow-hidden ${
+        className !== undefined
+          ? className
+          : "min-h-[500px] md:min-h-[600px] rounded-lg border border-line shadow-card"
+      }`}
     >
       <div ref={mapContainerRef} className="w-full h-full z-10" />
 
