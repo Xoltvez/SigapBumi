@@ -240,8 +240,8 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Right Column: Interactive Quick-Report Bento Card (Compact) */}
-          <div className="lg:col-span-5 relative max-w-[420px] mx-auto lg:max-w-none w-full">
+          {/* Right Column: Interactive Quick-Report Bento Card (Compact - hidden on mobile) */}
+          <div className="hidden lg:block lg:col-span-5 relative max-w-[420px] mx-auto lg:max-w-none w-full">
             {/* Background Geometric Red/Orange Blob Accent */}
             <div
               aria-hidden="true"
