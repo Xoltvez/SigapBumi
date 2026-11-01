@@ -272,7 +272,7 @@ export function Footer() {
             </p>
             <div className="pt-1">
               <Link
-                href="/admin"
+                href="/admin/login"
                 className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white text-orange-700 hover:bg-amber-100 font-bold text-xs transition-all shadow-sm"
               >
                 <Compass className="w-3.5 h-3.5" />

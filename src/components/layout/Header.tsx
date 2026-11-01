@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Bell, User } from "lucide-react";
+import { Bell, User, ShieldCheck } from "lucide-react";
 
 export function Header() {
   const pathname = usePathname();
@@ -75,11 +75,21 @@ export function Header() {
         </nav>
 
         {/* Action / Auth */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Quick Petugas Portal Link */}
+          <Link
+            href="/admin/login"
+            title="Portal Masuk Petugas Posko & Komando BPBD"
+            className="inline-flex items-center gap-1.5 h-8 sm:h-9 md:h-10 px-2.5 sm:px-3 rounded-lg text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200/90 transition-all shadow-2xs hover:scale-[1.02]"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-orange-600" />
+            <span className="hidden sm:inline">Portal Petugas</span>
+          </Link>
+
           <Link
             href="/notifikasi"
             aria-label="Notifikasi"
-            className={`w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-all focus-visible:outline-primary ${
+            className={`w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-all focus-visible:outline-primary ${
               isNotifActive
                 ? "bg-primary-soft text-primary border border-primary/25 shadow-xs font-bold"
                 : "text-ink-soft hover:bg-bg hover:text-ink border border-transparent"
@@ -91,7 +101,7 @@ export function Header() {
           <Link
             href="/masuk"
             aria-label="Akun Pengguna"
-            className={`inline-flex items-center gap-1.5 h-9 md:h-10 px-3 md:px-3.5 rounded-lg text-xs md:text-sm transition-all focus-visible:outline-primary ${
+            className={`inline-flex items-center gap-1.5 h-8 sm:h-9 md:h-10 px-2.5 sm:px-3 md:px-3.5 rounded-lg text-xs md:text-sm transition-all focus-visible:outline-primary ${
               isAuthActive
                 ? "border-2 border-primary bg-primary-soft text-primary font-bold shadow-xs"
                 : "border border-line font-medium text-ink hover:border-line-strong hover:bg-bg"

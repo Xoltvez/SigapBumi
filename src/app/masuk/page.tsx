@@ -19,8 +19,8 @@ export default function MasukPage() {
 
   const handleDemoLogin = (targetRole: "warga" | "petugas") => {
     if (targetRole === "petugas") {
-      // Masuk langsung ke area posko admin
-      router.push("/admin");
+      // Masuk ke form login resmi posko admin
+      router.push("/admin/login");
     } else {
       // Masuk ke beranda warga
       router.push("/laporan-saya");
@@ -30,7 +30,7 @@ export default function MasukPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (role === "petugas") {
-      router.push("/admin");
+      router.push("/admin/login");
     } else {
       router.push("/laporan-saya");
     }
@@ -152,10 +152,10 @@ export default function MasukPage() {
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
             <Link
-              href="/admin"
+              href="/admin/login"
               className="h-10 px-3 rounded-md border border-line-strong hover:bg-bg text-ink text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
             >
-              <span>Buka Dashboard /admin</span>
+              <span>Portal Login Petugas</span>
             </Link>
           </div>
         </div>

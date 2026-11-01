@@ -11,7 +11,10 @@ import {
   Map,
   BarChart3,
   ExternalLink,
+  LogOut,
+  ShieldCheck,
 } from "lucide-react";
+import { useAdmin } from "@/components/layout/AdminShell";
 
 interface AdminSidebarProps {
   isCollapsed: boolean;
@@ -23,6 +26,7 @@ export function AdminSidebar({
   activeSosCount = 0,
 }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { adminUser, logout } = useAdmin();
 
   const navItems = [
     { href: "/admin", label: "Ringkasan", icon: LayoutDashboard },
@@ -117,8 +121,23 @@ export function AdminSidebar({
         })}
       </nav>
 
-      {/* Footer / Switch back to citizen portal */}
-      <div className="p-3 border-t border-ink-soft/40">
+      {/* Footer: Officer info & Actions */}
+      <div className="p-3 border-t border-ink-soft/40 space-y-1.5">
+        {!isCollapsed && adminUser && (
+          <div className="px-2.5 py-2 rounded-lg bg-white/5 border border-white/10 mb-2">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-400">
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{adminUser.unitName}</span>
+            </div>
+            <div className="text-[11px] text-white font-medium truncate mt-0.5">
+              {adminUser.name}
+            </div>
+            <div className="text-[9px] text-ink-muted font-mono truncate">
+              {adminUser.nip}
+            </div>
+          </div>
+        )}
+
         <Link
           href="/"
           title={isCollapsed ? "Portal Publik Warga" : undefined}
@@ -129,6 +148,18 @@ export function AdminSidebar({
           <ExternalLink className="w-4 h-4 shrink-0" />
           {!isCollapsed && <span className="truncate">Portal Publik Warga</span>}
         </Link>
+
+        <button
+          type="button"
+          onClick={logout}
+          title={isCollapsed ? "Keluar Sesi Petugas" : undefined}
+          className={`w-full flex items-center gap-2 px-3 py-2 rounded text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors ${
+            isCollapsed ? "justify-center" : ""
+          }`}
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span className="truncate">Keluar Sesi</span>}
+        </button>
       </div>
     </aside>
   );
