@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import Link from "next/link";
 import {
-  ArrowLeft,
   RotateCw,
   HeartPulse,
   Flame,
@@ -204,22 +202,13 @@ export default function AdminSosPage() {
     <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-12 select-none">
       {/* 1. Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <Link
-            href="/admin"
-            className="w-10 h-10 rounded-full border border-slate-200/90 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 shadow-2xs transition-colors shrink-0"
-            title="Kembali ke Dashboard Utama"
-          >
-            <ArrowLeft className="w-4 h-4 stroke-[2.2]" />
-          </Link>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
-              Monitor SOS Real-Time
-            </h1>
-            <p className="text-xs md:text-sm text-slate-500 font-normal mt-0.5">
-              Pantau laporan darurat dari masyarakat secara langsung dan tindak lanjuti dengan cepat.
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
+            Monitor SOS Real-Time
+          </h1>
+          <p className="text-xs md:text-sm text-slate-500 font-normal mt-0.5">
+            Pantau laporan darurat dari masyarakat secara langsung dan tindak lanjuti dengan cepat.
+          </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
