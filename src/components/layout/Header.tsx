@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Bell, User, ShieldCheck } from "lucide-react";
+import { Bell, User } from "lucide-react";
 
 export function Header() {
   const pathname = usePathname();
@@ -76,16 +76,6 @@ export function Header() {
 
         {/* Action / Auth */}
         <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Quick Petugas Portal Link */}
-          <Link
-            href="/admin/login"
-            title="Portal Masuk Petugas Posko & Komando BPBD"
-            className="inline-flex items-center gap-1.5 h-8 sm:h-9 md:h-10 px-2.5 sm:px-3 rounded-lg text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200/90 transition-all shadow-2xs hover:scale-[1.02]"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-orange-600" />
-            <span className="hidden sm:inline">Portal Petugas</span>
-          </Link>
-
           <Link
             href="/notifikasi"
             aria-label="Notifikasi"
