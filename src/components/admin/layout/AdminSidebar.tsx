@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  User,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 
@@ -110,6 +111,12 @@ export function AdminSidebar({
               ? pathname === "/admin"
               : pathname.startsWith(item.href);
 
+          const isLaporan = item.href === "/admin/laporan";
+          const activeClasses = isLaporan
+            ? "bg-[#EFF6FF] text-[#2563EB] font-semibold"
+            : "bg-[#FFF4EC] text-[#EA580C] font-semibold";
+          const iconActiveColor = isLaporan ? "text-[#2563EB]" : "text-[#EA580C]";
+
           return (
             <Link
               key={item.href}
@@ -117,14 +124,14 @@ export function AdminSidebar({
               title={isCollapsed ? item.label : undefined}
               className={`group flex items-center gap-3.5 px-4 py-3 rounded-xl text-[13px] transition-all relative ${
                 isActive
-                  ? "bg-[#FFF4EC] text-[#EA580C] font-semibold"
+                  ? activeClasses
                   : "text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
               } ${isCollapsed ? "justify-center px-0" : ""}`}
             >
               <Icon
                 className={`w-[18px] h-[18px] shrink-0 transition-colors ${
                   isActive
-                    ? "text-[#EA580C]"
+                    ? iconActiveColor
                     : "text-slate-400 group-hover:text-slate-600"
                 }`}
               />
@@ -174,13 +181,13 @@ export function AdminSidebar({
         </svg>
       </div>
 
-      {/* Footer: Settings & Keluar */}
-      <div className="p-4 border-t border-slate-100 space-y-1 relative z-10 bg-white/90">
+      {/* Footer: Settings & Officer Profile Card */}
+      <div className="p-4 border-t border-slate-100 space-y-2 relative z-10 bg-white/90">
         {/* Settings Item */}
         <Link
           href="/admin"
           title={isCollapsed ? "Pengaturan" : undefined}
-          className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors ${
+          className={`flex items-center gap-3.5 px-4 py-2 rounded-xl text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors ${
             isCollapsed ? "justify-center px-0" : ""
           }`}
         >
@@ -188,18 +195,25 @@ export function AdminSidebar({
           {!isCollapsed && <span className="truncate">Pengaturan</span>}
         </Link>
 
-        {/* Keluar Action */}
-        <button
-          type="button"
-          onClick={logout}
-          title={isCollapsed ? "Keluar" : undefined}
-          className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-[13px] font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors ${
-            isCollapsed ? "justify-center px-0" : ""
-          }`}
-        >
-          <LogOut className="w-[18px] h-[18px] shrink-0 text-slate-400 group-hover:text-red-500" />
-          {!isCollapsed && <span className="truncate">Keluar</span>}
-        </button>
+        {/* Officer Card matching screenshot */}
+        {!isCollapsed && (
+          <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-slate-100/80 transition-colors cursor-pointer group">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-[#1E293B] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                <User className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-800 truncate leading-tight">
+                  BPBD Komando
+                </p>
+                <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                  Kapten Hendra Gunawan
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+          </div>
+        )}
       </div>
     </aside>
   );

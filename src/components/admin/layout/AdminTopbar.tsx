@@ -8,6 +8,7 @@ import {
   Bell,
   Volume2,
   VolumeX,
+  Search,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 
@@ -62,6 +63,23 @@ export function AdminTopbar({
         </div>
       </div>
 
+      {/* Center: Global Search Pill */}
+      <div className="relative flex-1 max-w-md mx-4 hidden md:block">
+        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <input
+          type="text"
+          defaultValue={urlCari}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              const val = (e.target as HTMLInputElement).value;
+              router.push(`/admin/laporan?cari=${encodeURIComponent(val)}`);
+            }
+          }}
+          placeholder="Cari laporan berdasarkan lokasi, jenis, atau kata kunci..."
+          className="w-full h-9 pl-9 pr-4 rounded-full border border-slate-200/90 bg-white text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-orange-500/30 transition-all"
+        />
+      </div>
+
       {/* Right Controls: Siren Toggle, Unit Selector, Notification Bell, User Avatar */}
       <div className="flex items-center gap-3 sm:gap-4">
         {/* Siren Status & Mute/Unmute toggle */}
@@ -83,23 +101,40 @@ export function AdminTopbar({
             {isSirenMuted ? (
               <>
                 <VolumeX className="w-3.5 h-3.5 text-slate-400" />
-                <span className="hidden md:inline">Sirine Mati</span>
+                <span className="hidden lg:inline">Sirine Mati</span>
               </>
             ) : (
               <>
                 <Volume2 className="w-3.5 h-3.5 text-red-500 animate-pulse" />
-                <span className="hidden md:inline">Sirine Siaga</span>
+                <span className="hidden lg:inline">Sirine Siaga</span>
               </>
             )}
           </button>
         )}
 
-        {/* Agency Unit Filter Select */}
-        <div className="relative hidden sm:block">
+        {/* Agency Unit Filter Select Pill with Orange Logo */}
+        <div className="relative">
+          <div className="h-9 px-3 pr-7 rounded-full border border-slate-200/90 bg-white shadow-2xs flex items-center gap-2 text-xs font-semibold text-slate-800 pointer-events-none">
+            <div className="w-5 h-5 rounded-full bg-linear-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white text-[10px] shadow-2xs shrink-0">
+              <span className="font-extrabold text-[9px] leading-none">▲</span>
+            </div>
+            <span>
+              {activeUnit === "bnpb_bpbd"
+                ? "BNPB / BPBD"
+                : activeUnit === "damkar"
+                ? "Dinas Damkar"
+                : activeUnit === "medis"
+                ? "Medis / Dinkes"
+                : activeUnit === "polisi"
+                ? "Polri"
+                : "Semua Posko"}
+            </span>
+          </div>
           <select
             value={activeUnit}
             onChange={(e) => onSelectUnit(e.target.value)}
-            className="h-9 pl-3 pr-7 rounded-full border border-slate-200/90 bg-white hover:border-slate-300 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-orange-500/30 cursor-pointer appearance-none shadow-2xs transition-all"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs"
+            title="Pilih Unit Posko"
           >
             <option value="semua">Semua Posko</option>
             <option value="bnpb_bpbd">BNPB / BPBD</option>
@@ -111,17 +146,6 @@ export function AdminTopbar({
             <ChevronDown className="w-3 h-3" />
           </div>
         </div>
-
-        {/* Notification Bell with Red Dot */}
-        <button
-          type="button"
-          onClick={() => router.push("/admin/sos")}
-          title="Notifikasi & Peringatan Darurat"
-          className="w-9 h-9 rounded-full bg-white border border-slate-200/90 hover:border-slate-300 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors shadow-2xs relative"
-        >
-          <Bell className="w-4 h-4 text-slate-600" />
-          <span className="w-2 h-2 rounded-full bg-red-500 absolute top-2 right-2 ring-2 ring-white" />
-        </button>
 
         {/* Admin Profile Pill */}
         <div className="relative">
