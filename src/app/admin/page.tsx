@@ -45,19 +45,27 @@ interface SosAlertItem {
   coordinates: string;
   time: string;
   status: "aktif" | "ditangani";
+  created_at: string;
 }
 
 const INITIAL_SOS_ALERTS: SosAlertItem[] = DEFAULT_MOCK_SOS.filter(
   (s) => s.status !== "selesai"
-).map((s) => ({
-  id: s.id,
-  sender_name: s.source,
-  assistance_type: s.assistance_type,
-  location: s.address,
-  coordinates: s.coordinates,
-  time: s.time_ago,
-  status: s.status as "aktif" | "ditangani",
-}));
+)
+  .map((s) => ({
+    id: s.id,
+    sender_name: s.source,
+    assistance_type: s.assistance_type,
+    location: s.address,
+    coordinates: s.coordinates,
+    time: s.time_ago,
+    status: s.status as "aktif" | "ditangani",
+    created_at: s.created_at,
+  }))
+  .sort((a, b) => {
+    const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return timeB - timeA;
+  });
 
 const INITIAL_REPORTS: AdminReportItem[] = DEFAULT_MOCK_REPORTS.map((r) => {
   let pLabel: PriorityLabel = "Sedang";
@@ -120,15 +128,22 @@ export default function AdminRingkasanPage() {
         if (isMounted && liveSos && liveSos.length > 0) {
           const activeOnly = liveSos.filter((s) => s.status !== "selesai");
           setSosAlerts(
-            activeOnly.map((s) => ({
-              id: s.id,
-              sender_name: s.source,
-              assistance_type: s.assistance_type,
-              location: s.address,
-              coordinates: s.coordinates,
-              time: s.time_ago,
-              status: s.status as "aktif" | "ditangani",
-            }))
+            activeOnly
+              .map((s) => ({
+                id: s.id,
+                sender_name: s.source,
+                assistance_type: s.assistance_type,
+                location: s.address,
+                coordinates: s.coordinates,
+                time: s.time_ago,
+                status: s.status as "aktif" | "ditangani",
+                created_at: s.created_at,
+              }))
+              .sort((a, b) => {
+                const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                return timeB - timeA;
+              })
           );
           setActiveSosCount(activeOnly.filter((s) => s.status === "aktif").length);
         }
@@ -223,7 +238,13 @@ export default function AdminRingkasanPage() {
   const urgentReports = filteredReports.filter(
     (r) => r.status === "diterima" || r.priority === "Kritis" || r.priority === "Tinggi"
   );
-  const activeSos = filteredSos.filter((s) => s.status === "aktif");
+  const activeSos = filteredSos
+    .filter((s) => s.status === "aktif")
+    .sort((a, b) => {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return timeB - timeA;
+    });
 
   const totalReportsCount = filteredReports.length || 1;
   const banjirCount = filteredReports.filter((r) => r.disaster_type === "banjir").length;

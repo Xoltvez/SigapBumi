@@ -364,9 +364,11 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
     });
   });
 
-  return Array.from(mergedMap.values()).sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
+  return Array.from(mergedMap.values()).sort((a, b) => {
+    const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return timeB - timeA;
+  });
 }
 
 /**

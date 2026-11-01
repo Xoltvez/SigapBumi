@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   Volume2,
@@ -91,17 +91,25 @@ export default function AdminSosPage() {
     };
   }, [loadData]);
 
-  const filteredEmergencies = emergencies.filter((e) => {
-    // 1. Filter unit
-    if (activeUnit !== "semua" && activeUnit !== "bnpb_bpbd") {
-      if (e.assistance_type !== activeUnit) return false;
-    }
-    // 2. Filter tab
-    if (filterTab === "aktif") return e.status === "aktif";
-    if (filterTab === "ditangani") return e.status === "ditangani";
-    if (filterTab === "palsu") return e.status === "palsu";
-    return true;
-  });
+  const filteredEmergencies = useMemo(() => {
+    return emergencies
+      .filter((e) => {
+        // 1. Filter unit
+        if (activeUnit !== "semua" && activeUnit !== "bnpb_bpbd") {
+          if (e.assistance_type !== activeUnit) return false;
+        }
+        // 2. Filter tab
+        if (filterTab === "aktif") return e.status === "aktif";
+        if (filterTab === "ditangani") return e.status === "ditangani";
+        if (filterTab === "palsu") return e.status === "palsu";
+        return true;
+      })
+      .sort((a, b) => {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return timeB - timeA; // Urutkan data SOS yang terbaru dulu
+      });
+  }, [emergencies, activeUnit, filterTab]);
 
   const handleDispatch = async (id: string, team: string) => {
     setEmergencies((prev) =>

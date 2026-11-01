@@ -83,7 +83,13 @@ export default function AdminPetaPage() {
 
         if (isMounted && liveReports && liveReports.length > 0) {
           const reportPoints = reportsToMapPoints(liveReports);
-          const activeSos = (liveSos || DEFAULT_MOCK_SOS).filter((s) => s.status === "aktif");
+          const activeSos = (liveSos || DEFAULT_MOCK_SOS)
+            .filter((s) => s.status === "aktif")
+            .sort((a, b) => {
+              const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+              const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+              return timeB - timeA;
+            });
           const sosPoints: MapPoint[] = activeSos.map((s) => ({
             id: s.id,
             tracking_code: `SOS-${s.id.toUpperCase()}`,
