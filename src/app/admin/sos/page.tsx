@@ -48,12 +48,29 @@ export default function AdminSosPage() {
       loadData();
     }, 0);
 
-    // Realtime channel listener
+    // Event listener lokal untuk pengujian instan antar tab/window
+    const handleLocalUpdate = () => {
+      loadData();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("sigapbumi:sos-created", handleLocalUpdate);
+      window.addEventListener("sigapbumi:sos-updated", handleLocalUpdate);
+      window.addEventListener("storage", handleLocalUpdate);
+    }
+
+    // Realtime channel listener (mendengarkan sos_alerts dan reports)
     const channel = supabase
       .channel("admin_sos_page_realtime")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sos_alerts" },
+        () => {
+          loadData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reports" },
         () => {
           loadData();
         }
@@ -65,6 +82,11 @@ export default function AdminSosPage() {
     return () => {
       clearTimeout(timer);
       clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("sigapbumi:sos-created", handleLocalUpdate);
+        window.removeEventListener("sigapbumi:sos-updated", handleLocalUpdate);
+        window.removeEventListener("storage", handleLocalUpdate);
+      }
       supabase.removeChannel(channel);
     };
   }, [loadData]);

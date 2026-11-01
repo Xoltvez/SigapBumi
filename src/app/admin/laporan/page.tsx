@@ -78,14 +78,20 @@ function LaporanContent() {
           };
         });
 
-        // Urutkan default: Kritis -> Tinggi -> Sedang -> Rendah
+        // Urutkan default: SOS paling atas -> Kritis -> Tinggi -> Sedang -> Rendah
         const priorityOrder: Record<PriorityLabel, number> = {
           Kritis: 4,
           Tinggi: 3,
           Sedang: 2,
           Rendah: 1,
         };
-        formatted.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]);
+        formatted.sort((a, b) => {
+          const aIsSos = a.tracking_code.startsWith("SOS") || a.title.includes("SOS");
+          const bIsSos = b.tracking_code.startsWith("SOS") || b.title.includes("SOS");
+          if (aIsSos && !bIsSos) return -1;
+          if (!aIsSos && bIsSos) return 1;
+          return priorityOrder[b.priority] - priorityOrder[a.priority];
+        });
 
         setReports(formatted);
       }
@@ -101,6 +107,15 @@ function LaporanContent() {
       loadData();
     }, 0);
 
+    // Event listener lokal untuk pengujian instan antar tab
+    const handleLocalUpdate = () => {
+      loadData();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("sigapbumi:sos-created", handleLocalUpdate);
+      window.addEventListener("storage", handleLocalUpdate);
+    }
+
     // Realtime channel
     const channel = supabase
       .channel("admin_laporan_list_realtime")
@@ -113,8 +128,15 @@ function LaporanContent() {
       )
       .subscribe();
 
+    const interval = setInterval(loadData, 5000);
+
     return () => {
       clearTimeout(timer);
+      clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("sigapbumi:sos-created", handleLocalUpdate);
+        window.removeEventListener("storage", handleLocalUpdate);
+      }
       supabase.removeChannel(channel);
     };
   }, []);
@@ -130,15 +152,18 @@ function LaporanContent() {
   // Filter hasil
   const filteredReports = useMemo(() => {
     return reports.filter((r) => {
-      // Unit instansi filter
+      // Unit instansi filter (SOS selalu tampil di semua unit)
       if (activeUnit !== "semua" && activeUnit !== "bnpb_bpbd") {
-        const unitMap: Record<string, DisasterType[]> = {
-          damkar: ["kebakaran", "karhutla"],
-          medis: ["gempa", "tsunami"],
-          polisi: ["lainnya"],
-        };
-        const allowedTypes = unitMap[activeUnit] || [];
-        if (!allowedTypes.includes(r.disaster_type)) return false;
+        const isSos = r.tracking_code.startsWith("SOS") || r.title.includes("SOS");
+        if (!isSos) {
+          const unitMap: Record<string, DisasterType[]> = {
+            damkar: ["kebakaran", "karhutla"],
+            medis: ["gempa", "tsunami"],
+            polisi: ["lainnya"],
+          };
+          const allowedTypes = unitMap[activeUnit] || [];
+          if (!allowedTypes.includes(r.disaster_type)) return false;
+        }
       }
 
       // Status
@@ -399,20 +424,34 @@ function LaporanContent() {
                   </td>
                 </tr>
               ) : (
-                paginatedReports.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="hover:bg-bg/60 transition-colors h-14"
-                  >
-                    {/* Prioritas */}
-                    <td className="py-3 px-4">
-                      <PriorityBadge priority={row.priority} />
-                    </td>
+                paginatedReports.map((row) => {
+                  const isSosRow = row.tracking_code.startsWith("SOS") || row.title.includes("SOS");
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`transition-colors h-14 ${
+                        isSosRow
+                          ? "bg-red-50/80 hover:bg-red-100/70 border-l-4 border-l-red-600"
+                          : "hover:bg-bg/60"
+                      }`}
+                    >
+                      {/* Prioritas */}
+                      <td className="py-3 px-4">
+                        {isSosRow ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-red-600 text-white animate-pulse inline-flex items-center gap-1">
+                            <span>🚨 SOS</span>
+                          </span>
+                        ) : (
+                          <PriorityBadge priority={row.priority} />
+                        )}
+                      </td>
 
-                    {/* Kode Tracking */}
-                    <td className="py-3 px-4 font-mono font-bold text-primary-text">
-                      {row.tracking_code}
-                    </td>
+                      {/* Kode Tracking */}
+                      <td className="py-3 px-4 font-mono font-bold">
+                        <span className={isSosRow ? "text-red-700 font-black" : "text-primary-text"}>
+                          {row.tracking_code}
+                        </span>
+                      </td>
 
                     {/* Jenis Bencana */}
                     <td className="py-3 px-4">
@@ -476,7 +515,8 @@ function LaporanContent() {
                       </Link>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

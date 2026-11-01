@@ -141,7 +141,17 @@ export default function AdminRingkasanPage() {
       loadData();
     }, 0);
 
-    // Realtime subscription
+    // Event listener lokal untuk pengujian instan antar tab
+    const handleLocalUpdate = () => {
+      loadData();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("sigapbumi:sos-created", handleLocalUpdate);
+      window.addEventListener("sigapbumi:sos-updated", handleLocalUpdate);
+      window.addEventListener("storage", handleLocalUpdate);
+    }
+
+    // Realtime subscription ke Supabase
     const channel = supabase
       .channel("admin_ringkasan_realtime")
       .on(
@@ -149,8 +159,13 @@ export default function AdminRingkasanPage() {
         { event: "INSERT", schema: "public", table: "reports" },
         (payload) => {
           const newRow = payload.new as { tracking_code?: string; title?: string };
-          setNewNotice(`Laporan Baru Masuk: [${newRow.tracking_code || "LPR"}] ${newRow.title || "Kejadian"}`);
-          setTimeout(() => setNewNotice(null), 6000);
+          const isSos = newRow.tracking_code?.startsWith("SOS") || newRow.title?.includes("SOS");
+          if (isSos) {
+            setNewNotice(`🚨 PANGGILAN DARURAT SOS MASUK: [${newRow.tracking_code || "SOS"}] ${newRow.title || "Warga Membutuhkan Pertolongan Segera"}`);
+          } else {
+            setNewNotice(`Laporan Baru Masuk: [${newRow.tracking_code || "LPR"}] ${newRow.title || "Kejadian"}`);
+          }
+          setTimeout(() => setNewNotice(null), 8000);
           loadData();
         }
       )
@@ -159,11 +174,30 @@ export default function AdminRingkasanPage() {
         { event: "UPDATE", schema: "public", table: "reports" },
         () => loadData()
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sos_alerts" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setNewNotice(`🚨 SINYAL SOS MASUK: Radar mendeteksi panggilan darurat baru!`);
+            setTimeout(() => setNewNotice(null), 8000);
+          }
+          loadData();
+        }
+      )
       .subscribe();
+
+    const interval = setInterval(loadData, 5000);
 
     return () => {
       isMounted = false;
       clearTimeout(timer);
+      clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("sigapbumi:sos-created", handleLocalUpdate);
+        window.removeEventListener("sigapbumi:sos-updated", handleLocalUpdate);
+        window.removeEventListener("storage", handleLocalUpdate);
+      }
       supabase.removeChannel(channel);
     };
   }, [setIsLiveConnected, setActiveSosCount]);

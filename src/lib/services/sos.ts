@@ -113,6 +113,17 @@ export function timeAgo(dateString: string): string {
   }
 }
 
+function generateUUID(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 /**
  * Mengirim sinyal SOS darurat dari warga ke Supabase
  */
@@ -123,9 +134,10 @@ export async function sendSosAlert(params: {
   note?: string;
   senderName?: string;
   phoneNumber?: string;
-}): Promise<{ success: boolean; id?: string; error?: string }> {
-  const generatedId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `sos-${Date.now()}`;
+}): Promise<{ success: boolean; id: string; trackingCode: string; error?: string }> {
+  const generatedId = generateUUID();
   const nowIso = new Date().toISOString();
+  const trackingCode = `SOS-${Date.now().toString().slice(-4)}`;
 
   const formattedNote = params.phoneNumber
     ? `${params.note || "Panggilan Darurat SOS Warga"} [Kontak: ${params.phoneNumber}]`
@@ -151,9 +163,15 @@ export async function sendSosAlert(params: {
   const currentCache = getLocalSosCache();
   saveLocalSosCache([newItem, ...currentCache.filter((x) => x.id !== generatedId)]);
 
-  // 2. Kirim ke Supabase
+  // Dispatch custom event & storage event agar tab lain/admin langsung reaktif seketika
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("sigapbumi:sos-created", { detail: newItem }));
+    window.dispatchEvent(new Event("storage"));
+  }
+
+  // 2. Kirim ke tabel sos_alerts Supabase (jika izin RLS tersedia)
   try {
-    const { error } = await supabase.from("sos_alerts").insert({
+    const { error: sosError } = await supabase.from("sos_alerts").insert({
       id: generatedId,
       location: `POINT(${params.lng} ${params.lat})`,
       assistance_type: params.assistanceType || "damkar",
@@ -161,15 +179,46 @@ export async function sendSosAlert(params: {
       note: formattedNote,
       created_at: nowIso,
     });
-
-    if (error) {
-      console.warn("sendSosAlert Supabase warning:", error.message);
+    if (sosError) {
+      console.warn("sendSosAlert sos_alerts info:", sosError.message);
     }
   } catch (err) {
-    console.warn("sendSosAlert network error:", err);
+    console.warn("sendSosAlert sos_alerts network error:", err);
   }
 
-  return { success: true, id: generatedId };
+  // 3. SELALU kirim ke tabel reports Supabase (agar realtime langsung muncul di antrean laporan & dashboard admin)
+  try {
+    const disasterType =
+      params.assistanceType === "damkar"
+        ? "kebakaran"
+        : params.assistanceType === "medis"
+        ? "lainnya"
+        : params.assistanceType === "polisi"
+        ? "lainnya"
+        : "banjir";
+
+    const { error: repError } = await supabase.from("reports").insert({
+      id: generatedId,
+      tracking_code: trackingCode,
+      disaster_type: disasterType,
+      title: `🚨 PANGGILAN DARURAT SOS (${(params.assistanceType || "damkar").toUpperCase()})`,
+      description: formattedNote,
+      location: `POINT(${params.lng} ${params.lat})`,
+      address: `Titik Darurat Warga (${params.lat.toFixed(4)}, ${params.lng.toFixed(4)})`,
+      status: "diterima",
+      confirmation_count: 1,
+      priority_score: 99,
+      created_at: nowIso,
+      updated_at: nowIso,
+    });
+    if (repError) {
+      console.warn("sendSosAlert reports insert info:", repError.message);
+    }
+  } catch (err) {
+    console.warn("sendSosAlert reports network error:", err);
+  }
+
+  return { success: true, id: generatedId, trackingCode };
 }
 
 /**
@@ -189,6 +238,10 @@ export async function updateSosPhone(
     saveLocalSosCache(localItems);
   }
 
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("storage"));
+  }
+
   try {
     const formattedNote = `Panggilan Darurat SOS Warga [Kontak: ${phoneNumber}]`;
     await supabase
@@ -196,7 +249,17 @@ export async function updateSosPhone(
       .update({ note: formattedNote })
       .eq("id", id);
   } catch (err) {
-    console.warn("updateSosPhone network error:", err);
+    console.warn("updateSosPhone sos_alerts network error:", err);
+  }
+
+  try {
+    const formattedNote = `Panggilan Darurat SOS Warga [Kontak: ${phoneNumber}]`;
+    await supabase
+      .from("reports")
+      .update({ description: formattedNote, updated_at: new Date().toISOString() })
+      .eq("id", id);
+  } catch (err) {
+    console.warn("updateSosPhone reports network error:", err);
   }
 
   return { success: true };
@@ -209,6 +272,7 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
   const localItems = getLocalSosCache();
   let supabaseItems: LiveSosItem[] = [];
 
+  // 1. Ambil dari tabel sos_alerts
   try {
     const { data, error } = await supabase
       .from("sos_alerts")
@@ -241,6 +305,45 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
     }
   } catch (err) {
     console.warn("fetchLiveSosAlerts Supabase error:", err);
+  }
+
+  // 2. Ambil juga dari tabel reports (laporan darurat dengan kode/judul SOS)
+  try {
+    const { data: repData } = await supabase
+      .from("reports")
+      .select("*")
+      .or("tracking_code.ilike.SOS-%,title.ilike.%SOS%")
+      .order("created_at", { ascending: false });
+
+    if (repData && repData.length > 0) {
+      repData.forEach((row) => {
+        const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
+        const phoneMatch = row.description ? (row.description as string).match(/\[Kontak:\s*([^\]]+)\]/) : null;
+        const extractedPhone = phoneMatch ? phoneMatch[1].trim() : undefined;
+        let aType: SosAssistanceType = "damkar";
+        if (row.title?.includes("MEDIS")) aType = "medis";
+        else if (row.title?.includes("POLISI")) aType = "polisi";
+        else if (row.title?.includes("BNPB") || row.title?.includes("BPBD")) aType = "bnpb_bpbd";
+
+        supabaseItems.push({
+          id: row.id,
+          source: "Ponsel Warga (GPS Sensor)",
+          assistance_type: aType,
+          address: row.address || `Koordinat GPS (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`,
+          coordinates: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
+          lat: coords.lat,
+          lng: coords.lng,
+          time_ago: timeAgo(row.created_at),
+          battery_level: "95%",
+          status: row.status === "selesai" ? "selesai" : row.status === "ditindaklanjuti" ? "ditangani" : "aktif",
+          phone_number: extractedPhone,
+          note: row.description || undefined,
+          created_at: row.created_at,
+        });
+      });
+    }
+  } catch (err) {
+    console.warn("fetchLiveSosAlerts from reports error:", err);
   }
 
   // Gabungkan hasil: Supabase live + Local Cache + Default Mock
@@ -320,6 +423,28 @@ export async function updateSosAlertStatus(
     }
   } catch (err) {
     console.warn("updateSosAlertStatus network error:", err);
+  }
+
+  // Juga sinkronkan status ke tabel reports
+  try {
+    const reportStatus =
+      newStatus === "selesai" || newStatus === "palsu"
+        ? (newStatus === "palsu" ? "ditolak" : "selesai")
+        : newStatus === "ditangani"
+        ? "ditindaklanjuti"
+        : "diterima";
+
+    await supabase
+      .from("reports")
+      .update({ status: reportStatus, updated_at: new Date().toISOString() })
+      .eq("id", id);
+  } catch (err) {
+    console.warn("updateSosAlertStatus reports update error:", err);
+  }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("sigapbumi:sos-updated", { detail: { id, status: newStatus } }));
   }
 
   return { success: true };
