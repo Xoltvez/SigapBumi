@@ -1,20 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Search,
   Calendar,
-  HelpCircle,
-  Bell,
-  Plus,
   Flame,
   HeartPulse,
   Shield,
   LifeBuoy,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronDown,
 } from "lucide-react";
 
 interface AdminTopbarProps {
@@ -31,8 +28,6 @@ export function AdminTopbar({
   onToggleSidebar,
   activeUnit,
   onSelectUnit,
-  activeSosCount = 0,
-  isLiveConnected = true,
 }: AdminTopbarProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -110,55 +105,35 @@ export function AdminTopbar({
         </form>
       </div>
 
-      {/* Right: Quick Action Button, Circle Icons, Unit Selector */}
-      <div className="flex items-center gap-2.5 sm:gap-3">
-        {/* Quick Action Button (like screenshot [+ Booking Baru] in amber) */}
-        <Link
-          href="/admin/laporan"
-          className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-all shadow-sm shrink-0"
-        >
-          <Plus className="w-3.5 h-3.5 stroke-[3]" />
-          <span>Laporan Baru</span>
-        </Link>
-
-        {/* Circular Help Button (like screenshot [?]) */}
-        <button
-          type="button"
-          title="Bantuan & Panduan Posko"
-          className="w-8 h-8 rounded-full bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 flex items-center justify-center transition-all shrink-0"
-        >
-          <HelpCircle className="w-4 h-4" />
-        </button>
-
-        {/* Circular Bell Notification Button (like screenshot [🔔]) */}
-        <Link
-          href="/admin/sos"
-          title="Notifikasi SOS & Laporan Baru"
-          className="w-8 h-8 rounded-full bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 flex items-center justify-center relative transition-all shrink-0"
-        >
-          <Bell className="w-4 h-4" />
-          {activeSosCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-[#131722]" />
-          )}
-        </Link>
-
-        {/* Agency Unit Selector */}
-        <div className="hidden lg:flex items-center gap-1.5 pl-2 border-l border-slate-800">
-          <div className="relative">
-            <select
-              value={activeUnit}
-              onChange={(e) => onSelectUnit(e.target.value)}
-              className="h-8 pl-7 pr-3 rounded-lg border border-slate-800 bg-slate-900/90 text-xs font-semibold text-slate-200 focus:outline-none focus:border-amber-500/50 cursor-pointer appearance-none"
-            >
-              <option value="semua">Semua Posko</option>
-              <option value="bnpb_bpbd">BNPB / BPBD</option>
-              <option value="damkar">Dinas Damkar</option>
-              <option value="medis">Medis / Dinkes</option>
-              <option value="polisi">Polri</option>
-            </select>
-            <div className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none">
-              {getUnitIcon(activeUnit)}
-            </div>
+      {/* Right: Agency Unit Selector with visible prominent stroke */}
+      <div className="flex items-center">
+        <div className="relative">
+          <select
+            value={activeUnit}
+            onChange={(e) => onSelectUnit(e.target.value)}
+            className="h-9 pl-8 pr-7 rounded-full border border-slate-600/90 hover:border-slate-400 bg-slate-900/95 text-xs font-semibold text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40 cursor-pointer appearance-none shadow-sm transition-all"
+          >
+            <option value="semua" className="bg-[#131722] text-white">
+              Semua Posko
+            </option>
+            <option value="bnpb_bpbd" className="bg-[#131722] text-white">
+              BNPB / BPBD
+            </option>
+            <option value="damkar" className="bg-[#131722] text-white">
+              Dinas Damkar
+            </option>
+            <option value="medis" className="bg-[#131722] text-white">
+              Medis / Dinkes
+            </option>
+            <option value="polisi" className="bg-[#131722] text-white">
+              Polri
+            </option>
+          </select>
+          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+            {getUnitIcon(activeUnit)}
+          </div>
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+            <ChevronDown className="w-3.5 h-3.5" />
           </div>
         </div>
       </div>
