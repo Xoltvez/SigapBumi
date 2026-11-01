@@ -119,6 +119,14 @@ function LaporanContent() {
     };
   }, []);
 
+  // Synchronize when search query param changes
+  useEffect(() => {
+    if (initialSearch !== undefined) {
+      setSearchCode(initialSearch);
+      setCurrentPage(1);
+    }
+  }, [initialSearch]);
+
   // Filter hasil
   const filteredReports = useMemo(() => {
     return reports.filter((r) => {
@@ -142,13 +150,14 @@ function LaporanContent() {
       // Priority
       if (selectedPriority !== "semua" && r.priority !== selectedPriority) return false;
 
-      // Search code or title
+      // Search code, title, disaster type (e.g. banjir), or location/daerah
       if (searchCode.trim()) {
         const q = searchCode.trim().toLowerCase();
         const matchCode = r.tracking_code.toLowerCase().includes(q);
         const matchTitle = r.title.toLowerCase().includes(q);
         const matchLoc = r.location.toLowerCase().includes(q);
-        if (!matchCode && !matchTitle && !matchLoc) return false;
+        const matchDisaster = r.disaster_type.toLowerCase().includes(q);
+        if (!matchCode && !matchTitle && !matchLoc && !matchDisaster) return false;
       }
 
       return true;
@@ -221,8 +230,8 @@ function LaporanContent() {
                 setSearchCode(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Cari kode (LPR-XXXXXX), judul, atau lokasi..."
-              className="w-full h-9 pl-9 pr-3 rounded-md border border-line bg-bg text-xs font-mono uppercase placeholder:normal-case placeholder:font-sans text-ink focus-visible:outline-primary"
+              placeholder="Cari bencana (misal: banjir), daerah/lokasi, atau kode..."
+              className="w-full h-9 pl-9 pr-3 rounded-md border border-line bg-bg text-xs placeholder:text-ink-muted text-ink focus-visible:outline-primary font-sans"
             />
           </div>
 
