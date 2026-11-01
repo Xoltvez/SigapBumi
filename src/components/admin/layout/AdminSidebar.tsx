@@ -114,7 +114,8 @@ export function AdminSidebar({
           const isBlueActive =
             item.href === "/admin/laporan" ||
             item.href === "/admin/sos" ||
-            item.href === "/admin/peta";
+            item.href === "/admin/peta" ||
+            item.href === "/admin/statistik";
           const activeClasses = isBlueActive
             ? "bg-[#EFF6FF] text-[#2563EB] font-semibold"
             : "bg-[#FFF4EC] text-[#EA580C] font-semibold";
