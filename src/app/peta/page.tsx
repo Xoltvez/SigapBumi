@@ -9,7 +9,6 @@ import {
   List,
   Map as MapIcon,
   Clock,
-  AlertCircle,
   ExternalLink,
   Search,
   SlidersHorizontal,
@@ -23,6 +22,7 @@ import {
   Siren,
   ChevronDown,
   RotateCcw,
+  AlertCircle,
 } from "lucide-react";
 import type { MapPoint } from "@/components/peta/DisasterMap";
 import type { DisasterType, ReportStatus } from "@/types";
@@ -284,21 +284,377 @@ function PetaContent() {
   };
 
   return (
-    <div className="w-full h-[calc(100vh-64px)] relative overflow-hidden bg-slate-100 flex flex-col font-sans select-none">
-      {/* 1. Full Screen Interactive Map */}
+    <main
+      className={`w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 font-sans select-none ${
+        viewMode === "peta"
+          ? "h-[calc(100vh-4rem)] py-3 sm:py-4 flex flex-col overflow-hidden"
+          : "min-h-[calc(100vh-4rem)] py-6 space-y-6"
+      }`}
+    >
+      {/* 1. Main Framed Map Mode with Symmetrical Controls */}
       {viewMode === "peta" ? (
-        <div key={mapCenterKey} className="absolute inset-0 w-full h-full z-0">
-          <DisasterMap
-            points={filteredPoints}
-            selectedPointId={selectedPoint?.id}
-            onSelectPoint={(pt) => setSelectedPoint(pt)}
-            showLegend={false}
-            className="w-full h-full rounded-none border-none shadow-none"
-          />
+        <div className="w-full flex-1 min-h-[580px] rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden relative bg-slate-100">
+          {/* Map Layer */}
+          <div key={mapCenterKey} className="absolute inset-0 w-full h-full z-0">
+            <DisasterMap
+              points={filteredPoints}
+              selectedPointId={selectedPoint?.id}
+              onSelectPoint={(pt) => setSelectedPoint(pt)}
+              showLegend={false}
+              className="w-full h-full rounded-none border-none shadow-none"
+            />
+          </div>
+
+          {/* Floating Symmetric Top Bar (Rata Kanan & Rata Kiri Serasi) */}
+          <div className="absolute top-4 left-4 right-4 sm:left-5 sm:right-5 z-[400] flex items-center justify-between pointer-events-none gap-3">
+            {/* Sisi Kiri: Search Bar, Tombol Filter, Switch Peta/Daftar */}
+            <div className="pointer-events-auto flex items-center gap-2 sm:gap-2.5 flex-wrap">
+              {/* Search Box */}
+              <div className="relative">
+                <div className="bg-white/95 backdrop-blur-md border border-slate-300/80 hover:border-slate-400 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 shadow-md rounded-xl h-10 px-3.5 flex items-center gap-2 w-56 sm:w-72 transition-all">
+                  <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Cari bencana atau daerah..."
+                    className="w-full text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none bg-transparent font-sans"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="text-slate-400 hover:text-slate-600 p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Toggle Filter Button */}
+              <button
+                type="button"
+                onClick={() => setShowFilterDrawer((prev) => !prev)}
+                className={`h-10 px-3.5 rounded-xl border backdrop-blur-md text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer ${
+                  showFilterDrawer || hasActiveFilters
+                    ? "bg-orange-600 text-white border-orange-600 shadow-orange-500/20"
+                    : "bg-white/95 text-slate-700 border-slate-300/80 hover:border-orange-400 hover:text-orange-600"
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>Filter</span>
+                {hasActiveFilters && (
+                  <span className="w-2 h-2 rounded-full bg-white ml-0.5" />
+                )}
+              </button>
+
+              {/* Switch Mode Peta vs Daftar */}
+              <div className="bg-white/95 backdrop-blur-md border border-slate-300/80 shadow-md rounded-xl h-10 p-1 flex items-center text-xs font-semibold text-slate-600">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("peta")}
+                  className={`h-8 px-2.5 rounded-lg flex items-center gap-1 transition-all ${
+                    viewMode === "peta"
+                      ? "bg-orange-500 text-white font-bold shadow-xs"
+                      : "hover:text-slate-900"
+                  }`}
+                >
+                  <MapIcon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Peta</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("daftar")}
+                  className={`h-8 px-2.5 rounded-lg flex items-center gap-1 transition-all ${
+                    viewMode === "daftar"
+                      ? "bg-orange-500 text-white font-bold shadow-xs"
+                      : "hover:text-slate-900"
+                  }`}
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span>Daftar ({filteredPoints.length})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sisi Kanan: Pusatkan Peta & Total Kejadian Aktif */}
+            <div className="pointer-events-auto flex items-center gap-2">
+              {/* Tombol Pusatkan Peta */}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedPoint(null);
+                  setMapCenterKey((prev) => prev + 1);
+                }}
+                title="Pusatkan Peta ke Seluruh Wilayah"
+                className="h-10 px-3.5 rounded-xl bg-white/95 hover:bg-white backdrop-blur-md border border-slate-300/80 hover:border-slate-400 text-slate-700 hover:text-orange-600 shadow-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Target className="w-3.5 h-3.5 text-orange-500" />
+                <span className="hidden md:inline">Pusatkan Peta</span>
+              </button>
+
+              {/* Badge Total Laporan */}
+              <div className="h-10 px-3.5 rounded-xl bg-white/95 backdrop-blur-md border border-slate-300/80 shadow-md text-xs font-bold text-slate-800 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                <span>{filteredPoints.length} Kejadian</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Floating Filter Popover (Sisi Kiri di dalam Peta) */}
+          {showFilterDrawer && (
+            <div className="absolute top-16 left-4 sm:left-5 z-[400] w-80 max-w-[calc(100vw-3rem)] max-h-[calc(100vh-14rem)] overflow-y-auto bg-white/98 backdrop-blur-md border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xl pointer-events-auto space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4 text-orange-600" />
+                  <h3 className="font-bold text-sm text-slate-800">Filter Bencana</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowFilterDrawer(false)}
+                  className="text-slate-400 hover:text-slate-600 p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Kategori Bencana */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Kategori Bencana</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DISASTER_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat.key)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                        selectedCategory === cat.key
+                          ? "bg-orange-600 text-white font-bold shadow-xs"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status Penanganan */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Status Penanganan</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {STATUS_LIST.map((st) => (
+                    <button
+                      key={st.key}
+                      type="button"
+                      onClick={() => setSelectedStatus(st.key)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                        selectedStatus === st.key
+                          ? "bg-slate-900 text-white font-bold"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Wilayah / Provinsi */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Wilayah Provinsi</label>
+                <div className="relative">
+                  <select
+                    value={selectedRegion}
+                    onChange={(e) => setSelectedRegion(e.target.value)}
+                    className="w-full h-9 pl-3 pr-8 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:border-orange-500 cursor-pointer appearance-none"
+                  >
+                    {PROVINCE_LIST.map((prov) => (
+                      <option key={prov} value={prov}>
+                        {prov}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Toggle SOS Darurat */}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                  <Siren className="w-3.5 h-3.5 text-red-500" />
+                  <span>Titik Darurat SOS</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSos((prev) => !prev)}
+                  className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${
+                    showSos ? "bg-red-500" : "bg-slate-300"
+                  }`}
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                      showSos ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Reset Action */}
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetAllFilters}
+                  className="w-full py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-600 flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset Semua Filter</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Floating Disaster Detail Card (Sisi Kanan di dalam Peta, Sesuai Contoh Gambar) */}
+          {selectedPoint && (
+            <div className="absolute top-16 right-4 sm:right-5 z-[400] w-full sm:w-[440px] max-w-[calc(100vw-3rem)] max-h-[calc(100vh-14rem)] overflow-y-auto bg-white/98 backdrop-blur-md border border-slate-200/90 rounded-2xl p-5 shadow-2xl pointer-events-auto space-y-4 animate-in slide-in-from-right duration-200">
+              {/* Header Kartu: Ikon, Jenis Bencana & Tombol Tutup */}
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                    {getDisasterIcon(selectedPoint.disaster_type)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-slate-900 capitalize leading-tight">
+                      {selectedPoint.disaster_type === "karhutla"
+                        ? "Kebakaran Hutan & Lahan"
+                        : selectedPoint.disaster_type === "longsor"
+                        ? "Tanah Longsor"
+                        : selectedPoint.disaster_type}
+                    </h3>
+                    <span className="font-mono text-[11px] font-bold text-orange-600">
+                      {selectedPoint.tracking_code}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPoint(null)}
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Bagian Lokasi & Tombol Menuju Lokasi */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Lokasi Kejadian
+                  </span>
+                  <Link
+                    href={`/lacak?kode=${encodeURIComponent(selectedPoint.tracking_code)}`}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 hover:text-orange-700 transition-colors"
+                  >
+                    <Navigation className="w-3 h-3" />
+                    <span>Menuju Lokasi / Lacak</span>
+                  </Link>
+                </div>
+                <p className="text-xs font-semibold text-slate-800 leading-snug">
+                  {selectedPoint.location_name}
+                </p>
+              </div>
+
+              {/* Grid: Waktu Kejadian & Status */}
+              <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                <div>
+                  <span className="text-[10px] font-semibold text-slate-400 block uppercase">
+                    Waktu Terpantau
+                  </span>
+                  <span className="font-bold text-slate-800 mt-0.5 block">
+                    {selectedPoint.created_at || "Hari ini"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-semibold text-slate-400 block uppercase">
+                    Status Posko
+                  </span>
+                  <div className="mt-1">
+                    {getStatusBadge(selectedPoint.status, selectedPoint.is_sos)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Kronologi / Rincian Kejadian */}
+              <div className="space-y-1 text-xs">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Rincian Kejadian & Kronologi
+                </span>
+                <p className="text-slate-700 leading-relaxed bg-slate-50/70 p-3 rounded-xl border border-slate-100">
+                  {selectedPoint.description ||
+                    `${selectedPoint.title}. Telah diverifikasi oleh posko tanggap darurat dan diteruskan ke tim satuan tugas lapangan untuk penanganan segera.`}
+                </p>
+              </div>
+
+              {/* Validasi Warga / Dampak */}
+              <div className="space-y-1.5 text-xs">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Validasi & Dampak Warga
+                </span>
+                <div className="flex items-center gap-2 text-slate-700 text-xs bg-orange-50/60 p-2.5 rounded-xl border border-orange-100">
+                  <CheckCircle2 className="w-4 h-4 text-orange-600 shrink-0" />
+                  <span>
+                    <strong>{selectedPoint.confirmation_count} Warga</strong> telah memvalidasi laporan kejadian ini di titik lokasi.
+                  </span>
+                </div>
+              </div>
+
+              {/* Tombol Lacak Progres */}
+              <div className="pt-2 border-t border-slate-100">
+                <Link
+                  href={`/lacak?kode=${encodeURIComponent(selectedPoint.tracking_code)}`}
+                  className="w-full h-10 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+                >
+                  <span>Pantau Status Realtime di Halaman Lacak</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Floating Status Legend (Bawah Kiri di dalam Peta) */}
+          <div className="absolute bottom-4 left-4 sm:left-5 z-[400] bg-white/95 backdrop-blur-md border border-slate-300/80 rounded-xl p-3 shadow-md pointer-events-auto text-xs space-y-1.5 max-w-[260px]">
+            <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1">
+              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                Legenda Status Titik
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium">
+                {filteredPoints.length} Titik
+              </span>
+            </div>
+            <div className="space-y-1 text-[11px] text-slate-600">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB] shrink-0" />
+                <span>Diterima / Diverifikasi</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B] shrink-0" />
+                <span>Ditindaklanjuti</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] shrink-0" />
+                <span>Selesai Teratasi</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#DC2626] shrink-0 animate-pulse" />
+                <span className="font-bold text-red-600">Panggilan Darurat SOS</span>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
-        /* 2. Alternative List View Mode */
-        <div className="relative z-10 w-full h-full overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto space-y-4 pt-20">
+        /* Alternative List View Mode (Tetap Serasi di Container max-w-[1240px]) */
+        <div className="w-full space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-200">
             <div>
               <h2 className="text-lg font-bold text-slate-800">
@@ -357,354 +713,7 @@ function PetaContent() {
           </div>
         </div>
       )}
-
-      {/* 3. Floating Symmetric Top Bar (Rata Kanan & Rata Kiri Serasi) */}
-      <div className="absolute top-4 left-4 right-4 sm:left-6 sm:right-6 z-[400] flex items-center justify-between pointer-events-none gap-3">
-        {/* Sisi Kiri: Search Bar, Tombol Filter, Switch Peta/Daftar */}
-        <div className="pointer-events-auto flex items-center gap-2 sm:gap-2.5 flex-wrap">
-          {/* Search Box */}
-          <div className="relative">
-            <div className="bg-white/95 backdrop-blur-md border border-slate-300/80 hover:border-slate-400 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 shadow-md rounded-xl h-10 px-3.5 flex items-center gap-2 w-56 sm:w-72 transition-all">
-              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari bencana atau daerah..."
-                className="w-full text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none bg-transparent font-sans"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="text-slate-400 hover:text-slate-600 p-0.5"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Toggle Filter Button */}
-          <button
-            type="button"
-            onClick={() => setShowFilterDrawer((prev) => !prev)}
-            className={`h-10 px-3.5 rounded-xl border backdrop-blur-md text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer ${
-              showFilterDrawer || hasActiveFilters
-                ? "bg-orange-600 text-white border-orange-600 shadow-orange-500/20"
-                : "bg-white/95 text-slate-700 border-slate-300/80 hover:border-orange-400 hover:text-orange-600"
-            }`}
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>Filter</span>
-            {hasActiveFilters && (
-              <span className="w-2 h-2 rounded-full bg-white ml-0.5" />
-            )}
-          </button>
-
-          {/* Switch Mode Peta vs Daftar */}
-          <div className="bg-white/95 backdrop-blur-md border border-slate-300/80 shadow-md rounded-xl h-10 p-1 flex items-center text-xs font-semibold text-slate-600">
-            <button
-              type="button"
-              onClick={() => setViewMode("peta")}
-              className={`h-8 px-2.5 rounded-lg flex items-center gap-1 transition-all ${
-                viewMode === "peta"
-                  ? "bg-orange-500 text-white font-bold shadow-xs"
-                  : "hover:text-slate-900"
-              }`}
-            >
-              <MapIcon className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Peta</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("daftar")}
-              className={`h-8 px-2.5 rounded-lg flex items-center gap-1 transition-all ${
-                viewMode === "daftar"
-                  ? "bg-orange-500 text-white font-bold shadow-xs"
-                  : "hover:text-slate-900"
-              }`}
-            >
-              <List className="w-3.5 h-3.5" />
-              <span>Daftar ({filteredPoints.length})</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Sisi Kanan: Pusatkan Peta & Total Kejadian Aktif */}
-        <div className="pointer-events-auto flex items-center gap-2">
-          {/* Tombol Pusatkan Peta */}
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedPoint(null);
-              setMapCenterKey((prev) => prev + 1);
-            }}
-            title="Pusatkan Peta ke Seluruh Wilayah"
-            className="h-10 px-3.5 rounded-xl bg-white/95 hover:bg-white backdrop-blur-md border border-slate-300/80 hover:border-slate-400 text-slate-700 hover:text-orange-600 shadow-md text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-          >
-            <Target className="w-3.5 h-3.5 text-orange-500" />
-            <span className="hidden md:inline">Pusatkan Peta</span>
-          </button>
-
-          {/* Badge Total Laporan */}
-          <div className="h-10 px-3.5 rounded-xl bg-white/95 backdrop-blur-md border border-slate-300/80 shadow-md text-xs font-bold text-slate-800 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-            <span>{filteredPoints.length} Kejadian</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Floating Filter Popover / Panel (Sisi Kiri, Serasi dengan Detail di Kanan) */}
-      {showFilterDrawer && (
-        <div className="absolute top-16 left-4 sm:left-6 z-[400] w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-6rem)] overflow-y-auto bg-white/98 backdrop-blur-md border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xl pointer-events-auto space-y-4 animate-in fade-in zoom-in-95 duration-150">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-orange-600" />
-              <h3 className="font-bold text-sm text-slate-800">Filter Bencana</h3>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowFilterDrawer(false)}
-              className="text-slate-400 hover:text-slate-600 p-1"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Kategori Bencana */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">Kategori Bencana</label>
-            <div className="flex flex-wrap gap-1.5">
-              {DISASTER_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.key}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat.key)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                    selectedCategory === cat.key
-                      ? "bg-orange-600 text-white font-bold shadow-xs"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Status Penanganan */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">Status Penanganan</label>
-            <div className="flex flex-wrap gap-1.5">
-              {STATUS_LIST.map((st) => (
-                <button
-                  key={st.key}
-                  type="button"
-                  onClick={() => setSelectedStatus(st.key)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                    selectedStatus === st.key
-                      ? "bg-slate-900 text-white font-bold"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {st.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Wilayah / Provinsi */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">Wilayah Provinsi</label>
-            <div className="relative">
-              <select
-                value={selectedRegion}
-                onChange={(e) => setSelectedRegion(e.target.value)}
-                className="w-full h-9 pl-3 pr-8 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:border-orange-500 cursor-pointer appearance-none"
-              >
-                {PROVINCE_LIST.map((prov) => (
-                  <option key={prov} value={prov}>
-                    {prov}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Toggle SOS Darurat */}
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-              <Siren className="w-3.5 h-3.5 text-red-500" />
-              <span>Titik Darurat SOS</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowSos((prev) => !prev)}
-              className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${
-                showSos ? "bg-red-500" : "bg-slate-300"
-              }`}
-            >
-              <div
-                className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                  showSos ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Reset Action */}
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={resetAllFilters}
-              className="w-full py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-orange-600 flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Semua Filter</span>
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* 5. Floating Disaster Detail Card (Sisi Kanan, Sesuai Gambar Contoh!) */}
-      {selectedPoint && (
-        <div className="absolute top-16 sm:top-16 right-4 sm:right-6 z-[400] w-full sm:w-[450px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-6rem)] overflow-y-auto bg-white/98 backdrop-blur-md border border-slate-200/90 rounded-2xl p-5 shadow-2xl pointer-events-auto space-y-4 animate-in slide-in-from-right duration-200">
-          {/* Header Kartu: Ikon, Jenis Bencana & Tombol Tutup */}
-          <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                {getDisasterIcon(selectedPoint.disaster_type)}
-              </div>
-              <div>
-                <h3 className="font-bold text-base text-slate-900 capitalize leading-tight">
-                  {selectedPoint.disaster_type === "karhutla"
-                    ? "Kebakaran Hutan & Lahan"
-                    : selectedPoint.disaster_type === "longsor"
-                    ? "Tanah Longsor"
-                    : selectedPoint.disaster_type}
-                </h3>
-                <span className="font-mono text-[11px] font-bold text-orange-600">
-                  {selectedPoint.tracking_code}
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelectedPoint(null)}
-              className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Bagian Lokasi & Tombol Menuju Lokasi */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Lokasi Kejadian
-              </span>
-              <Link
-                href={`/lacak?kode=${encodeURIComponent(selectedPoint.tracking_code)}`}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 hover:text-orange-700 transition-colors"
-              >
-                <Navigation className="w-3 h-3" />
-                <span>Menuju Lokasi / Lacak</span>
-              </Link>
-            </div>
-            <p className="text-xs font-semibold text-slate-800 leading-snug">
-              {selectedPoint.location_name}
-            </p>
-          </div>
-
-          {/* Grid: Hari/Tanggal & Waktu Kejadian */}
-          <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
-            <div>
-              <span className="text-[10px] font-semibold text-slate-400 block uppercase">
-                Waktu Terpantau
-              </span>
-              <span className="font-bold text-slate-800 mt-0.5 block">
-                {selectedPoint.created_at || "Hari ini"}
-              </span>
-            </div>
-            <div>
-              <span className="text-[10px] font-semibold text-slate-400 block uppercase">
-                Status Posko
-              </span>
-              <div className="mt-1">
-                {getStatusBadge(selectedPoint.status, selectedPoint.is_sos)}
-              </div>
-            </div>
-          </div>
-
-          {/* Kronologi / Rincian Kejadian */}
-          <div className="space-y-1 text-xs">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Rincian Kejadian & Kronologi
-            </span>
-            <p className="text-slate-700 leading-relaxed bg-slate-50/70 p-3 rounded-xl border border-slate-100">
-              {selectedPoint.description ||
-                `${selectedPoint.title}. Telah diverifikasi oleh posko tanggap darurat dan diteruskan ke tim satuan tugas lapangan untuk penanganan segera.`}
-            </p>
-          </div>
-
-          {/* Validasi Warga / Dampak */}
-          <div className="space-y-1.5 text-xs">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Validasi & Dampak Warga
-            </span>
-            <div className="flex items-center gap-2 text-slate-700 text-xs bg-orange-50/60 p-2.5 rounded-xl border border-orange-100">
-              <CheckCircle2 className="w-4 h-4 text-orange-600 shrink-0" />
-              <span>
-                <strong>{selectedPoint.confirmation_count} Warga</strong> telah mengonfirmasi dan memverifikasi laporan ini di titik lokasi.
-              </span>
-            </div>
-          </div>
-
-          {/* Tombol Lacak Progres */}
-          <div className="pt-2 border-t border-slate-100">
-            <Link
-              href={`/lacak?kode=${encodeURIComponent(selectedPoint.tracking_code)}`}
-              className="w-full h-10 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
-            >
-              <span>Pantau Status Realtime di Halaman Lacak</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* 6. Floating Status Legend (Bawah Kiri, Rata Kiri Serasi) */}
-      <div className="absolute bottom-4 left-4 sm:left-6 z-[400] bg-white/95 backdrop-blur-md border border-slate-300/80 rounded-xl p-3 shadow-md pointer-events-auto text-xs space-y-1.5 max-w-[260px]">
-        <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1">
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-            Legenda Status Titik
-          </span>
-          <span className="text-[10px] text-slate-400 font-medium">
-            {filteredPoints.length} Titik
-          </span>
-        </div>
-        <div className="space-y-1 text-[11px] text-slate-600">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB] shrink-0" />
-            <span>Diterima / Diverifikasi</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B] shrink-0" />
-            <span>Ditindaklanjuti</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] shrink-0" />
-            <span>Selesai Teratasi</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#DC2626] shrink-0 animate-pulse" />
-            <span className="font-bold text-red-600">Panggilan Darurat SOS</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    </main>
   );
 }
 
@@ -712,8 +721,9 @@ export default function PetaPage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full h-[calc(100vh-64px)] bg-slate-100 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-16 flex flex-col items-center justify-center text-slate-400">
+          <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mb-3" />
+          <p className="text-xs font-bold text-slate-600">Menyiapkan Peta Geospasial SigapBumi...</p>
         </div>
       }
     >
