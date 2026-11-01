@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { SosFab } from "@/components/layout/SosFab";
 
@@ -34,6 +35,9 @@ export default function RootLayout({
           <Header />
         </Suspense>
         <div className="flex-1 flex flex-col">{children}</div>
+        <Suspense fallback={null}>
+          <Footer />
+        </Suspense>
         <Suspense fallback={null}>
           <SosFab />
         </Suspense>
