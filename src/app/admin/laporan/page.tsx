@@ -410,73 +410,93 @@ function LaporanContent() {
             />
           </div>
 
-          {/* Chips: Status & Prioritas (Never wrap onto two lines) */}
+          {/* Chips: Status & Prioritas (Dibedakan secara tegas agar tidak ambigu) */}
           <div className="flex items-center gap-3 sm:gap-4 text-xs shrink-0 whitespace-nowrap">
-            {/* Status Chips */}
-            <div className="flex items-center gap-1 shrink-0">
-              <span className="font-bold text-slate-700 mr-0.5">Status:</span>
-              {(
-                [
-                  ["semua", "Semua"],
-                  ["diterima", "Diterima"],
-                  ["diverifikasi", "Diverifikasi"],
-                  ["ditindaklanjuti", "Ditindaklanjuti"],
-                  ["selesai", "Selesai"],
-                  ["ditolak", "Ditolak"],
-                ] as const
-              ).map(([val, label]) => {
-                const active = selectedStatus === val;
-                return (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => {
-                      setSelectedStatus(val);
-                      setCurrentPage(1);
-                    }}
-                    className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition-all ${
-                      active
-                        ? "bg-slate-900 text-white shadow-xs"
-                        : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/90"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
+            {/* GRUP 1: STATUS PENANGANAN (Alur Kerja) */}
+            <div className="flex items-center gap-1.5 shrink-0 bg-slate-50/80 p-1 rounded-xl border border-slate-200/70">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] uppercase tracking-wider shrink-0">
+                <Clock className="w-3 h-3 text-blue-600" />
+                <span>Status</span>
+              </span>
+              <div className="flex items-center gap-1">
+                {(
+                  [
+                    ["semua", "Semua"],
+                    ["diterima", "Diterima"],
+                    ["diverifikasi", "Diverifikasi"],
+                    ["ditindaklanjuti", "Ditindaklanjuti"],
+                    ["selesai", "Selesai"],
+                    ["ditolak", "Ditolak"],
+                  ] as const
+                ).map(([val, label]) => {
+                  const active = selectedStatus === val;
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => {
+                        setSelectedStatus(val);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all ${
+                        active
+                          ? "bg-blue-600 text-white shadow-2xs"
+                          : "bg-white text-slate-600 hover:bg-slate-100/80 border border-slate-200/80"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Priority Chips */}
-            <div className="flex items-center gap-1 shrink-0">
-              <span className="font-bold text-slate-700 mr-0.5">Prioritas:</span>
-              {(
-                [
-                  ["semua", "Semua"],
-                  ["Kritis", "Kritis"],
-                  ["Tinggi", "Tinggi"],
-                  ["Sedang", "Sedang"],
-                  ["Rendah", "Rendah"],
-                ] as const
-              ).map(([pVal, pLabel]) => {
-                const active = selectedPriority === pVal;
-                return (
-                  <button
-                    key={pVal}
-                    type="button"
-                    onClick={() => {
-                      setSelectedPriority(pVal);
-                      setCurrentPage(1);
-                    }}
-                    className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition-all ${
-                      active
-                        ? "bg-slate-900 text-white shadow-xs"
-                        : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/90"
-                    }`}
-                  >
-                    {pLabel}
-                  </button>
-                );
-              })}
+            {/* PEMISAH / DIVIDER TEGAS */}
+            <div className="h-6 w-[1.5px] bg-slate-200 shrink-0" aria-hidden="true" />
+
+            {/* GRUP 2: PRIORITAS URGENSI (Tingkat Bahaya Bencana) */}
+            <div className="flex items-center gap-1.5 shrink-0 bg-slate-50/80 p-1 rounded-xl border border-slate-200/70">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-50 text-rose-700 font-bold text-[11px] uppercase tracking-wider shrink-0">
+                <AlertTriangle className="w-3 h-3 text-rose-600" />
+                <span>Prioritas</span>
+              </span>
+              <div className="flex items-center gap-1">
+                {(
+                  [
+                    { val: "semua", label: "Semua", dot: null, activeClass: "bg-slate-900 text-white" },
+                    { val: "Kritis", label: "Kritis", dot: "bg-rose-500", activeClass: "bg-rose-600 text-white shadow-2xs" },
+                    { val: "Tinggi", label: "Tinggi", dot: "bg-amber-500", activeClass: "bg-amber-600 text-white shadow-2xs" },
+                    { val: "Sedang", label: "Sedang", dot: "bg-blue-500", activeClass: "bg-blue-600 text-white shadow-2xs" },
+                    { val: "Rendah", label: "Rendah", dot: "bg-emerald-500", activeClass: "bg-emerald-600 text-white shadow-2xs" },
+                  ] as const
+                ).map(({ val, label, dot, activeClass }) => {
+                  const active = selectedPriority === val;
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPriority(val);
+                        setCurrentPage(1);
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all ${
+                        active
+                          ? activeClass
+                          : "bg-white text-slate-700 hover:bg-slate-100/80 border border-slate-200/80"
+                      }`}
+                    >
+                      {dot && (
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            active ? "bg-white ring-1 ring-white/50" : dot
+                          }`}
+                        />
+                      )}
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
