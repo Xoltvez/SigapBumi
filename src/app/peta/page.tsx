@@ -5,7 +5,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
   MapPin,
-  ShieldAlert,
   Layers,
   List,
   Map as MapIcon,
@@ -233,13 +232,6 @@ export default function PetaPage() {
             </div>
           )}
 
-          {/* Privacy Notice Banner */}
-          <div className="p-3 bg-bg rounded-md border border-line text-xs text-ink-soft flex items-start gap-2">
-            <ShieldAlert className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-            <p className="leading-relaxed">
-              <strong>Privasi Terjamin:</strong> Data pribadi pelapor (nama dan nomor telepon) disamarkan demi keamanan dan pencegahan penyalahgunaan data.
-            </p>
-          </div>
         </div>
 
         {/* Content Container (Desktop 9 cols) */}
