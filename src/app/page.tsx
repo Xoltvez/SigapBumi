@@ -233,153 +233,132 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Right Column: Interactive Quick-Report Bento Card matching Image 2 */}
-          <div className="lg:col-span-5 relative">
-            {/* Background Geometric Red/Orange Blob Accent (giving depth like Image 2) */}
+          {/* Right Column: Interactive Quick-Report Bento Card (Compact) */}
+          <div className="lg:col-span-5 relative max-w-[420px] mx-auto lg:max-w-none w-full">
+            {/* Background Geometric Red/Orange Blob Accent */}
             <div
               aria-hidden="true"
-              className="absolute -top-3 -right-3 w-40 h-40 rounded-full bg-gradient-to-br from-red-500/80 to-orange-500/80 blur-xs -z-10"
+              className="absolute -top-2 -right-2 w-28 h-28 rounded-full bg-gradient-to-br from-red-500/80 to-orange-500/80 blur-xs -z-10"
             />
             <div
               aria-hidden="true"
-              className="absolute -bottom-4 -left-4 w-32 h-32 rounded-3xl bg-orange-600/30 blur-lg -z-10"
+              className="absolute -bottom-3 -left-3 w-24 h-24 rounded-2xl bg-orange-600/25 blur-md -z-10"
             />
 
             {/* Dark Container Card */}
-            <div className="bg-[#111622] border border-slate-800 rounded-[28px] sm:rounded-[32px] p-5 sm:p-7 shadow-2xl shadow-black/50 space-y-5 text-white">
-              {/* Header Headline (matching: Explore insights, creativity, and new possibilities) */}
+            <div className="bg-[#111622] border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl shadow-black/40 space-y-3 text-white">
+              {/* Header Headline */}
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 rounded-full inline-block mb-2">
+                <span className="text-[9px] font-extrabold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full inline-block mb-1.5">
                   Lapor Cepat 1-Klik
                 </span>
-                <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-snug">
+                <h2 className="text-sm sm:text-base font-bold text-white tracking-tight leading-snug">
                   Laporkan kejadian darurat di sekitar Anda sekarang.
                 </h2>
               </div>
 
-              {/* Stacked White Card (Center Layer with Offset Card Shadow like in Image 2) */}
-              <div className="relative my-2">
+              {/* Stacked White Card (Center Layer with Offset Card Shadow) */}
+              <div className="relative my-1">
                 {/* Offset Card Layer Behind */}
                 <div
                   aria-hidden="true"
-                  className="absolute inset-0 bg-white/40 rounded-2xl rotate-2 translate-x-2 -translate-y-1 scale-[0.98] shadow-md pointer-events-none"
+                  className="absolute inset-0 bg-white/35 rounded-xl rotate-2 translate-x-1.5 -translate-y-1 scale-[0.98] shadow pointer-events-none"
                 />
 
                 {/* Main Foreground White Card */}
-                <div className="relative bg-white rounded-2xl p-3 sm:p-4 shadow-xl text-slate-900 border border-slate-100">
-                  <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-slate-100 text-xs">
-                    <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
+                <div className="relative bg-white rounded-xl p-2.5 sm:p-3 shadow-lg text-slate-900 border border-slate-100">
+                  <div className="flex items-center justify-between pb-1.5 mb-1 border-b border-slate-100 text-xs">
+                    <span className="font-bold text-slate-800 text-[10px] uppercase tracking-wider">
                       Pilih Jenis Kejadian
                     </span>
-                    <span className="text-[10px] font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                    <span className="text-[9px] font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full">
                       Siaga 24/7
                     </span>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {/* Item 1: Kebakaran */}
                     <Link
                       href="/lapor?tipe=kebakaran"
-                      className="group flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+                      className="group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <Flame className="w-4 h-4" />
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Flame className="w-3.5 h-3.5" />
                         </div>
                         <div className="min-w-0 text-left">
-                          <p className="text-xs font-bold text-slate-900 group-hover:text-red-600 transition-colors truncate">
+                          <p className="text-[11px] font-bold text-slate-900 group-hover:text-red-600 transition-colors truncate">
                             Kebakaran Pemukiman / Lahan
                           </p>
-                          <p className="text-[10px] text-slate-500 truncate">
+                          <p className="text-[9px] text-slate-500 truncate">
                             Damkar 113 &middot; Pemadaman darurat
                           </p>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-red-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-red-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-1.5" />
                     </Link>
 
                     {/* Item 2: Banjir */}
                     <Link
                       href="/lapor?tipe=banjir"
-                      className="group flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+                      className="group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <Waves className="w-4 h-4" />
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Waves className="w-3.5 h-3.5" />
                         </div>
                         <div className="min-w-0 text-left">
-                          <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                          <p className="text-[11px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
                             Banjir &amp; Luapan Air Sungai
                           </p>
-                          <p className="text-[10px] text-slate-500 truncate">
-                            Lapor tinggi genangan &amp; warga terjebak
+                          <p className="text-[9px] text-slate-500 truncate">
+                            Lapor tinggi genangan &amp; evakuasi
                           </p>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-1.5" />
                     </Link>
 
                     {/* Item 3: Gempa Bumi */}
                     <Link
                       href="/lapor?tipe=gempa"
-                      className="group flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+                      className="group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <Activity className="w-4 h-4" />
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Activity className="w-3.5 h-3.5" />
                         </div>
                         <div className="min-w-0 text-left">
-                          <p className="text-xs font-bold text-slate-900 group-hover:text-amber-600 transition-colors truncate">
+                          <p className="text-[11px] font-bold text-slate-900 group-hover:text-amber-600 transition-colors truncate">
                             Gempa Bumi &amp; Kerusakan
                           </p>
-                          <p className="text-[10px] text-slate-500 truncate">
-                            Info kerusakan bangunan &amp; posko aman
+                          <p className="text-[9px] text-slate-500 truncate">
+                            Dampak retakan &amp; posko aman
                           </p>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-1.5" />
                     </Link>
 
-                    {/* Item 4: Tanah Longsor */}
+                    {/* Item 4: Tanah Longsor & Cuaca */}
                     <Link
                       href="/lapor?tipe=longsor"
-                      className="group flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+                      className="group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <Mountain className="w-4 h-4" />
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Mountain className="w-3.5 h-3.5" />
                         </div>
                         <div className="min-w-0 text-left">
-                          <p className="text-xs font-bold text-slate-900 group-hover:text-emerald-600 transition-colors truncate">
+                          <p className="text-[11px] font-bold text-slate-900 group-hover:text-emerald-600 transition-colors truncate">
                             Tanah Longsor &amp; Tebing Runtuh
                           </p>
-                          <p className="text-[10px] text-slate-500 truncate">
-                            Lapor akses jalan putus &amp; longsoran
+                          <p className="text-[9px] text-slate-500 truncate">
+                            Akses jalan putus &amp; longsoran
                           </p>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
-                    </Link>
-
-                    {/* Item 5: Angin Puting Beliung / Cuaca Ekstrem */}
-                    <Link
-                      href="/lapor?tipe=cuaca_ekstrem"
-                      className="group flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <Wind className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0 text-left">
-                          <p className="text-xs font-bold text-slate-900 group-hover:text-teal-600 transition-colors truncate">
-                            Puting Beliung &amp; Cuaca Ekstrem
-                          </p>
-                          <p className="text-[10px] text-slate-500 truncate">
-                            Pohon roboh &amp; atap beterbangan
-                          </p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-1.5" />
                     </Link>
                   </div>
                 </div>
@@ -387,37 +366,37 @@ export default function HomePage() {
 
               {/* Bottom Section: Overlapping Avatars + Report Count + Description */}
               <div className="pt-2 border-t border-slate-800/80">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   {/* Overlapping Citizen Avatars (like in Image 2) */}
-                  <div className="flex -space-x-2.5 overflow-hidden shrink-0">
-                    <div className="inline-flex h-8 w-8 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-orange-500 to-amber-400 text-white text-[10px] font-extrabold items-center justify-center shadow-xs">
+                  <div className="flex -space-x-2 overflow-hidden shrink-0">
+                    <div className="inline-flex h-7 w-7 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-orange-500 to-amber-400 text-white text-[9px] font-extrabold items-center justify-center shadow-xs">
                       AH
                     </div>
-                    <div className="inline-flex h-8 w-8 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-blue-600 to-cyan-400 text-white text-[10px] font-extrabold items-center justify-center shadow-xs">
+                    <div className="inline-flex h-7 w-7 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-blue-600 to-cyan-400 text-white text-[9px] font-extrabold items-center justify-center shadow-xs">
                       RD
                     </div>
-                    <div className="inline-flex h-8 w-8 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-emerald-600 to-teal-400 text-white text-[10px] font-extrabold items-center justify-center shadow-xs">
+                    <div className="inline-flex h-7 w-7 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-emerald-600 to-teal-400 text-white text-[9px] font-extrabold items-center justify-center shadow-xs">
                       SY
                     </div>
-                    <div className="inline-flex h-8 w-8 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-purple-600 to-pink-500 text-white text-[10px] font-extrabold items-center justify-center shadow-xs">
+                    <div className="inline-flex h-7 w-7 rounded-full ring-2 ring-[#111622] bg-gradient-to-tr from-purple-600 to-pink-500 text-white text-[9px] font-extrabold items-center justify-center shadow-xs">
                       WN
                     </div>
                   </div>
 
                   {/* Report Count */}
                   <div className="min-w-0">
-                    <div className="text-sm font-black text-white tracking-tight flex items-center gap-1.5">
+                    <div className="text-xs sm:text-sm font-black text-white tracking-tight flex items-center gap-1.5">
                       <span>1.420+ Warga Melaporkan</span>
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     </div>
-                    <p className="text-[11px] text-slate-400 truncate">
+                    <p className="text-[10px] text-slate-400 truncate">
                       {totalCount} laporan darurat aktif terverifikasi posko
                     </p>
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-400 mt-2.5 leading-relaxed">
-                  Laporan Anda diteruskan langsung ke sistem koordinasi posko BPBD dan instansi penyelamat terdekat.
+                <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                  Laporan Anda diteruskan langsung ke sistem posko BPBD dan tim evakuasi terdekat.
                 </p>
               </div>
             </div>
