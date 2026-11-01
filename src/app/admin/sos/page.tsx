@@ -17,6 +17,7 @@ import {
   MessageSquare,
   AlertTriangle,
   Ban,
+  MapPin,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import type { SosAssistanceType } from "@/types";
@@ -299,8 +300,9 @@ export default function AdminSosPage() {
                   <span className="text-ink-muted block mb-0.5 font-semibold">
                     Lokasi Pemancar Sinyal:
                   </span>
-                  <p className="font-semibold text-ink text-sm">
-                    📍 {emg.address}
+                  <p className="font-semibold text-ink text-sm inline-flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-primary shrink-0" />
+                    <span>{emg.address}</span>
                   </p>
                 </div>
 

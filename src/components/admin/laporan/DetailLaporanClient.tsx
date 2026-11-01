@@ -370,7 +370,10 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
               <span>Titik Lokasi Geospasial</span>
             </h2>
             <div className="p-3 bg-bg rounded-md border border-line text-xs space-y-1">
-              <p className="font-semibold text-ink">📍 {report.address}</p>
+              <p className="font-semibold text-ink inline-flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span>{report.address}</span>
+              </p>
               <p className="font-mono text-ink-muted text-[11px]">
                 Koordinat GPS: {report.lat}, {report.lng} (WGS84 / PostGIS SRID 4326)
               </p>

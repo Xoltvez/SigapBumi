@@ -555,26 +555,30 @@ export default function HomePage() {
         {/* Filter Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
           {[
-            { id: "semua", label: "Semua Kategori" },
-            { id: "banjir", label: "🌊 Banjir" },
-            { id: "gempa", label: "🌋 Gempa" },
-            { id: "kebakaran", label: "🔥 Kebakaran" },
-            { id: "longsor", label: "⛰️ Tanah Longsor" },
-            { id: "karhutla", label: "🌲 Karhutla" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setSelectedDisasterFilter(tab.id)}
-              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all shrink-0 ${
-                selectedDisasterFilter === tab.id
-                  ? "bg-ink text-white shadow-xs"
-                  : "bg-surface hover:bg-bg text-ink-soft border border-line"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+            { id: "semua", label: "Semua Kategori", icon: null },
+            { id: "banjir", label: "Banjir", icon: Waves },
+            { id: "gempa", label: "Gempa", icon: Activity },
+            { id: "kebakaran", label: "Kebakaran", icon: Flame },
+            { id: "longsor", label: "Tanah Longsor", icon: Mountain },
+            { id: "karhutla", label: "Karhutla", icon: Trees },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setSelectedDisasterFilter(tab.id)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold transition-all shrink-0 ${
+                  selectedDisasterFilter === tab.id
+                    ? "bg-ink text-white shadow-xs"
+                    : "bg-surface hover:bg-bg text-ink-soft border border-line"
+                }`}
+              >
+                {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Cards Grid */}

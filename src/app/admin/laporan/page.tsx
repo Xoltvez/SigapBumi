@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
+  MapPin,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import { PriorityBadge } from "@/components/admin/common/PriorityBadge";
@@ -417,8 +418,9 @@ function LaporanContent() {
                       <p className="font-semibold text-ink truncate leading-snug">
                         {row.title}
                       </p>
-                      <p className="text-[11px] text-ink-muted truncate mt-0.5">
-                        📍 {row.location}
+                      <p className="text-[11px] text-ink-muted truncate mt-0.5 inline-flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-ink-muted shrink-0" />
+                        <span>{row.location}</span>
                       </p>
                     </td>
 
