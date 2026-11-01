@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Flame,
@@ -13,8 +12,6 @@ import {
   X,
   CheckCircle2,
   AlertTriangle,
-  Siren,
-  ArrowRight,
 } from "lucide-react";
 import type { SosAssistanceType } from "@/types";
 import { sendSosAlert, updateSosPhone, updateSosAssistanceType } from "@/lib/services/sos";
@@ -180,7 +177,7 @@ export function SosFab() {
           aria-labelledby="sos-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-ink/75 p-4 backdrop-blur-sm"
         >
-          <div className="w-full max-w-md bg-surface rounded-lg p-6 shadow-overlay text-center relative border border-line">
+          <div className="w-full max-w-md max-h-[88vh] overflow-y-auto bg-surface rounded-2xl p-5 sm:p-6 shadow-overlay text-center relative border border-line">
             {!isSent ? (
               // Countdown State
               <div>
@@ -253,40 +250,6 @@ export function SosFab() {
                 <p className="text-ink-soft text-xs mb-3">
                   Koordinat posisi darurat Anda telah masuk ke daftar radar posko. Pilih jenis bantuan jika memungkinkan:
                 </p>
-
-                {/* Akses Cepat Dashboard Petugas / Monitor SOS (Untuk Pengujian & Operasional) */}
-                <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-left shadow-xs">
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <span className="text-[11px] font-bold text-red-950 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-red-600 animate-ping shrink-0" />
-                      Sinyal Masuk ke Radar Posko
-                    </span>
-                    <span className="text-[10px] font-extrabold text-red-700 bg-red-100 px-2 py-0.5 rounded-full uppercase">
-                      Darurat
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-700 mb-2.5 leading-snug">
-                    Panggilan darurat Anda kini aktif di radar posko dan antrean petugas. Buka dashboard untuk memantau respons tim lapangan:
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Link
-                      href="/admin/sos"
-                      onClick={handleCancel}
-                      className="flex-1 py-2 px-3 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all"
-                    >
-                      <Siren className="w-3.5 h-3.5" />
-                      <span>Buka Monitor SOS Petugas</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </Link>
-                    <Link
-                      href="/admin"
-                      onClick={handleCancel}
-                      className="py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1 transition-all"
-                    >
-                      <span>Dashboard Admin</span>
-                    </Link>
-                  </div>
-                </div>
 
                 {/* Dispatch Disclaimer Notice */}
                 <div className="p-3 mb-4 rounded-md bg-warning-soft border border-warning/30 text-left text-[11px] text-warning-text flex items-start gap-2">
