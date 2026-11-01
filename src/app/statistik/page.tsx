@@ -161,9 +161,6 @@ export default function StatistikPage() {
               <BarChart3 className="w-7 h-7 text-primary" />
               <span>Statistik & Analitik Penanganan Bencana</span>
             </h1>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-primary-soft text-primary-hover border border-primary/20">
-              Data Demonstrasi & Riil
-            </span>
           </div>
           <p className="text-sm text-ink-soft mt-1">
             Transparansi data pelaporan masyarakat, kecepatan respons posko, dan rasio penyelesaian kasus di seluruh Indonesia.
