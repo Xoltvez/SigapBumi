@@ -81,58 +81,51 @@ export default function AdminSosPage() {
     setIsLoading(true);
     try {
       const live = await fetchLiveSosAlerts();
-      if (live && live.length > 0) {
-        const mappedLive: DisplaySosItem[] = live.map((e, index) => {
-          let type: SosAssistanceType = e.assistance_type || "damkar";
-          let title = "Bantuan Darurat";
-          if (type === "medis") title = "Bantuan Medis";
-          else if (type === "damkar") title = "Bantuan Damkar";
-          else if (type === "polisi") title = "Bantuan Keamanan";
-          else title = "Bantuan SAR / Lainnya";
+      const mappedLive: DisplaySosItem[] = (live || []).map((e, index) => {
+        let type: SosAssistanceType = e.assistance_type || "damkar";
+        let title = "Bantuan Darurat";
+        if (type === "medis") title = "Bantuan Medis";
+        else if (type === "damkar") title = "Bantuan Damkar";
+        else if (type === "polisi") title = "Bantuan Keamanan";
+        else title = "Bantuan SAR / Lainnya";
 
-          return {
-            id: e.id,
-            displayCode: e.id.startsWith("SOS") ? e.id : `SOS #${100 + index + 3}`,
-            type,
-            title,
-            address: e.address || "Titik Darurat Warga",
-            coordinates: e.coordinates || "-6.2088, 106.8456",
-            timeAgo: e.time_ago || "Baru saja",
-            status: e.status || "aktif",
-            phoneNumber: e.phone_number || "0812-3456-7890",
-            source: e.source || "Ponsel Warga (GPS Sensor)",
-          };
-        });
+        return {
+          id: e.id,
+          displayCode: e.id.startsWith("SOS") ? e.id : `SOS #${100 + index + 3}`,
+          type,
+          title,
+          address: e.address || "Titik Darurat Warga",
+          coordinates: e.coordinates || "-6.2088, 106.8456",
+          timeAgo: e.time_ago || "Baru saja",
+          status: e.status || "aktif",
+          phoneNumber: e.phone_number || "0812-3456-7890",
+          source: e.source || "Ponsel Warga (GPS Sensor)",
+        };
+      });
 
-        // Trigger siren if incoming new active SOS
-        const hasNewActive = mappedLive.some(
-          (item) => item.status === "aktif" && !knownIdsRef.current.has(item.id)
-        );
-        if (!isFirstLoadRef.current && hasNewActive && !isSirenMuted) {
-          playSosSiren(4, 0.4);
-        }
-        mappedLive.forEach((item) => knownIdsRef.current.add(item.id));
-        isFirstLoadRef.current = false;
-
-        // Combine with default items without duplicates
-        const combined = [...mappedLive];
-        for (const def of DEFAULT_SOS_ITEMS) {
-          if (!combined.some((item) => item.id === def.id)) {
-            combined.push(def);
-          }
-        }
-
-        // Sort: Active first, then by status
-        combined.sort((a, b) => {
-          if (a.status === "aktif" && b.status !== "aktif") return -1;
-          if (a.status !== "aktif" && b.status === "aktif") return 1;
-          return 0;
-        });
-
-        setSosList(combined);
-        const activeCount = combined.filter((e) => e.status === "aktif").length;
-        setActiveSosCount(activeCount);
+      // Trigger siren if incoming new active SOS
+      const hasNewActive = mappedLive.some(
+        (item) => item.status === "aktif" && !knownIdsRef.current.has(item.id)
+      );
+      if (!isFirstLoadRef.current && hasNewActive && !isSirenMuted) {
+        playSosSiren(4, 0.4);
       }
+      mappedLive.forEach((item) => knownIdsRef.current.add(item.id));
+      isFirstLoadRef.current = false;
+
+      // Gunakan live jika tersedia, jika kosong gunakan default demo
+      const combined = mappedLive.length > 0 ? mappedLive : DEFAULT_SOS_ITEMS;
+
+      // Sort: Active first, then by status
+      combined.sort((a, b) => {
+        if (a.status === "aktif" && b.status !== "aktif") return -1;
+        if (a.status !== "aktif" && b.status === "aktif") return 1;
+        return 0;
+      });
+
+      setSosList(combined);
+      const activeCount = combined.filter((e) => e.status === "aktif").length;
+      setActiveSosCount(activeCount);
     } catch (err) {
       console.warn("Gagal sinkronisasi data SOS:", err);
     } finally {

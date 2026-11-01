@@ -39,7 +39,7 @@ export function AdminSidebar({
       href: "/admin/sos",
       label: "Monitor SOS",
       icon: Bell,
-      badge: activeSosCount > 0 ? `${activeSosCount}` : "1",
+      badge: activeSosCount > 0 ? `${activeSosCount}` : undefined,
     },
     { href: "/admin/peta", label: "Peta Operasional", icon: MapPin },
     { href: "/admin/statistik", label: "Rekap & Statistik", icon: BarChart2 },

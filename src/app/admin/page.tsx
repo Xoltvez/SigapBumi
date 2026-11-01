@@ -18,6 +18,7 @@ import { useAdmin } from "@/components/layout/AdminShell";
 import type { ReportStatus, DisasterType, SosAssistanceType, PriorityLabel } from "@/types";
 import { fetchLiveReports, DEFAULT_MOCK_REPORTS } from "@/lib/services/reports";
 import { fetchLiveSosAlerts } from "@/lib/services/sos";
+import { supabase } from "@/lib/supabase/client";
 
 interface AdminReportItem {
   id: string;
@@ -152,13 +153,37 @@ export default function AdminRingkasanPage() {
       }
     }
 
-    const timer = setTimeout(() => {
+    loadData();
+
+    const handleSync = () => {
       loadData();
-    }, 0);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("sigapbumi:sos-created", handleSync);
+      window.addEventListener("sigapbumi:sos-updated", handleSync);
+      window.addEventListener("storage", handleSync);
+    }
+
+    const channelReports = supabase
+      .channel("admin_dashboard_reports_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, handleSync)
+      .subscribe();
+
+    const channelSos = supabase
+      .channel("admin_dashboard_sos_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sos_alerts" }, handleSync)
+      .subscribe();
 
     return () => {
       isMounted = false;
-      clearTimeout(timer);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("sigapbumi:sos-created", handleSync);
+        window.removeEventListener("sigapbumi:sos-updated", handleSync);
+        window.removeEventListener("storage", handleSync);
+      }
+      supabase.removeChannel(channelReports);
+      supabase.removeChannel(channelSos);
     };
   }, [setActiveSosCount, setIsLiveConnected]);
 

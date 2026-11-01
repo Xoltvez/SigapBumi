@@ -178,21 +178,29 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
  * Konversi daftar LiveReportItem ke format MapPoint untuk Leaflet
  */
 export function reportsToMapPoints(reports: LiveReportItem[]): MapPoint[] {
-  return reports.map((r) => ({
-    id: r.id,
-    tracking_code: r.tracking_code,
-    disaster_type: r.disaster_type,
-    title: r.title,
-    location_name: r.address,
-    lat: r.lat,
-    lng: r.lng,
-    status: r.status,
-    created_at: r.created_at,
-    confirmation_count: r.confirmation_count,
-    is_demo: r.is_demo,
-    province: r.province,
-    regency: r.regency,
-  }));
+  return reports.map((r) => {
+    const isSos = Boolean(
+      r.tracking_code?.toUpperCase().startsWith("SOS-") ||
+      r.title?.toUpperCase().includes("SOS") ||
+      r.description?.toUpperCase().includes("SOS")
+    );
+    return {
+      id: r.id,
+      tracking_code: r.tracking_code,
+      disaster_type: r.disaster_type,
+      title: r.title,
+      location_name: r.address,
+      lat: r.lat,
+      lng: r.lng,
+      status: r.status,
+      created_at: r.created_at,
+      confirmation_count: r.confirmation_count,
+      is_sos: isSos,
+      is_demo: r.is_demo,
+      province: r.province,
+      regency: r.regency,
+    };
+  });
 }
 
 /**

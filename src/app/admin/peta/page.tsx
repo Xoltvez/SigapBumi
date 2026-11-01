@@ -32,6 +32,7 @@ import {
   fetchLiveReports,
 } from "@/lib/services/reports";
 import { fetchLiveSosAlerts } from "@/lib/services/sos";
+import { supabase } from "@/lib/supabase/client";
 
 // Dynamic import for Leaflet client component
 const DisasterMap = dynamic(() => import("@/components/peta/DisasterMap"), {
@@ -79,39 +80,34 @@ export default function AdminPetaPage() {
 
       if (liveReports && liveReports.length > 0) {
         const reportPoints = reportsToMapPoints(liveReports);
-        const activeSos = (liveSos || [])
-          .filter(
-            (s) =>
-              s.status === "aktif" &&
-              !s.id.startsWith("sos-10") &&
-              s.id !== "sos-1" &&
-              s.id !== "sos-2" &&
-              s.id !== "sos-sample" &&
-              !s.address?.includes("Citra 2")
-          )
-          .sort((a, b) => {
-            const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-            const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-            return timeB - timeA;
-          });
+        // Map live SOS alerts into MapPoints
+        const activeSos: MapPoint[] = (liveSos || [])
+          .filter((s) => s.status === "aktif")
+          .map((s) => ({
+            id: s.id,
+            tracking_code: s.id.startsWith("SOS") ? s.id : `SOS-${s.id.slice(0, 4).toUpperCase()}`,
+            disaster_type: (s.assistance_type === "damkar" ? "kebakaran" : "lainnya") as DisasterType,
+            title: `🚨 Panggilan Darurat: Bantuan ${s.assistance_type.toUpperCase()}`,
+            location_name: s.address,
+            lat: s.lat,
+            lng: s.lng,
+            status: "ditindaklanjuti" as ReportStatus,
+            created_at: s.time_ago || "Baru saja",
+            confirmation_count: 1,
+            is_sos: true,
+            is_demo: false,
+            province: s.address.includes("Jakarta") ? "DKI Jakarta" : "Jawa Barat",
+          }));
 
-        const sosPoints: MapPoint[] = activeSos.map((s) => ({
-          id: s.id,
-          tracking_code: `SOS-${s.id.toUpperCase()}`,
-          disaster_type: "kebakaran",
-          title: `Panggilan Darurat: Bantuan ${s.assistance_type.toUpperCase()}`,
-          location_name: s.address,
-          lat: s.lat,
-          lng: s.lng,
-          status: "ditindaklanjuti" as ReportStatus,
-          created_at: s.time_ago,
-          confirmation_count: 1,
-          is_sos: true,
-          is_demo: false,
-          province: s.address.includes("Jakarta") ? "DKI Jakarta" : "Jawa Barat",
-        }));
+        // Gabungkan tanpa duplikasi ID atau tracking code
+        const merged: MapPoint[] = [...activeSos];
+        for (const pt of reportPoints) {
+          if (!merged.some((m) => m.id === pt.id || (m.tracking_code && pt.tracking_code && m.tracking_code === pt.tracking_code))) {
+            merged.push(pt);
+          }
+        }
 
-        setPoints([...sosPoints, ...reportPoints]);
+        setPoints(merged);
       }
     } catch (err) {
       console.warn("Gagal memuat koordinat peta admin:", err);
@@ -122,6 +118,36 @@ export default function AdminPetaPage() {
 
   useEffect(() => {
     loadData();
+
+    const handleSync = () => {
+      loadData();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("sigapbumi:sos-created", handleSync);
+      window.addEventListener("sigapbumi:sos-updated", handleSync);
+      window.addEventListener("storage", handleSync);
+    }
+
+    const channelReports = supabase
+      .channel("admin_peta_reports_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, handleSync)
+      .subscribe();
+
+    const channelSos = supabase
+      .channel("admin_peta_sos_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sos_alerts" }, handleSync)
+      .subscribe();
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("sigapbumi:sos-created", handleSync);
+        window.removeEventListener("sigapbumi:sos-updated", handleSync);
+        window.removeEventListener("storage", handleSync);
+      }
+      supabase.removeChannel(channelReports);
+      supabase.removeChannel(channelSos);
+    };
   }, [loadData]);
 
   // Filtered points
@@ -163,11 +189,11 @@ export default function AdminPetaPage() {
     setTimeout(() => setActionNotice(null), 3500);
   };
 
-  // KPI Metrics
-  const totalTitik = points.length || 142;
-  const sosTotal = points.filter((p) => p.is_sos).length || 14;
-  const prosesTotal = points.filter((p) => !p.is_sos && p.status === "ditindaklanjuti").length || 67;
-  const selesaiTotal = points.filter((p) => !p.is_sos && p.status === "selesai").length || 47;
+  // KPI Metrics riil tanpa fallback palsu
+  const totalTitik = points.length;
+  const sosTotal = points.filter((p) => p.is_sos).length;
+  const prosesTotal = points.filter((p) => !p.is_sos && p.status === "ditindaklanjuti").length;
+  const selesaiTotal = points.filter((p) => !p.is_sos && p.status === "selesai").length;
 
   const getDisasterIcon = (type: DisasterType) => {
     switch (type) {

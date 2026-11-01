@@ -9,6 +9,7 @@ import { AdminSidebar } from "@/components/admin/layout/AdminSidebar";
 import { AdminTopbar } from "@/components/admin/layout/AdminTopbar";
 import { playSosSiren, stopSosSiren } from "@/lib/audio/siren";
 import { supabase } from "@/lib/supabase/client";
+import { fetchLiveSosAlerts } from "@/lib/services/sos";
 
 export interface AdminAuthSession {
   nip: string;
@@ -107,12 +108,27 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     }
   }, [isSirenMuted]);
 
-  // Realtime channel listener untuk mendeteksi sinyal SOS baru secara global di dashboard
+  // Sinkronisasi jumlah sinyal SOS aktif riil secara global di dashboard
   useEffect(() => {
     if (isLoginPage) return;
+    let isMounted = true;
+
+    async function syncSosCount() {
+      try {
+        const alerts = await fetchLiveSosAlerts();
+        if (isMounted && alerts) {
+          const activeOnly = alerts.filter((s) => s.status === "aktif");
+          setActiveSosCount(activeOnly.length);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    syncSosCount();
 
     const handleIncomingSos = (e?: CustomEvent<{ id?: string; assistanceType?: string }>) => {
-      setActiveSosCount((prev) => prev + 1);
+      syncSosCount();
       triggerSiren();
       setEmergencyNotice({
         id: e?.detail?.id || `sos-${Date.now()}`,
@@ -123,8 +139,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       });
     };
 
+    const handleLocalSync = () => {
+      syncSosCount();
+    };
+
     if (typeof window !== "undefined") {
       window.addEventListener("sigapbumi:sos-created", handleIncomingSos as EventListener);
+      window.addEventListener("sigapbumi:sos-updated", handleLocalSync);
+      window.addEventListener("storage", handleLocalSync);
     }
 
     const channel = supabase
@@ -143,6 +165,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       )
       .on(
         "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "sos_alerts" },
+        () => {
+          syncSosCount();
+        }
+      )
+      .on(
+        "postgres_changes",
         { event: "INSERT", schema: "public", table: "reports" },
         (payload) => {
           const row = payload.new;
@@ -156,8 +185,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       .subscribe();
 
     return () => {
+      isMounted = false;
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:sos-created", handleIncomingSos as EventListener);
+        window.removeEventListener("sigapbumi:sos-updated", handleLocalSync);
+        window.removeEventListener("storage", handleLocalSync);
       }
       supabase.removeChannel(channel);
     };

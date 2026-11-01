@@ -22,6 +22,7 @@ import {
   reportsToMapPoints,
   DEFAULT_MOCK_REPORTS,
 } from "@/lib/services/reports";
+import { fetchLiveSosAlerts } from "@/lib/services/sos";
 
 // Dynamic import for Leaflet client component (avoid SSR window error)
 const DisasterMap = dynamic(() => import("@/components/peta/DisasterMap"), {
@@ -109,9 +110,41 @@ function PetaContent() {
     async function loadData() {
       try {
         const liveReports = await fetchLiveReports();
-        if (isMounted && liveReports && liveReports.length > 0) {
-          const mapPoints = reportsToMapPoints(liveReports);
-          setPoints(mapPoints);
+        const liveSos = await fetchLiveSosAlerts();
+
+        const reportPoints = (liveReports && liveReports.length > 0)
+          ? reportsToMapPoints(liveReports)
+          : INITIAL_POINTS;
+
+        // Map live SOS alerts into MapPoints
+        const activeSos: MapPoint[] = (liveSos || [])
+          .filter((s) => s.status === "aktif")
+          .map((s) => ({
+            id: s.id,
+            tracking_code: s.id.startsWith("SOS") ? s.id : `SOS-${s.id.slice(0, 4).toUpperCase()}`,
+            disaster_type: (s.assistance_type === "damkar" ? "kebakaran" : "lainnya") as DisasterType,
+            title: `🚨 Panggilan Darurat: Bantuan ${s.assistance_type.toUpperCase()}`,
+            location_name: s.address,
+            lat: s.lat,
+            lng: s.lng,
+            status: "ditindaklanjuti" as ReportStatus,
+            created_at: s.time_ago || "Baru saja",
+            confirmation_count: 1,
+            is_sos: true,
+            is_demo: false,
+            province: s.address.includes("Jakarta") ? "DKI Jakarta" : "Jawa Barat",
+          }));
+
+        // Gabungkan tanpa duplikasi ID atau tracking code
+        const merged: MapPoint[] = [...activeSos];
+        for (const pt of reportPoints) {
+          if (!merged.some((m) => m.id === pt.id || (m.tracking_code && pt.tracking_code && m.tracking_code === pt.tracking_code))) {
+            merged.push(pt);
+          }
+        }
+
+        if (isMounted) {
+          setPoints(merged);
           setIsLiveConnected(true);
         }
       } catch (err) {
@@ -121,20 +154,35 @@ function PetaContent() {
 
     loadData();
 
-    const channel = supabase
-      .channel("public_peta_reports")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "reports" },
-        () => {
-          loadData();
-        }
-      )
+    const handleSync = () => {
+      loadData();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("sigapbumi:sos-created", handleSync);
+      window.addEventListener("sigapbumi:sos-updated", handleSync);
+      window.addEventListener("storage", handleSync);
+    }
+
+    const channelReports = supabase
+      .channel("public_peta_reports_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, handleSync)
+      .subscribe();
+
+    const channelSos = supabase
+      .channel("public_peta_sos_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sos_alerts" }, handleSync)
       .subscribe();
 
     return () => {
       isMounted = false;
-      supabase.removeChannel(channel);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("sigapbumi:sos-created", handleSync);
+        window.removeEventListener("sigapbumi:sos-updated", handleSync);
+        window.removeEventListener("storage", handleSync);
+      }
+      supabase.removeChannel(channelReports);
+      supabase.removeChannel(channelSos);
     };
   }, []);
 
