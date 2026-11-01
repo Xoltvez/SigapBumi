@@ -9,15 +9,13 @@ import {
   HeartPulse,
   Shield,
   LifeBuoy,
-  PanelLeftClose,
-  PanelLeftOpen,
   ChevronDown,
   X,
 } from "lucide-react";
 
 interface AdminTopbarProps {
-  isSidebarCollapsed: boolean;
-  onToggleSidebar: () => void;
+  isSidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
   activeUnit: string;
   onSelectUnit: (unit: string) => void;
   activeSosCount?: number;
@@ -25,8 +23,6 @@ interface AdminTopbarProps {
 }
 
 export function AdminTopbar({
-  isSidebarCollapsed,
-  onToggleSidebar,
   activeUnit,
   onSelectUnit,
 }: AdminTopbarProps) {
@@ -85,22 +81,8 @@ export function AdminTopbar({
 
   return (
     <header className="h-16 bg-[#131722] border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between gap-3 sticky top-0 z-20 shadow-sm select-none font-sans">
-      {/* Left: Mobile Toggle, Date Pill, Search Bar */}
+      {/* Left: Date Pill, Search Bar */}
       <div className="flex items-center gap-3 flex-1 max-w-2xl">
-        {/* Mobile / Responsive Sidebar Toggle Button */}
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          aria-label={isSidebarCollapsed ? "Perluas Sidebar" : "Ciutkan Sidebar"}
-          className="p-1.5 rounded-lg border border-slate-600/90 bg-slate-900/95 text-slate-300 hover:text-white hover:border-slate-400 transition-colors shrink-0 shadow-sm"
-        >
-          {isSidebarCollapsed ? (
-            <PanelLeftOpen className="w-4 h-4" />
-          ) : (
-            <PanelLeftClose className="w-4 h-4" />
-          )}
-        </button>
-
         {/* Date Pill Badge with visible stroke */}
         <div className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/95 border border-slate-600/90 text-xs font-semibold text-slate-200 shrink-0 shadow-sm">
           <Calendar className="w-3.5 h-3.5 text-amber-400" />

@@ -85,17 +85,19 @@ export function AdminSidebar({
           )}
         </Link>
 
-        {/* Circular Collapse Toggle Button on Border Line */}
+        {/* Single Circular Collapse/Expand Button exactly on border line */}
         {onToggleCollapse && (
           <button
             type="button"
             onClick={onToggleCollapse}
             title={isCollapsed ? "Perluas Sidebar" : "Ciutkan Sidebar"}
-            className={`w-6 h-6 rounded-full border border-amber-500/40 bg-[#131722] hover:bg-slate-800 text-amber-400 hover:text-amber-300 flex items-center justify-center text-xs shadow-md transition-all shrink-0 ${
-              isCollapsed ? "hidden" : "inline-flex"
-            }`}
+            className="absolute -right-3 top-5 z-40 w-6 h-6 rounded-full border border-amber-500/60 bg-[#131722] hover:bg-slate-800 text-amber-400 hover:text-amber-300 flex items-center justify-center text-xs shadow-md transition-all cursor-pointer"
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
+            {isCollapsed ? (
+              <ChevronRight className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronLeft className="w-3.5 h-3.5" />
+            )}
           </button>
         )}
       </div>
@@ -193,18 +195,6 @@ export function AdminSidebar({
           <LogOut className="w-3.5 h-3.5 shrink-0" />
           {!isCollapsed && <span>Keluar</span>}
         </button>
-
-        {/* Collapsed expand button on bottom if collapsed */}
-        {isCollapsed && onToggleCollapse && (
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            title="Perluas Sidebar"
-            className="w-full mt-1 flex items-center justify-center py-1.5 rounded-lg text-slate-500 hover:text-amber-400 hover:bg-slate-800/50 transition-colors"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        )}
       </div>
     </aside>
   );
