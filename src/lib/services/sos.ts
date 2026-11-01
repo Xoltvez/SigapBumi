@@ -266,6 +266,69 @@ export async function updateSosPhone(
 }
 
 /**
+ * Memperbarui jenis bantuan pada sinyal SOS aktif yang sudah terkirim (tanpa membuat duplikasi)
+ */
+export async function updateSosAssistanceType(
+  id: string,
+  assistanceType: SosAssistanceType
+): Promise<{ success: boolean }> {
+  // 1. Update di local cache
+  const localItems = getLocalSosCache();
+  const existing = localItems.find((x) => x.id === id);
+  if (existing) {
+    existing.assistance_type = assistanceType;
+    existing.note = `Panggilan Darurat Warga - Butuh Bantuan ${assistanceType.toUpperCase()}${
+      existing.phone_number ? ` [Kontak: ${existing.phone_number}]` : ""
+    }`;
+    saveLocalSosCache(localItems);
+  }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("sigapbumi:sos-updated", { detail: { id, assistanceType } }));
+  }
+
+  // 2. Update di tabel sos_alerts
+  try {
+    await supabase
+      .from("sos_alerts")
+      .update({
+        assistance_type: assistanceType,
+        note: existing?.note || `Panggilan Darurat Warga - Butuh Bantuan ${assistanceType.toUpperCase()}`,
+      })
+      .eq("id", id);
+  } catch (err) {
+    console.warn("updateSosAssistanceType sos_alerts error:", err);
+  }
+
+  // 3. Update di tabel reports
+  try {
+    const disasterType =
+      assistanceType === "damkar"
+        ? "kebakaran"
+        : assistanceType === "medis"
+        ? "lainnya"
+        : assistanceType === "polisi"
+        ? "lainnya"
+        : "banjir";
+
+    await supabase
+      .from("reports")
+      .update({
+        disaster_type: disasterType,
+        title: `🚨 PANGGILAN DARURAT SOS (${assistanceType.toUpperCase()})`,
+        description: existing?.note || `Panggilan Darurat Warga - Butuh Bantuan ${assistanceType.toUpperCase()}`,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+  } catch (err) {
+    console.warn("updateSosAssistanceType reports error:", err);
+  }
+
+  return { success: true };
+}
+
+/**
  * Mengambil daftar panggilan SOS live dari Supabase dan sinkron dengan mock/cache
  */
 export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
@@ -364,11 +427,30 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
     });
   });
 
-  return Array.from(mergedMap.values()).sort((a, b) => {
+  const sorted = Array.from(mergedMap.values()).sort((a, b) => {
     const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
     const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
     return timeB - timeA;
   });
+
+  // Hapus duplikasi sinyal yang berasal dari titik lokasi & kontak yang sama dalam selang waktu dekat (< 15 detik)
+  const deduplicated: LiveSosItem[] = [];
+  for (const item of sorted) {
+    const isDuplicate = deduplicated.some((existing) => {
+      const sameCoords = Math.abs(existing.lat - item.lat) < 0.0001 && Math.abs(existing.lng - item.lng) < 0.0001;
+      const samePhone = Boolean(item.phone_number && existing.phone_number && item.phone_number === existing.phone_number);
+      const timeDiff = Math.abs(
+        (new Date(existing.created_at).getTime() || 0) - (new Date(item.created_at).getTime() || 0)
+      );
+      return (sameCoords || samePhone) && timeDiff < 15000;
+    });
+
+    if (!isDuplicate) {
+      deduplicated.push(item);
+    }
+  }
+
+  return deduplicated;
 }
 
 /**

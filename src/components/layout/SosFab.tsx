@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -17,7 +17,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import type { SosAssistanceType } from "@/types";
-import { sendSosAlert, updateSosPhone } from "@/lib/services/sos";
+import { sendSosAlert, updateSosPhone, updateSosAssistanceType } from "@/lib/services/sos";
 
 export function SosFab() {
   const pathname = usePathname();
@@ -60,39 +60,47 @@ export function SosFab() {
     }
   }, []);
 
+  const hasTriggeredRef = useRef<boolean>(false);
+
+  // Countdown timer decrement
   useEffect(() => {
     if (pathname.startsWith("/admin")) return;
     if (countdown === null) return;
+
     if (countdown > 0) {
       const timer = setTimeout(() => {
-        setCountdown((prev) => {
-          if (prev === 1) {
-            // Trigger kirim SOS nyata ke Supabase
-            const savedPhone = typeof window !== "undefined" ? localStorage.getItem("sigapbumi_user_phone") || undefined : undefined;
-            const phoneToSend = phoneNumber.trim() || savedPhone;
-
-            sendSosAlert({
-              lat: currentCoords.lat,
-              lng: currentCoords.lng,
-              assistanceType: selectedAssistance || "damkar",
-              note: "Panggilan Darurat SOS Warga (Realtime)",
-              phoneNumber: phoneToSend,
-            }).then((res) => {
-              if (res.id) setActiveSosId(res.id);
-            });
-
-            setIsSent(true);
-            return null;
-          }
-          return prev !== null ? prev - 1 : null;
-        });
+        setCountdown((c) => (c !== null ? c - 1 : null));
       }, 1000);
       return () => clearTimeout(timer);
+    }
+
+    // Trigger kirim SOS tepat SATU KALI saat countdown mencapai 0
+    if (countdown === 0 && !hasTriggeredRef.current) {
+      hasTriggeredRef.current = true;
+      setIsSent(true);
+
+      const savedPhone =
+        typeof window !== "undefined"
+          ? localStorage.getItem("sigapbumi_user_phone") || undefined
+          : undefined;
+      const phoneToSend = phoneNumber.trim() || savedPhone;
+
+      sendSosAlert({
+        lat: currentCoords.lat,
+        lng: currentCoords.lng,
+        assistanceType: selectedAssistance || "damkar",
+        note: "Panggilan Darurat SOS Warga (Realtime)",
+        phoneNumber: phoneToSend,
+      }).then((res) => {
+        if (res.id) setActiveSosId(res.id);
+      });
     }
   }, [countdown, pathname, currentCoords, selectedAssistance, phoneNumber]);
 
   const handleStartSos = useCallback(() => {
     fetchCurrentLocation();
+    hasTriggeredRef.current = false;
+    setActiveSosId(null);
     setIsOpen(true);
     setCountdown(3);
     setIsSent(false);
@@ -115,21 +123,15 @@ export function SosFab() {
     };
   }, [handleStartSos]);
 
+  // Mengubah tipe bantuan: HANYA memperbarui SOS yang sudah ada (tidak membuat duplikasi baru)
   const handleSelectAssistance = (type: SosAssistanceType) => {
     setSelectedAssistance(type);
-    const cleanPhone = phoneNumber.trim();
-    // Kirim pembaruan tipe bantuan nyata
-    sendSosAlert({
-      lat: currentCoords.lat,
-      lng: currentCoords.lng,
-      assistanceType: type,
-      phoneNumber: cleanPhone || undefined,
-      note: `Panggilan Darurat Warga - Butuh Bantuan ${type.toUpperCase()}`,
-    }).then((res) => {
-      if (res.id) setActiveSosId(res.id);
-    });
+    if (activeSosId) {
+      updateSosAssistanceType(activeSosId, type);
+    }
   };
 
+  // Menyimpan nomor HP: HANYA memperbarui catatan kontak pada SOS yang sedang aktif
   const handleSavePhone = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const cleanPhone = phoneNumber.trim();
@@ -140,26 +142,16 @@ export function SosFab() {
     }
     if (activeSosId) {
       await updateSosPhone(activeSosId, cleanPhone);
-    } else {
-      // Jika belum ada ID, kirim update dengan note berisi phone
-      sendSosAlert({
-        lat: currentCoords.lat,
-        lng: currentCoords.lng,
-        assistanceType: selectedAssistance || "damkar",
-        phoneNumber: cleanPhone,
-        note: `Panggilan Darurat Warga [Kontak: ${cleanPhone}]`,
-      }).then((res) => {
-        if (res.id) setActiveSosId(res.id);
-      });
     }
-
     setIsPhoneSaved(true);
   };
 
   const handleCancel = () => {
+    hasTriggeredRef.current = false;
     setCountdown(null);
     setIsOpen(false);
     setIsSent(false);
+    setActiveSosId(null);
   };
 
   if (pathname.startsWith("/admin")) {
