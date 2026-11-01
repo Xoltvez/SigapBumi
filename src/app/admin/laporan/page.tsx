@@ -393,89 +393,91 @@ function LaporanContent() {
       </div>
 
       {/* Filter Bar Horizontal */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-1">
-        {/* Search Input Box */}
-        <div className="relative w-full lg:w-72">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchCode}
-            onChange={(e) => {
-              setSearchCode(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="Cari laporan..."
-            className="w-full h-9 pl-9 pr-3 rounded-full bg-white border border-slate-200/90 text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-orange-500/30 transition-all"
-          />
-        </div>
-
-        {/* Chips: Status & Prioritas */}
-        <div className="flex flex-wrap items-center gap-4 text-xs">
-          {/* Status Chips */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-bold text-slate-700 mr-1">Status:</span>
-            {(
-              [
-                ["semua", "Semua"],
-                ["diterima", "Diterima"],
-                ["diverifikasi", "Diverifikasi"],
-                ["ditindaklanjuti", "Ditindaklanjuti"],
-                ["selesai", "Selesai"],
-                ["ditolak", "Ditolak"],
-              ] as const
-            ).map(([val, label]) => {
-              const active = selectedStatus === val;
-              return (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => {
-                    setSelectedStatus(val);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                    active
-                      ? "bg-slate-900 text-white shadow-xs"
-                      : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/90"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
+      <div className="pt-1">
+        <div className="flex items-center justify-between gap-3 sm:gap-4 overflow-x-auto pb-1 scrollbar-none w-full">
+          {/* Search Input Box */}
+          <div className="relative w-48 sm:w-56 shrink-0">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchCode}
+              onChange={(e) => {
+                setSearchCode(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Cari laporan..."
+              className="w-full h-8.5 pl-9 pr-3 rounded-full bg-white border border-slate-200/90 text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-orange-500/30 transition-all"
+            />
           </div>
 
-          {/* Priority Chips */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-bold text-slate-700 mr-1">Prioritas:</span>
-            {(
-              [
-                ["semua", "Semua"],
-                ["Kritis", "Kritis"],
-                ["Tinggi", "Tinggi"],
-                ["Sedang", "Sedang"],
-                ["Rendah", "Rendah"],
-              ] as const
-            ).map(([pVal, pLabel]) => {
-              const active = selectedPriority === pVal;
-              return (
-                <button
-                  key={pVal}
-                  type="button"
-                  onClick={() => {
-                    setSelectedPriority(pVal);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                    active
-                      ? "bg-slate-900 text-white shadow-xs"
-                      : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/90"
-                  }`}
-                >
-                  {pLabel}
-                </button>
-              );
-            })}
+          {/* Chips: Status & Prioritas (Never wrap onto two lines) */}
+          <div className="flex items-center gap-3 sm:gap-4 text-xs shrink-0 whitespace-nowrap">
+            {/* Status Chips */}
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="font-bold text-slate-700 mr-0.5">Status:</span>
+              {(
+                [
+                  ["semua", "Semua"],
+                  ["diterima", "Diterima"],
+                  ["diverifikasi", "Diverifikasi"],
+                  ["ditindaklanjuti", "Ditindaklanjuti"],
+                  ["selesai", "Selesai"],
+                  ["ditolak", "Ditolak"],
+                ] as const
+              ).map(([val, label]) => {
+                const active = selectedStatus === val;
+                return (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => {
+                      setSelectedStatus(val);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition-all ${
+                      active
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/90"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Priority Chips */}
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="font-bold text-slate-700 mr-0.5">Prioritas:</span>
+              {(
+                [
+                  ["semua", "Semua"],
+                  ["Kritis", "Kritis"],
+                  ["Tinggi", "Tinggi"],
+                  ["Sedang", "Sedang"],
+                  ["Rendah", "Rendah"],
+                ] as const
+              ).map(([pVal, pLabel]) => {
+                const active = selectedPriority === pVal;
+                return (
+                  <button
+                    key={pVal}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPriority(pVal);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition-all ${
+                      active
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/90"
+                    }`}
+                  >
+                    {pLabel}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
