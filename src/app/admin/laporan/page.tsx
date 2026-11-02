@@ -40,6 +40,7 @@ interface AdminReportRow {
   status: ReportStatus;
   priority: PriorityLabel;
   confirmation_count: number;
+  target_agency?: string;
 }
 
 function formatReportTime(dateStr?: string) {
@@ -60,40 +61,147 @@ function formatReportTime(dateStr?: string) {
   }
 }
 
+// Dataset laporan default dengan pemisahan yurisdiksi ketat per role instansi
 const DEFAULT_REPORTS: AdminReportRow[] = [
+  // --- ROLE DAMKAR (Kebakaran & Karhutla) ---
   {
-    id: "rep-sos-2540",
-    tracking_code: "SOS-2540",
+    id: "rep-sos-1399",
+    tracking_code: "SOS-1399",
     disaster_type: "kebakaran",
     title: "PANGGILAN DARURAT SOS (DAMKAR)",
-    location: "Titik Darurat Warga (-7.4052, 109.2452)",
-    time: "1 Nov 2026, 22.34 WIB",
+    location: "Titik Darurat Warga (-7.4552, 109.2427)",
+    time: "2 Nov 2026, 09.12 WIB",
     status: "diterima",
     priority: "Kritis",
     confirmation_count: 1,
+    target_agency: "damkar",
   },
   {
-    id: "rep-sos-6793",
-    tracking_code: "SOS-6793",
+    id: "rep-sos-4862",
+    tracking_code: "SOS-4862",
     disaster_type: "kebakaran",
     title: "PANGGILAN DARURAT SOS (DAMKAR)",
-    location: "Titik Darurat Warga (-7.4052, 109.2452)",
-    time: "1 Nov 2026, 22.34 WIB",
+    location: "Titik Darurat Warga (-7.4552, 109.2428)",
+    time: "2 Nov 2026, 01.41 WIB",
     status: "diterima",
-    priority: "Tinggi",
+    priority: "Kritis",
     confirmation_count: 1,
+    target_agency: "damkar",
   },
   {
-    id: "rep-sos-5532",
-    tracking_code: "SOS-5532",
+    id: "rep-dmk-1",
+    tracking_code: "SB-2026-DMK1",
     disaster_type: "kebakaran",
-    title: "PANGGILAN DARURAT SOS (DAMKAR)",
-    location: "Titik Darurat Warga (-7.4052, 109.2452)",
-    time: "1 Nov 2026, 22.33 WIB",
+    title: "Kebakaran Permukiman Padat Penduduk",
+    location: "Tambora, Jakarta Barat",
+    time: "2 Nov 2026, 08.30 WIB",
+    status: "ditindaklanjuti",
+    priority: "Kritis",
+    confirmation_count: 14,
+    target_agency: "damkar",
+  },
+  {
+    id: "rep-dmk-2",
+    tracking_code: "SB-2026-DMK2",
+    disaster_type: "karhutla",
+    title: "Kebakaran Hutan & Lahan Gambut Meluas 3 Ha",
+    location: "Cikarang Timur, Bekasi",
+    time: "1 Nov 2026, 16.20 WIB",
+    status: "selesai",
+    priority: "Sedang",
+    confirmation_count: 8,
+    target_agency: "damkar",
+  },
+
+  // --- ROLE MEDIS / KESEHATAN (Kejadian Medis & Ambulans) ---
+  {
+    id: "rep-sos-9214",
+    tracking_code: "SOS-9214",
+    disaster_type: "lainnya",
+    title: "PANGGILAN DARURAT SOS (MEDIS)",
+    location: "Titik Darurat Warga (-6.2140, 106.8450)",
+    time: "2 Nov 2026, 08.45 WIB",
+    status: "diterima",
+    priority: "Kritis",
+    confirmation_count: 1,
+    target_agency: "medis",
+  },
+  {
+    id: "rep-sos-7821",
+    tracking_code: "SOS-7821",
+    disaster_type: "lainnya",
+    title: "PANGGILAN DARURAT SOS (MEDIS)",
+    location: "Titik Darurat Warga (-6.2280, 106.8520)",
+    time: "2 Nov 2026, 07.10 WIB",
     status: "ditindaklanjuti",
     priority: "Tinggi",
     confirmation_count: 1,
+    target_agency: "medis",
   },
+  {
+    id: "rep-med-1",
+    tracking_code: "SB-2026-MED1",
+    disaster_type: "gempa",
+    title: "Evakuasi Medis Korban Tertimpa Reruntuhan Bangunan",
+    location: "Kecamatan Cugenang, Cianjur",
+    time: "2 Nov 2026, 06.50 WIB",
+    status: "ditindaklanjuti",
+    priority: "Kritis",
+    confirmation_count: 22,
+    target_agency: "medis",
+  },
+  {
+    id: "rep-med-2",
+    tracking_code: "SB-2026-MED2",
+    disaster_type: "lainnya",
+    title: "Kebutuhan Ambulans & Nakes Darurat Pasien Lansia",
+    location: "Posko Kesehatan Kampung Melayu, Jatinegara",
+    time: "1 Nov 2026, 21.15 WIB",
+    status: "selesai",
+    priority: "Sedang",
+    confirmation_count: 9,
+    target_agency: "medis",
+  },
+
+  // --- ROLE BNPB / BPBD (Bencana Alam Hidrometeorologi & Geologi) ---
+  {
+    id: "rep-sos-4888",
+    tracking_code: "SOS-4888",
+    disaster_type: "banjir",
+    title: "PANGGILAN DARURAT SOS (BNPB_BPBD)",
+    location: "Titik Darurat Warga (-6.1747, 106.8323)",
+    time: "2 Nov 2026, 01.42 WIB",
+    status: "diterima",
+    priority: "Kritis",
+    confirmation_count: 1,
+    target_agency: "bnpb_bpbd",
+  },
+  {
+    id: "rep-bpb-1",
+    tracking_code: "SB-2026-BPB1",
+    disaster_type: "banjir",
+    title: "Banjir Luapan Kali Semanan 60 cm",
+    location: "Kelurahan Semanan, Kalideres, Jakarta Barat",
+    time: "2 Nov 2026, 05.30 WIB",
+    status: "ditindaklanjuti",
+    priority: "Tinggi",
+    confirmation_count: 28,
+    target_agency: "bnpb_bpbd",
+  },
+  {
+    id: "rep-bpb-2",
+    tracking_code: "SB-2026-BPB2",
+    disaster_type: "longsor",
+    title: "Tanah Longsor Tebing Menutup Akses Jalan Utama",
+    location: "Desa Sukamaju, Wonosobo",
+    time: "1 Nov 2026, 18.00 WIB",
+    status: "ditindaklanjuti",
+    priority: "Kritis",
+    confirmation_count: 19,
+    target_agency: "bnpb_bpbd",
+  },
+
+  // --- ROLE POLISI (Kamtibmas & Pengamanan Jalur) ---
   {
     id: "rep-sos-2085",
     tracking_code: "SOS-2085",
@@ -104,19 +212,123 @@ const DEFAULT_REPORTS: AdminReportRow[] = [
     status: "diverifikasi",
     priority: "Sedang",
     confirmation_count: 1,
+    target_agency: "polisi",
   },
   {
-    id: "rep-sos-8830",
-    tracking_code: "SOS-8830",
-    disaster_type: "kebakaran",
-    title: "PANGGILAN DARURAT SOS (DAMKAR)",
-    location: "Titik Darurat Warga (-7.4052, 109.2460)",
-    time: "1 Nov 2026, 22.15 WIB",
-    status: "selesai",
-    priority: "Rendah",
-    confirmation_count: 0,
+    id: "rep-pol-1",
+    tracking_code: "SB-2026-POL1",
+    disaster_type: "lainnya",
+    title: "Penyekatan & Pengamanan Jalur Evakuasi Rawan Bencana",
+    location: "Pertigaan Akses Jalur Puncak, Bogor",
+    time: "2 Nov 2026, 06.15 WIB",
+    status: "ditindaklanjuti",
+    priority: "Tinggi",
+    confirmation_count: 12,
+    target_agency: "polisi",
   },
 ];
+
+// Helper penyaring kewenangan laporan strictly per instansi / role
+export function checkReportBelongsToUnit(r: AdminReportRow, unit: string): boolean {
+  if (unit === "semua" || unit === "pemerintahan") return true;
+
+  const titleUpper = (r.title || "").toUpperCase();
+  const trackingUpper = (r.tracking_code || "").toUpperCase();
+  const isSos = trackingUpper.startsWith("SOS-") || titleUpper.includes("SOS");
+
+  // 1. DATA KEBAKARAN & KARHUTLA HANYA MASUK KE DAMKAR
+  const isFireRelated =
+    r.disaster_type === "kebakaran" ||
+    r.disaster_type === "karhutla" ||
+    titleUpper.includes("DAMKAR") ||
+    titleUpper.includes("KEBAKARAN") ||
+    titleUpper.includes("KARHUTLA") ||
+    r.target_agency === "damkar";
+
+  if (isFireRelated) {
+    return unit === "damkar";
+  }
+
+  // 2. PENANGANAN PANGGILAN DARURAT SOS BERDASARKAN BADGE INSTANSI
+  if (isSos) {
+    if (unit === "damkar") {
+      return titleUpper.includes("DAMKAR");
+    }
+    if (unit === "medis") {
+      return (
+        titleUpper.includes("MEDIS") ||
+        titleUpper.includes("KESEHATAN") ||
+        titleUpper.includes("AMBULANS") ||
+        r.target_agency === "medis"
+      );
+    }
+    if (unit === "polisi") {
+      return (
+        titleUpper.includes("POLISI") ||
+        titleUpper.includes("KEAMANAN") ||
+        r.target_agency === "polisi"
+      );
+    }
+    if (unit === "bnpb_bpbd") {
+      return (
+        titleUpper.includes("BNPB") ||
+        titleUpper.includes("BPBD") ||
+        titleUpper.includes("SAR") ||
+        titleUpper.includes("EVAKUASI") ||
+        r.target_agency === "bnpb_bpbd"
+      );
+    }
+    return false;
+  }
+
+  // 3. JENIS KEJADIAN MEDIS HANYA MASUK KE ROLE MEDIS/KESEHATAN
+  const isMedicalRelated =
+    r.target_agency === "medis" ||
+    titleUpper.includes("MEDIS") ||
+    titleUpper.includes("KESEHATAN") ||
+    titleUpper.includes("AMBULANS") ||
+    titleUpper.includes("PSC 119") ||
+    titleUpper.includes("KORBAN") ||
+    titleUpper.includes("LUKA") ||
+    titleUpper.includes("CEDERA") ||
+    titleUpper.includes("TRAUMA") ||
+    titleUpper.includes("NAKES");
+
+  if (unit === "medis") {
+    return isMedicalRelated;
+  }
+
+  // 4. ROLE LAIN TIDAK BOLEH MENERIMA LAPORAN KHUSUS MEDIS MURNI
+  if (
+    isMedicalRelated &&
+    (titleUpper.includes("AMBULANS") ||
+      titleUpper.includes("KESEHATAN") ||
+      r.target_agency === "medis")
+  ) {
+    return false;
+  }
+
+  // 5. ROLE KEPOLISIAN (Kamtibmas, Penyekatan, Penjarahan, Bencana Lainnya)
+  if (unit === "polisi") {
+    if (r.target_agency === "polisi") return true;
+    return (
+      titleUpper.includes("POLISI") ||
+      titleUpper.includes("KEAMANAN") ||
+      titleUpper.includes("KAMTIBMAS") ||
+      titleUpper.includes("PENYEKATAN") ||
+      titleUpper.includes("PENJARAHAN") ||
+      r.disaster_type === "lainnya"
+    );
+  }
+
+  // 6. ROLE BNPB / BPBD (Bencana hidrometeorologi & geologi: banjir, longsor, gempa, tsunami)
+  if (unit === "bnpb_bpbd") {
+    if (r.target_agency === "bnpb_bpbd") return true;
+    return ["banjir", "longsor", "gempa", "tsunami"].includes(r.disaster_type);
+  }
+
+  return false;
+}
 
 function LaporanContent() {
   const { activeUnit } = useAdmin();
@@ -224,6 +436,7 @@ function LaporanContent() {
             status: r.status,
             priority: pLabel,
             confirmation_count: r.confirmation_count,
+            target_agency: r.target_agency,
           };
         });
 
@@ -293,20 +506,9 @@ function LaporanContent() {
     };
   }, []);
 
-  // Laporan basis yang dibatasi sesuai hak akses instansi aktif
+  // Laporan basis yang dibatasi strictly per instansi / role aktif
   const baseReports = useMemo(() => {
-    if (activeUnit === "semua" || activeUnit === "pemerintahan") return reports;
-    const unitMap: Record<string, DisasterType[]> = {
-      bnpb_bpbd: ["banjir", "longsor", "gempa", "tsunami"],
-      damkar: ["kebakaran", "karhutla"],
-      medis: ["gempa", "tsunami"],
-      polisi: ["lainnya"],
-    };
-    const allowed = unitMap[activeUnit] || [];
-    return reports.filter((r) => {
-      const isSos = r.tracking_code.startsWith("SOS") || r.title.includes("SOS");
-      return isSos || allowed.includes(r.disaster_type);
-    });
+    return reports.filter((r) => checkReportBelongsToUnit(r, activeUnit));
   }, [reports, activeUnit]);
 
   // Hitung jumlah untuk 4 KPI card secara dinamis berdasarkan role

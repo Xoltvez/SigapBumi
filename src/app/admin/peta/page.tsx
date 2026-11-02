@@ -156,28 +156,76 @@ export default function AdminPetaPage() {
   // Titik basis yang disaring berdasarkan hak akses instansi aktif
   const basePoints = useMemo(() => {
     if (activeUnit === "semua" || activeUnit === "pemerintahan") return points;
-    const unitMap: Record<string, DisasterType[]> = {
-      bnpb_bpbd: ["banjir", "longsor", "gempa", "tsunami"],
-      damkar: ["kebakaran", "karhutla"],
-      medis: ["gempa", "tsunami"],
-      polisi: ["lainnya"],
-    };
-    const allowed = unitMap[activeUnit] || [];
     return points.filter((pt) => {
+      const titleLower = pt.title.toLowerCase();
+      const isFire =
+        pt.disaster_type === "kebakaran" ||
+        pt.disaster_type === "karhutla" ||
+        titleLower.includes("damkar") ||
+        titleLower.includes("kebakaran") ||
+        titleLower.includes("karhutla");
+
+      // 1. Data kebakaran hanya masuk ke damkar
+      if (isFire) {
+        return activeUnit === "damkar";
+      }
+
       if (pt.is_sos) {
         if (activeUnit === "damkar") {
-          return pt.disaster_type === "kebakaran" || pt.title.toLowerCase().includes("damkar");
+          return titleLower.includes("damkar");
         }
         if (activeUnit === "medis") {
-          return pt.title.toLowerCase().includes("medis");
+          return (
+            titleLower.includes("medis") ||
+            titleLower.includes("kesehatan") ||
+            titleLower.includes("ambulans")
+          );
         }
         if (activeUnit === "polisi") {
-          return pt.title.toLowerCase().includes("keamanan") || pt.title.toLowerCase().includes("polisi");
+          return titleLower.includes("keamanan") || titleLower.includes("polisi");
         }
-        // bnpb_bpbd gets general SOS/SAR
-        return true;
+        if (activeUnit === "bnpb_bpbd") {
+          return (
+            titleLower.includes("bnpb") ||
+            titleLower.includes("bpbd") ||
+            titleLower.includes("sar") ||
+            titleLower.includes("evakuasi")
+          );
+        }
+        return false;
       }
-      return allowed.includes(pt.disaster_type);
+
+      // 2. Kejadian Medis hanya masuk ke role medis
+      const isMedical =
+        titleLower.includes("medis") ||
+        titleLower.includes("kesehatan") ||
+        titleLower.includes("ambulans") ||
+        titleLower.includes("korban") ||
+        titleLower.includes("cedera");
+
+      if (activeUnit === "medis") {
+        return isMedical;
+      }
+      if (
+        isMedical &&
+        (titleLower.includes("ambulans") || titleLower.includes("kesehatan"))
+      ) {
+        return false;
+      }
+
+      if (activeUnit === "polisi") {
+        return (
+          titleLower.includes("polisi") ||
+          titleLower.includes("keamanan") ||
+          pt.disaster_type === "lainnya"
+        );
+      }
+
+      if (activeUnit === "bnpb_bpbd") {
+        return ["banjir", "longsor", "gempa", "tsunami"].includes(pt.disaster_type);
+      }
+
+      return false;
     });
   }, [points, activeUnit]);
 

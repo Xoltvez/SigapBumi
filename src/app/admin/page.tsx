@@ -233,19 +233,43 @@ export default function AdminRingkasanPage() {
       );
     }
     if (activeUnit === "medis") {
-      return reports.filter(
-        (r: AdminReportItem) => ["gempa", "tsunami"].includes(r.disaster_type) || r.target_agency === "medis"
-      );
+      return reports.filter((r: AdminReportItem) => {
+        if (r.disaster_type === "kebakaran" || r.disaster_type === "karhutla") return false;
+        const titleUpper = r.title.toUpperCase();
+        return (
+          r.target_agency === "medis" ||
+          titleUpper.includes("MEDIS") ||
+          titleUpper.includes("KESEHATAN") ||
+          titleUpper.includes("AMBULANS") ||
+          titleUpper.includes("KORBAN") ||
+          titleUpper.includes("LUKA") ||
+          titleUpper.includes("CEDERA")
+        );
+      });
     }
     if (activeUnit === "polisi") {
-      return reports.filter(
-        (r: AdminReportItem) => ["lainnya"].includes(r.disaster_type) || r.target_agency === "polisi"
-      );
+      return reports.filter((r: AdminReportItem) => {
+        if (r.disaster_type === "kebakaran" || r.disaster_type === "karhutla") return false;
+        if (r.target_agency === "damkar" || r.target_agency === "medis") return false;
+        const titleUpper = r.title.toUpperCase();
+        return (
+          r.target_agency === "polisi" ||
+          titleUpper.includes("POLISI") ||
+          titleUpper.includes("KEAMANAN") ||
+          titleUpper.includes("KAMTIBMAS") ||
+          r.disaster_type === "lainnya"
+        );
+      });
     }
     // bnpb_bpbd
-    return reports.filter(
-      (r: AdminReportItem) => ["banjir", "longsor", "gempa", "tsunami"].includes(r.disaster_type) || r.target_agency === "bnpb_bpbd"
-    );
+    return reports.filter((r: AdminReportItem) => {
+      if (r.disaster_type === "kebakaran" || r.disaster_type === "karhutla") return false;
+      if (r.target_agency === "medis" || r.target_agency === "damkar") return false;
+      return (
+        ["banjir", "longsor", "gempa", "tsunami"].includes(r.disaster_type) ||
+        r.target_agency === "bnpb_bpbd"
+      );
+    });
   }, [reports, activeUnit]);
 
   // Filter SOS sesuai kewenangan instansi aktif
