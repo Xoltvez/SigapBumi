@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Move3d, RotateCcw, Sparkles, ShieldCheck } from "lucide-react";
+import { Move3d, RotateCcw } from "lucide-react";
 
 interface Hotspot {
   id: string;
@@ -272,8 +272,7 @@ export function Interactive3DBag() {
                     style={{ transform: "translateZ(30px)" }}
                     className="absolute left-1/2 -top-16 -translate-x-1/2 w-44 bg-slate-900/95 text-white p-2.5 rounded-xl shadow-xl text-left pointer-events-none backdrop-blur-md border border-slate-700/80 animate-in fade-in zoom-in-95 duration-200 z-30"
                   >
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
-                      <Sparkles className="w-3 h-3 shrink-0" />
+                    <div className="text-xs font-bold text-amber-300">
                       <span>{spot.title}</span>
                     </div>
                     <p className="text-[10px] text-slate-300 mt-0.5 leading-snug">
