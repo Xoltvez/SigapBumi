@@ -236,6 +236,18 @@ function PetaContent() {
     return list;
   }, [filteredPoints, listSearch, listSort]);
 
+  // Pada tampilan mobile (< 768px), pastikan selalu menggunakan tampilan peta yang rapi dan interaktif
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== "undefined" && window.innerWidth < 768) {
+        setViewMode("peta");
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Navigasi langsung dari Daftar Kejadian ke Titik Peta
   const handleOpenInMap = (item: MapPoint) => {
     setSelectedPoint(item);
@@ -275,12 +287,12 @@ function PetaContent() {
             </span>
           </div>
           <p className="text-xs text-ink-soft mt-0.5">
-            Sebaran informasi kebencanaan dan titik panggilan darurat SOS dengan dukungan mode peta dan alternatif daftar.
+            Sebaran informasi kebencanaan dan titik panggilan darurat SOS secara interaktif dan real-time.
           </p>
         </div>
 
-        {/* View Mode Switcher (Peta vs Daftar) */}
-        <div className="flex items-center gap-2">
+        {/* View Mode Switcher (Peta vs Daftar) - Disembunyikan di mobile agar tampilan peta tetap fokus dan rapi */}
+        <div className="hidden md:flex items-center gap-2">
           <div
             role="tablist"
             aria-label="Mode Tampilan Peta atau Daftar"
@@ -377,7 +389,7 @@ function PetaContent() {
                 <button
                   type="button"
                   onClick={() => setViewMode("daftar")}
-                  className="text-primary hover:underline font-semibold flex items-center gap-1"
+                  className="hidden md:flex text-primary hover:underline font-semibold items-center gap-1 shrink-0"
                 >
                   <List className="w-3.5 h-3.5" />
                   <span>Beralih ke Tampilan Daftar</span>
@@ -393,8 +405,8 @@ function PetaContent() {
               </div>
             </div>
           ) : (
-            // LIST VIEW ALTERNATIVE (FR-04 & Master Prompt Section 3.2 & 6.4)
-            <div className="space-y-4">
+            // LIST VIEW ALTERNATIVE (Hanya aktif di desktop jika viewMode === "daftar")
+            <div className="hidden md:block space-y-4">
               {/* Header List Controls: Search & Sort */}
               <div className="bg-surface border border-line rounded-lg p-3.5 shadow-card space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -434,14 +446,14 @@ function PetaContent() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-ink-muted pt-2 border-t border-line">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-ink-muted pt-2 border-t border-line">
                   <span>
                     Menampilkan <strong>{displayedListPoints.length}</strong> dari {filteredPoints.length} kejadian bencana
                   </span>
                   <button
                     type="button"
                     onClick={() => setViewMode("peta")}
-                    className="text-primary hover:underline font-semibold flex items-center gap-1"
+                    className="text-primary hover:underline font-semibold flex items-center gap-1 shrink-0"
                   >
                     <MapIcon className="w-3.5 h-3.5" />
                     <span>Kembali ke Tampilan Peta</span>
