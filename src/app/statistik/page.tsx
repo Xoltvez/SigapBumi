@@ -20,7 +20,6 @@ import {
   Clock,
   ShieldCheck,
   CheckCircle2,
-  Download,
   Calendar,
   Info,
   Layers,
@@ -135,22 +134,6 @@ export default function StatistikPage() {
     { bulan: "Okt", laporan: totalReports, selesai: selesaiCount },
   ];
 
-  const exportCSV = () => {
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      "Wilayah,Total Laporan,Selesai Ditangani,Waktu Respons Rata-rata,Tingkat Penyelesaian\n" +
-      regionalStats
-        .map((r) => `${r.wilayah},${r.total},${r.selesai},${r.respons},${r.persentase}`)
-        .join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `statistik_kebencanaan_sigapbumi_${period}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
     <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 pb-28 md:pb-12 space-y-8">
       {/* Top Header */}
@@ -167,7 +150,7 @@ export default function StatistikPage() {
           </p>
         </div>
 
-        {/* Filter Period & Export Buttons */}
+        {/* Filter Period Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1 bg-surface border border-line rounded-md p-1 text-xs font-medium">
             <Calendar className="w-4 h-4 text-ink-muted ml-2" />
@@ -194,15 +177,6 @@ export default function StatistikPage() {
               Tahun 2026
             </button>
           </div>
-
-          <button
-            type="button"
-            onClick={exportCSV}
-            className="h-9 px-3.5 rounded-md border border-line bg-surface hover:bg-bg text-ink text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-sm"
-          >
-            <Download className="w-3.5 h-3.5 text-primary" />
-            <span>Ekspor CSV</span>
-          </button>
         </div>
       </div>
 
