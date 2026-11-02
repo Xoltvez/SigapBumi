@@ -180,11 +180,16 @@ function AdminLoginContent() {
 
           {/* Login Form */}
           <form onSubmit={handleLoginSubmit} className="space-y-4">
-            {/* Instansi / Unit Dropdown */}
+            {/* Instansi / Unit Dropdown (Pilihan Role Akses) */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Instansi / Satuan Tugas
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Pilih Role / Instansi Penugasan
+                </label>
+                <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-semibold">
+                  Wajib Dipilih
+                </span>
+              </div>
               <div className="relative">
                 <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                   <Building2 className="w-4 h-4" />
@@ -201,6 +206,9 @@ function AdminLoginContent() {
                   ))}
                 </select>
               </div>
+              <p className="text-[11px] text-slate-500 mt-1.5 leading-normal">
+                Role instansi terkunci selama sesi komando berlangsung. Penggantian instansi hanya dapat dilakukan melalui menu Logout.
+              </p>
             </div>
 
             {/* NIP / ID Input */}

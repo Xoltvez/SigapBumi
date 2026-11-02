@@ -16,7 +16,7 @@ interface AdminTopbarProps {
   isSidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
   activeUnit: string;
-  onSelectUnit: (unit: string) => void;
+  onSelectUnit?: (unit: string) => void;
   activeSosCount?: number;
   isLiveConnected?: boolean;
   isSirenMuted?: boolean;
@@ -118,39 +118,33 @@ export function AdminTopbar({
           </button>
         )}
 
-        {/* Agency Unit Filter Select Pill with Orange Logo */}
-        <div className="relative">
-          <div className="h-9 px-3 pr-7 rounded-full border border-slate-200/90 bg-white shadow-2xs flex items-center gap-2 text-xs font-semibold text-slate-800 pointer-events-none">
-            <div className="w-5 h-5 rounded-full bg-linear-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white text-[10px] shadow-2xs shrink-0">
-              <span className="font-extrabold text-[9px] leading-none">▲</span>
-            </div>
-            <span>
-              {activeUnit === "bnpb_bpbd"
-                ? "BNPB / BPBD"
-                : activeUnit === "damkar"
-                ? "Dinas Damkar"
-                : activeUnit === "medis"
-                ? "Medis / Dinkes"
-                : activeUnit === "polisi"
-                ? "Polri"
-                : "Semua Posko"}
-            </span>
+        {/* Agency Unit Badge (Terkunci sesuai role saat login, tidak bisa diganti di topbar) */}
+        <div
+          title={`Akses Terkunci: Masuk sebagai ${
+            activeUnit === "damkar"
+              ? "Dinas Pemadam Kebakaran"
+              : activeUnit === "medis"
+              ? "Dinas Kesehatan / Medis"
+              : activeUnit === "polisi"
+              ? "Kepolisian RI / Satgas Polri"
+              : "BNPB / BPBD"
+          }. Untuk mengganti instansi, silakan logout terlebih dahulu.`}
+          className="h-9 px-3.5 rounded-full border border-slate-200/90 bg-white shadow-2xs flex items-center gap-2 text-xs font-semibold text-slate-800 select-none cursor-default"
+        >
+          <div className="w-5 h-5 rounded-full bg-linear-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white text-[10px] shadow-2xs shrink-0">
+            <span className="font-extrabold text-[9px] leading-none">▲</span>
           </div>
-          <select
-            value={activeUnit}
-            onChange={(e) => onSelectUnit(e.target.value)}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs"
-            title="Pilih Unit Posko"
-          >
-            <option value="semua">Semua Posko</option>
-            <option value="bnpb_bpbd">BNPB / BPBD</option>
-            <option value="damkar">Dinas Damkar</option>
-            <option value="medis">Medis / Dinkes</option>
-            <option value="polisi">Polri</option>
-          </select>
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-            <ChevronDown className="w-3 h-3" />
-          </div>
+          <span>
+            {activeUnit === "bnpb_bpbd"
+              ? "BNPB / BPBD"
+              : activeUnit === "damkar"
+              ? "Dinas Damkar"
+              : activeUnit === "medis"
+              ? "Medis / Dinkes"
+              : activeUnit === "polisi"
+              ? "Polri"
+              : "BNPB / BPBD"}
+          </span>
         </div>
 
         {/* Admin Profile Pill */}
