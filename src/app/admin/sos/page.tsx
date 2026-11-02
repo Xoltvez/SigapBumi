@@ -87,17 +87,27 @@ export default function AdminSosPage() {
   // Kategori Filter Status
   const [statusFilter, setStatusFilter] = useState<"semua" | "aktif" | "ditangani" | "selesai">("semua");
 
+  // List SOS yang dibatasi sesuai hak akses instansi aktif
+  const baseSosList = useMemo(() => {
+    if (activeUnit === "semua" || activeUnit === "pemerintahan") return sosList;
+    if (activeUnit === "damkar") return sosList.filter((x) => x.type === "damkar");
+    if (activeUnit === "medis") return sosList.filter((x) => x.type === "medis");
+    if (activeUnit === "polisi") return sosList.filter((x) => x.type === "polisi");
+    // bnpb_bpbd
+    return sosList.filter((x) => x.type === "bnpb_bpbd" || (x.type as string) === "lainnya");
+  }, [sosList, activeUnit]);
+
   // Dynamic Category counts
-  const countMedis = useMemo(() => sosList.filter((x) => x.type === "medis").length, [sosList]);
-  const countKebakaran = useMemo(() => sosList.filter((x) => x.type === "damkar").length, [sosList]);
-  const countKeamanan = useMemo(() => sosList.filter((x) => x.type === "polisi").length, [sosList]);
-  const countLainnya = useMemo(() => sosList.filter((x) => x.type === "bnpb_bpbd" || (x.type as string) === "lainnya").length, [sosList]);
+  const countMedis = useMemo(() => baseSosList.filter((x) => x.type === "medis").length, [baseSosList]);
+  const countKebakaran = useMemo(() => baseSosList.filter((x) => x.type === "damkar").length, [baseSosList]);
+  const countKeamanan = useMemo(() => baseSosList.filter((x) => x.type === "polisi").length, [baseSosList]);
+  const countLainnya = useMemo(() => baseSosList.filter((x) => x.type === "bnpb_bpbd" || (x.type as string) === "lainnya").length, [baseSosList]);
 
   // Status Filter counts
-  const countAktif = useMemo(() => sosList.filter((x) => x.status === "aktif").length, [sosList]);
-  const countDitangani = useMemo(() => sosList.filter((x) => x.status === "ditangani").length, [sosList]);
-  const countSelesai = useMemo(() => sosList.filter((x) => x.status === "selesai" || x.status === "palsu").length, [sosList]);
-  const countTotal = sosList.length;
+  const countAktif = useMemo(() => baseSosList.filter((x) => x.status === "aktif").length, [baseSosList]);
+  const countDitangani = useMemo(() => baseSosList.filter((x) => x.status === "ditangani").length, [baseSosList]);
+  const countSelesai = useMemo(() => baseSosList.filter((x) => x.status === "selesai" || x.status === "palsu").length, [baseSosList]);
+  const countTotal = baseSosList.length;
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -250,15 +260,7 @@ export default function AdminSosPage() {
 
   // Filter based on active agency unit and status category
   const visibleSosList = useMemo(() => {
-    return sosList.filter((item) => {
-      // 1. Filter Instansi Unit
-      if (activeUnit !== "semua" && activeUnit !== "bnpb_bpbd" && activeUnit !== "pemerintahan") {
-        if (activeUnit === "damkar" && item.type !== "damkar") return false;
-        if (activeUnit === "medis" && item.type !== "medis") return false;
-        if (activeUnit === "polisi" && item.type !== "polisi") return false;
-      }
-
-      // 2. Filter Kategori Status
+    return baseSosList.filter((item) => {
       if (statusFilter === "aktif") {
         return item.status === "aktif";
       }
@@ -271,7 +273,7 @@ export default function AdminSosPage() {
 
       return true;
     });
-  }, [sosList, activeUnit, statusFilter]);
+  }, [baseSosList, statusFilter]);
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-12 select-none">

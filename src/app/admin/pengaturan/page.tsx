@@ -28,6 +28,8 @@ import {
   Wifi,
   ExternalLink,
   Info,
+  Lock,
+  Building2,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import { playSosSiren, stopSosSiren } from "@/lib/audio/siren";
@@ -448,41 +450,85 @@ export default function AdminPengaturanPage() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Instansi Penanggung Jawab
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Instansi Penanggung Jawab & Hak Akses
+                    </label>
+                    <span className="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
+                      <Lock className="w-3 h-3 text-slate-400" />
+                      Terkunci Sesuai Akun Login
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                     {[
-                      { id: "bnpb_bpbd", label: "BNPB / BPBD", icon: LifeBuoy, color: "text-[#EA580C]" },
-                      { id: "damkar", label: "Dinas Damkar", icon: Flame, color: "text-rose-500" },
-                      { id: "medis", label: "Dinkes / RS", icon: HeartPulse, color: "text-rose-600" },
-                      { id: "polisi", label: "Kepolisian (Polri)", icon: Shield, color: "text-blue-600" },
+                      {
+                        id: "pemerintahan",
+                        label: "Pemerintahan (Pusat)",
+                        sub: "Semua Data Masuk",
+                        icon: Building2,
+                        color: "text-amber-600",
+                      },
+                      {
+                        id: "bnpb_bpbd",
+                        label: "BNPB / BPBD",
+                        sub: "Bencana Hidrometeorologi",
+                        icon: LifeBuoy,
+                        color: "text-[#EA580C]",
+                      },
+                      {
+                        id: "damkar",
+                        label: "Dinas Damkar",
+                        sub: "Kebakaran & Karhutla",
+                        icon: Flame,
+                        color: "text-rose-500",
+                      },
+                      {
+                        id: "medis",
+                        label: "Dinkes / RS",
+                        sub: "Medis Darurat & PSC 119",
+                        icon: HeartPulse,
+                        color: "text-rose-600",
+                      },
+                      {
+                        id: "polisi",
+                        label: "Kepolisian (Polri)",
+                        sub: "Kamtibmas & Pengamanan",
+                        icon: Shield,
+                        color: "text-blue-600",
+                      },
                     ].map((item) => {
                       const Icon = item.icon;
                       const isSelected = officerForm.unit === item.id;
                       return (
-                        <button
+                        <div
                           key={item.id}
-                          type="button"
-                          onClick={() =>
-                            setOfficerForm({
-                              ...officerForm,
-                              unit: item.id,
-                              unitName: item.label,
-                            })
-                          }
-                          className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all ${
+                          className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
                             isSelected
                               ? "border-[#EA580C] bg-[#FFF4EC] text-[#EA580C] shadow-sm ring-1 ring-[#EA580C]"
-                              : "border-slate-200 bg-slate-50/50 hover:bg-slate-100/50 text-slate-700"
+                              : "border-slate-200/80 bg-slate-50/40 text-slate-400 opacity-60"
                           }`}
                         >
-                          <Icon className={`w-4 h-4 ${isSelected ? "text-[#EA580C]" : item.color}`} />
-                          <span className="text-[11px] text-center">{item.label}</span>
-                        </button>
+                          <Icon
+                            className={`w-4 h-4 ${
+                              isSelected ? "text-[#EA580C]" : item.color
+                            }`}
+                          />
+                          <span className="text-[11px] text-center font-bold">
+                            {item.label}
+                          </span>
+                          <span className="text-[9px] text-center font-normal line-clamp-1">
+                            {item.sub}
+                          </span>
+                        </div>
                       );
                     })}
                   </div>
+                  <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>
+                      Untuk berganti instansi atau hak akses, silakan logout dan login kembali dengan role yang sesuai.
+                    </span>
+                  </p>
                 </div>
               </div>
             </div>

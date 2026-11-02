@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -85,7 +85,7 @@ const INITIAL_FEATURED_REPORTS = [
 ];
 
 export default function AdminRingkasanPage() {
-  const { activeUnit, activeUnitName, setActiveSosCount, setIsLiveConnected } = useAdmin();
+  const { activeUnit, activeUnitName, adminUser, setActiveSosCount, setIsLiveConnected } = useAdmin();
   const [reports, setReports] = useState<AdminReportItem[]>([]);
   const [sosAlerts, setSosAlerts] = useState<SosAlertItem[]>(INITIAL_SOS_ALERTS);
   const [updatingReportId, setUpdatingReportId] = useState<string | null>(null);
@@ -182,7 +182,6 @@ export default function AdminRingkasanPage() {
                 return timeB - timeA;
               })
           );
-          setActiveSosCount(activeOnly.filter((s) => s.status === "aktif").length);
         }
       } catch (err) {
         console.warn("Gagal memuat ringkasan live:", err);
@@ -221,9 +220,60 @@ export default function AdminRingkasanPage() {
       supabase.removeChannel(channelReports);
       supabase.removeChannel(channelSos);
     };
-  }, [setActiveSosCount, setIsLiveConnected]);
+  }, [setIsLiveConnected]);
 
-  const activeSos = sosAlerts.filter((s) => s.status === "aktif");
+  // Filter laporan sesuai kewenangan instansi aktif
+  const unitReports: AdminReportItem[] = useMemo(() => {
+    if (activeUnit === "pemerintahan" || activeUnit === "semua") {
+      return reports;
+    }
+    if (activeUnit === "damkar") {
+      return reports.filter(
+        (r: AdminReportItem) => ["kebakaran", "karhutla"].includes(r.disaster_type) || r.target_agency === "damkar"
+      );
+    }
+    if (activeUnit === "medis") {
+      return reports.filter(
+        (r: AdminReportItem) => ["gempa", "tsunami"].includes(r.disaster_type) || r.target_agency === "medis"
+      );
+    }
+    if (activeUnit === "polisi") {
+      return reports.filter(
+        (r: AdminReportItem) => ["lainnya"].includes(r.disaster_type) || r.target_agency === "polisi"
+      );
+    }
+    // bnpb_bpbd
+    return reports.filter(
+      (r: AdminReportItem) => ["banjir", "longsor", "gempa", "tsunami"].includes(r.disaster_type) || r.target_agency === "bnpb_bpbd"
+    );
+  }, [reports, activeUnit]);
+
+  // Filter SOS sesuai kewenangan instansi aktif
+  const unitSosAlerts: SosAlertItem[] = useMemo(() => {
+    if (activeUnit === "pemerintahan" || activeUnit === "semua") {
+      return sosAlerts;
+    }
+    if (activeUnit === "damkar") {
+      return sosAlerts.filter((s: SosAlertItem) => s.assistance_type === "damkar");
+    }
+    if (activeUnit === "medis") {
+      return sosAlerts.filter((s: SosAlertItem) => s.assistance_type === "medis");
+    }
+    if (activeUnit === "polisi") {
+      return sosAlerts.filter((s: SosAlertItem) => s.assistance_type === "polisi");
+    }
+    // bnpb_bpbd
+    return sosAlerts.filter(
+      (s: SosAlertItem) => s.assistance_type === "bnpb_bpbd" || (s.assistance_type as string) === "evakuasi"
+    );
+  }, [sosAlerts, activeUnit]);
+
+  const activeSos = unitSosAlerts.filter((s: SosAlertItem) => s.status === "aktif");
+
+  // Sinkronisasi jumlah SOS ke sidebar
+  useEffect(() => {
+    setActiveSosCount(activeSos.length);
+  }, [activeSos.length, setActiveSosCount]);
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-10">
@@ -232,10 +282,18 @@ export default function AdminRingkasanPage() {
         {/* Teks Sambutan di Sebelah Kiri */}
         <div className="relative z-10 max-w-xl">
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Selamat datang, Admin!
+            Selamat datang, {adminUser?.name?.split(" ")[0] || "Petugas"}!
           </h1>
           <p className="text-sm md:text-[15px] text-slate-500 font-normal mt-1.5">
-            Pantau dan kelola laporan bencana dengan mudah.
+            {activeUnit === "pemerintahan" || activeUnit === "semua"
+              ? "Biro Pengendalian Operasi Pemerintahan — Akses Penuh Seluruh Kejadian Bencana & SOS Nasional."
+              : activeUnit === "damkar"
+              ? "Posko Dinas Pemadam Kebakaran & Penyelamatan — Pemantauan Kebakaran & Karhutla."
+              : activeUnit === "medis"
+              ? "Posko Dinas Kesehatan & PSC 119 — Pemantauan Darurat Medis & Evakuasi Pasien."
+              : activeUnit === "polisi"
+              ? "Satgas Kebencanaan Kepolisian RI — Pengamanan Lokasi & Ketertiban Wilayah Bencana."
+              : "Komando Pusdalops BPBD — Penanganan Bencana Hidrometeorologi & Geologi Lapangan."}
           </p>
         </div>
 
@@ -298,7 +356,7 @@ export default function AdminRingkasanPage() {
             </div>
             <div>
               <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
-                {reports.length > 0 ? reports.filter((r) => r.status === "diterima").length : 11}
+                {unitReports.length > 0 ? unitReports.filter((r) => r.status === "diterima").length : 0}
               </p>
               <p className="text-xs text-slate-400 font-medium mt-1">
                 Laporan Baru
@@ -327,7 +385,7 @@ export default function AdminRingkasanPage() {
             </div>
             <div>
               <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
-                {reports.length > 0 ? reports.filter((r) => r.status === "ditindaklanjuti" || r.status === "diverifikasi").length : 15}
+                {unitReports.length > 0 ? unitReports.filter((r) => r.status === "ditindaklanjuti" || r.status === "diverifikasi").length : 0}
               </p>
               <p className="text-xs text-slate-400 font-medium mt-1">
                 Laporan Diproses
@@ -356,7 +414,7 @@ export default function AdminRingkasanPage() {
             </div>
             <div>
               <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
-                {reports.length > 0 ? reports.filter((r) => r.status === "selesai").length : 37}
+                {unitReports.length > 0 ? unitReports.filter((r) => r.status === "selesai").length : 0}
               </p>
               <p className="text-xs text-slate-400 font-medium mt-1">
                 Laporan Selesai
@@ -385,7 +443,7 @@ export default function AdminRingkasanPage() {
             </div>
             <div>
               <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
-                6.4 <span className="text-lg md:text-xl font-bold">mnt</span>
+                {activeUnit === "damkar" ? "7.2" : activeUnit === "medis" ? "5.8" : activeUnit === "polisi" ? "8.1" : "6.4"} <span className="text-lg md:text-xl font-bold">mnt</span>
               </p>
               <p className="text-xs text-slate-400 font-medium mt-1">
                 Rata-rata Respons
@@ -415,7 +473,7 @@ export default function AdminRingkasanPage() {
             <div className="flex items-center gap-2.5">
               <FileText className="w-5 h-5 text-slate-700" />
               <h2 className="text-base font-bold text-slate-900">
-                Laporan Terbaru
+                Laporan Terbaru ({unitReports.length})
               </h2>
             </div>
             <Link
@@ -429,8 +487,8 @@ export default function AdminRingkasanPage() {
 
           {/* List Laporan */}
           <div className="divide-y divide-slate-100">
-            {(reports.length > 0
-              ? reports.slice(0, 4).map((r, idx) => ({
+            {(unitReports.length > 0
+              ? unitReports.slice(0, 4).map((r, idx) => ({
                   id: r.id,
                   title: r.title,
                   location: `${r.location} · ${r.time}`,

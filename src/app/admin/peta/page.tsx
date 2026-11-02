@@ -34,6 +34,7 @@ import {
 } from "@/lib/services/reports";
 import { fetchLiveSosAlerts, updateSosAlertStatus } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
+import { useAdmin } from "@/components/layout/AdminShell";
 
 // Dynamic import for Leaflet client component
 const DisasterMap = dynamic(() => import("@/components/peta/DisasterMap"), {
@@ -61,6 +62,7 @@ const PROVINCE_OPTIONS = [
 ];
 
 export default function AdminPetaPage() {
+  const { activeUnit, activeUnitName } = useAdmin();
   const [points, setPoints] = useState<MapPoint[]>(() => {
     return reportsToMapPoints(DEFAULT_MOCK_REPORTS);
   });
@@ -151,9 +153,37 @@ export default function AdminPetaPage() {
     };
   }, [loadData]);
 
+  // Titik basis yang disaring berdasarkan hak akses instansi aktif
+  const basePoints = useMemo(() => {
+    if (activeUnit === "semua" || activeUnit === "pemerintahan") return points;
+    const unitMap: Record<string, DisasterType[]> = {
+      bnpb_bpbd: ["banjir", "longsor", "gempa", "tsunami"],
+      damkar: ["kebakaran", "karhutla"],
+      medis: ["gempa", "tsunami"],
+      polisi: ["lainnya"],
+    };
+    const allowed = unitMap[activeUnit] || [];
+    return points.filter((pt) => {
+      if (pt.is_sos) {
+        if (activeUnit === "damkar") {
+          return pt.disaster_type === "kebakaran" || pt.title.toLowerCase().includes("damkar");
+        }
+        if (activeUnit === "medis") {
+          return pt.title.toLowerCase().includes("medis");
+        }
+        if (activeUnit === "polisi") {
+          return pt.title.toLowerCase().includes("keamanan") || pt.title.toLowerCase().includes("polisi");
+        }
+        // bnpb_bpbd gets general SOS/SAR
+        return true;
+      }
+      return allowed.includes(pt.disaster_type);
+    });
+  }, [points, activeUnit]);
+
   // Filtered points
   const filteredPoints = useMemo(() => {
-    return points.filter((pt) => {
+    return basePoints.filter((pt) => {
       if (selectedProvince !== "Semua Provinsi" && pt.province !== selectedProvince) {
         return false;
       }
@@ -174,11 +204,11 @@ export default function AdminPetaPage() {
       }
       return true;
     });
-  }, [points, selectedProvince, selectedDisaster, selectedStatus, searchQuery]);
+  }, [basePoints, selectedProvince, selectedDisaster, selectedStatus, searchQuery]);
 
   const selectedPoint = useMemo(() => {
-    return points.find((p) => p.id === selectedPointId);
-  }, [points, selectedPointId]);
+    return basePoints.find((p) => p.id === selectedPointId);
+  }, [basePoints, selectedPointId]);
 
   // Handle local and remote status transition
   const handleUpdateStatus = async (newStatus: ReportStatus) => {
@@ -208,11 +238,11 @@ export default function AdminPetaPage() {
     }
   };
 
-  // KPI Metrics riil tanpa fallback palsu
-  const totalTitik = points.length;
-  const sosTotal = points.filter((p) => p.is_sos).length;
-  const prosesTotal = points.filter((p) => !p.is_sos && p.status === "ditindaklanjuti").length;
-  const selesaiTotal = points.filter((p) => !p.is_sos && p.status === "selesai").length;
+  // KPI Metrics riil tanpa fallback palsu berdasarkan yurisdiksi aktif
+  const totalTitik = basePoints.length;
+  const sosTotal = basePoints.filter((p) => p.is_sos).length;
+  const prosesTotal = basePoints.filter((p) => !p.is_sos && p.status === "ditindaklanjuti").length;
+  const selesaiTotal = basePoints.filter((p) => !p.is_sos && p.status === "selesai").length;
 
   const getDisasterIcon = (type: DisasterType) => {
     switch (type) {
@@ -233,6 +263,11 @@ export default function AdminPetaPage() {
       {/* 1. Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
+              Yurisdiksi: {activeUnitName}
+            </span>
+          </div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
             Peta Operasional Taktis
           </h1>

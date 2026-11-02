@@ -293,28 +293,31 @@ function LaporanContent() {
     };
   }, []);
 
-  // Hitung jumlah untuk 4 KPI card secara dinamis
-  const totalCount = reports.length;
-  const menungguCount = reports.filter((r) => r.status === "diterima" || r.status === "diverifikasi").length;
-  const penangananCount = reports.filter((r) => r.status === "ditindaklanjuti").length;
-  const selesaiCount = reports.filter((r) => r.status === "selesai").length;
+  // Laporan basis yang dibatasi sesuai hak akses instansi aktif
+  const baseReports = useMemo(() => {
+    if (activeUnit === "semua" || activeUnit === "pemerintahan") return reports;
+    const unitMap: Record<string, DisasterType[]> = {
+      bnpb_bpbd: ["banjir", "longsor", "gempa", "tsunami"],
+      damkar: ["kebakaran", "karhutla"],
+      medis: ["gempa", "tsunami"],
+      polisi: ["lainnya"],
+    };
+    const allowed = unitMap[activeUnit] || [];
+    return reports.filter((r) => {
+      const isSos = r.tracking_code.startsWith("SOS") || r.title.includes("SOS");
+      return isSos || allowed.includes(r.disaster_type);
+    });
+  }, [reports, activeUnit]);
+
+  // Hitung jumlah untuk 4 KPI card secara dinamis berdasarkan role
+  const totalCount = baseReports.length;
+  const menungguCount = baseReports.filter((r) => r.status === "diterima" || r.status === "diverifikasi").length;
+  const penangananCount = baseReports.filter((r) => r.status === "ditindaklanjuti").length;
+  const selesaiCount = baseReports.filter((r) => r.status === "selesai").length;
 
   // Filtered reports
   const filteredReports = useMemo(() => {
-    return reports.filter((r) => {
-      if (activeUnit !== "semua" && activeUnit !== "bnpb_bpbd" && activeUnit !== "pemerintahan") {
-        const isSos = r.tracking_code.startsWith("SOS") || r.title.includes("SOS");
-        if (!isSos) {
-          const unitMap: Record<string, DisasterType[]> = {
-            damkar: ["kebakaran", "karhutla"],
-            medis: ["gempa", "tsunami"],
-            polisi: ["lainnya"],
-          };
-          const allowedTypes = unitMap[activeUnit] || [];
-          if (!allowedTypes.includes(r.disaster_type)) return false;
-        }
-      }
-
+    return baseReports.filter((r) => {
       if (selectedStatus !== "semua" && r.status !== selectedStatus) return false;
       if (selectedPriority !== "semua" && r.priority !== selectedPriority) return false;
 
