@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Navigation,
   CheckCircle2,
+  AlertCircle,
   Pause,
   Plus,
   Trash2,
@@ -73,7 +74,8 @@ const DEFAULT_SOS_ITEMS: DisplaySosItem[] = [
 ];
 
 export default function AdminSosPage() {
-  const { activeUnit, setActiveSosCount, isSirenMuted } = useAdmin();
+  const { activeUnit, activeUnitName, setActiveSosCount, isSirenMuted } = useAdmin();
+  const isPemerintahan = activeUnit === "pemerintahan" || activeUnit === "semua";
   const [sosList, setSosList] = useState<DisplaySosItem[]>(DEFAULT_SOS_ITEMS);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const knownIdsRef = React.useRef<Set<string>>(new Set());
@@ -319,79 +321,216 @@ export default function AdminSosPage() {
         </div>
       </div>
 
-      {/* 2. Category Metric Cards (Row 1) */}
+      {/* 2. Metric Cards (Row 1) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-        {/* Card 1: SOS Medis */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 px-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-full bg-[#FEE2E2] flex items-center justify-center text-[#EF4444] shrink-0 font-bold">
-              <Plus className="w-6 h-6 stroke-[3]" />
+        {isPemerintahan ? (
+          <>
+            {/* Pemerintahan: 4 Kategori Lintas Instansi */}
+            {/* Card 1: SOS Medis */}
+            <div
+              onClick={() => setStatusFilter("semua")}
+              className="bg-white rounded-2xl border border-slate-100 p-4 px-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-full bg-[#FEE2E2] flex items-center justify-center text-[#EF4444] shrink-0 font-bold">
+                  <Plus className="w-6 h-6 stroke-[3]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">
+                    {countMedis}
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    SOS Medis
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
             </div>
-            <div>
-              <p className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">
-                {countMedis}
-              </p>
-              <p className="text-xs text-slate-500 font-medium mt-1">
-                SOS Medis
-              </p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-        </div>
 
-        {/* Card 2: SOS Kebakaran */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 px-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-full bg-[#FFEDD5] flex items-center justify-center text-[#EA580C] shrink-0 font-bold">
-              <Flame className="w-6 h-6 fill-[#EA580C]" />
+            {/* Card 2: SOS Kebakaran */}
+            <div
+              onClick={() => setStatusFilter("semua")}
+              className="bg-white rounded-2xl border border-slate-100 p-4 px-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-full bg-[#FFEDD5] flex items-center justify-center text-[#EA580C] shrink-0 font-bold">
+                  <Flame className="w-6 h-6 fill-[#EA580C]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">
+                    {countKebakaran}
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    SOS Kebakaran
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
             </div>
-            <div>
-              <p className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">
-                {countKebakaran}
-              </p>
-              <p className="text-xs text-slate-500 font-medium mt-1">
-                SOS Kebakaran
-              </p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-        </div>
 
-        {/* Card 3: SOS Keamanan */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 px-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-full bg-[#DBEAFE] flex items-center justify-center text-[#2563EB] shrink-0 font-bold">
-              <Shield className="w-6 h-6 fill-[#2563EB]" />
+            {/* Card 3: SOS Keamanan */}
+            <div
+              onClick={() => setStatusFilter("semua")}
+              className="bg-white rounded-2xl border border-slate-100 p-4 px-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-full bg-[#DBEAFE] flex items-center justify-center text-[#2563EB] shrink-0 font-bold">
+                  <Shield className="w-6 h-6 fill-[#2563EB]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">
+                    {countKeamanan}
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    SOS Keamanan
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
             </div>
-            <div>
-              <p className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">
-                {countKeamanan}
-              </p>
-              <p className="text-xs text-slate-500 font-medium mt-1">
-                SOS Keamanan
-              </p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-        </div>
 
-        {/* Card 4: SOS Lainnya */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 px-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-full bg-[#D1FAE5] flex items-center justify-center text-[#059669] shrink-0 font-bold">
-              <AlertTriangle className="w-6 h-6 stroke-[2.2]" />
+            {/* Card 4: SOS Lainnya */}
+            <div
+              onClick={() => setStatusFilter("semua")}
+              className="bg-white rounded-2xl border border-slate-100 p-4 px-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-full bg-[#D1FAE5] flex items-center justify-center text-[#059669] shrink-0 font-bold">
+                  <AlertTriangle className="w-6 h-6 stroke-[2.2]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">
+                    {countLainnya}
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    SOS Lainnya
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
             </div>
-            <div>
-              <p className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">
-                {countLainnya}
-              </p>
-              <p className="text-xs text-slate-500 font-medium mt-1">
-                SOS Lainnya
-              </p>
+          </>
+        ) : (
+          <>
+            {/* Role Instansi (Damkar, Medis, Polisi, BNPB/BPBD): Status Operasional */}
+            {/* Card 1: Belum Diproses */}
+            <div
+              onClick={() => setStatusFilter("aktif")}
+              className={`bg-white rounded-2xl border p-4 px-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-all cursor-pointer ${
+                statusFilter === "aktif"
+                  ? "border-rose-400 ring-2 ring-rose-200"
+                  : "border-slate-100 hover:border-slate-200"
+              }`}
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-full bg-[#FEE2E2] flex items-center justify-center text-[#EF4444] shrink-0 font-bold">
+                  <AlertCircle className="w-6 h-6 stroke-[2.5]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-2xl font-extrabold text-rose-600 tracking-tight leading-none">
+                      {countAktif}
+                    </p>
+                    {countAktif > 0 && (
+                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 font-bold mt-1">
+                    Belum Diproses
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    Perlu respons cepat
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${statusFilter === "aktif" ? "text-rose-500 translate-x-0.5" : "text-slate-400"}`} />
             </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-        </div>
+
+            {/* Card 2: Sedang Ditangani */}
+            <div
+              onClick={() => setStatusFilter("ditangani")}
+              className={`bg-white rounded-2xl border p-4 px-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-all cursor-pointer ${
+                statusFilter === "ditangani"
+                  ? "border-amber-400 ring-2 ring-amber-200"
+                  : "border-slate-100 hover:border-slate-200"
+              }`}
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-full bg-[#FEF3C7] flex items-center justify-center text-[#D97706] shrink-0 font-bold">
+                  <Clock className="w-6 h-6 stroke-[2.5]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">
+                    {countDitangani}
+                  </p>
+                  <p className="text-xs text-slate-600 font-bold mt-1">
+                    Sedang Ditangani
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    Regu di lokasi kejadian
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${statusFilter === "ditangani" ? "text-amber-500 translate-x-0.5" : "text-slate-400"}`} />
+            </div>
+
+            {/* Card 3: Selesai Ditangani */}
+            <div
+              onClick={() => setStatusFilter("selesai")}
+              className={`bg-white rounded-2xl border p-4 px-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-all cursor-pointer ${
+                statusFilter === "selesai"
+                  ? "border-emerald-400 ring-2 ring-emerald-200"
+                  : "border-slate-100 hover:border-slate-200"
+              }`}
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-full bg-[#D1FAE5] flex items-center justify-center text-[#059669] shrink-0 font-bold">
+                  <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">
+                    {countSelesai}
+                  </p>
+                  <p className="text-xs text-slate-600 font-bold mt-1">
+                    Selesai Ditangani
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    Insiden tuntas diatasi
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${statusFilter === "selesai" ? "text-emerald-500 translate-x-0.5" : "text-slate-400"}`} />
+            </div>
+
+            {/* Card 4: Total Panggilan SOS Unit */}
+            <div
+              onClick={() => setStatusFilter("semua")}
+              className={`bg-white rounded-2xl border p-4 px-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center justify-between hover:shadow-md transition-all cursor-pointer ${
+                statusFilter === "semua"
+                  ? "border-blue-400 ring-2 ring-blue-200"
+                  : "border-slate-100 hover:border-slate-200"
+              }`}
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#2563EB] shrink-0 font-bold">
+                  <Layers className="w-6 h-6 stroke-[2.2]" />
+                </div>
+                <div>
+                  <p className="text-2xl font-extrabold text-slate-900 tracking-tight leading-none">
+                    {countTotal}
+                  </p>
+                  <p className="text-xs text-slate-600 font-bold mt-1">
+                    Total Panggilan SOS
+                  </p>
+                  <p className="text-[10px] text-blue-600 font-medium">
+                    {activeUnitName}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${statusFilter === "semua" ? "text-blue-500 translate-x-0.5" : "text-slate-400"}`} />
+            </div>
+          </>
+        )}
       </div>
 
       {/* 2.5 Filter Bar Kategori Status */}
