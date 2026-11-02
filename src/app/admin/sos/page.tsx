@@ -91,7 +91,7 @@ export default function AdminSosPage() {
   const countMedis = useMemo(() => sosList.filter((x) => x.type === "medis").length, [sosList]);
   const countKebakaran = useMemo(() => sosList.filter((x) => x.type === "damkar").length, [sosList]);
   const countKeamanan = useMemo(() => sosList.filter((x) => x.type === "polisi").length, [sosList]);
-  const countLainnya = useMemo(() => sosList.filter((x) => x.type === "bnpb_bpbd" || x.type === "lainnya").length, [sosList]);
+  const countLainnya = useMemo(() => sosList.filter((x) => x.type === "bnpb_bpbd" || (x.type as string) === "lainnya").length, [sosList]);
 
   // Status Filter counts
   const countAktif = useMemo(() => sosList.filter((x) => x.status === "aktif").length, [sosList]);

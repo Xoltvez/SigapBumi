@@ -15,6 +15,7 @@ import {
   Siren,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
+import type { ReportStatus, DisasterType, SosAssistanceType, PriorityLabel } from "@/types";
 import {
   fetchLiveReports,
   updateReportStatusLive,

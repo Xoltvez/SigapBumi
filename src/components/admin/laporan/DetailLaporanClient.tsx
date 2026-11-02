@@ -172,8 +172,9 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
           const detail = await fetchReportDetail(found.tracking_code);
 
           let pLabel: PriorityLabel = "Sedang";
-          if (found.priority === "tinggi" || found.priority === "Kritis" || found.confirmation_count >= 20) pLabel = "Kritis";
-          else if (found.priority === "Tinggi" || found.confirmation_count >= 10) pLabel = "Tinggi";
+          const p = String(found.priority || "").toLowerCase();
+          if (p === "kritis" || p === "tinggi" || found.confirmation_count >= 20) pLabel = "Kritis";
+          else if (found.confirmation_count >= 10) pLabel = "Tinggi";
           else if (found.status === "selesai") pLabel = "Rendah";
 
           setReport({
