@@ -50,6 +50,35 @@ function saveLocalSosCache(items: LiveSosItem[]): void {
   }
 }
 
+export const LOCAL_STORAGE_DELETED_SOS_KEY = "sigapbumi_deleted_sos";
+
+/**
+ * Mengambil ID sinyal SOS yang telah dihapus oleh admin
+ */
+export function getDeletedSosIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_DELETED_SOS_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Menandai sinyal SOS sebagai dihapus pada cache lokal
+ */
+export function markSosAsDeleted(id: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const current = getDeletedSosIds();
+    current.add(id);
+    localStorage.setItem(LOCAL_STORAGE_DELETED_SOS_KEY, JSON.stringify(Array.from(current)));
+  } catch {
+    // Ignore storage quota errors
+  }
+}
+
 /**
  * Menghitung waktu lampau dalam bahasa Indonesia
  */
@@ -475,7 +504,8 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
     }
   }
 
-  return deduplicated;
+  const deletedIds = getDeletedSosIds();
+  return deduplicated.filter((item) => !deletedIds.has(item.id));
 }
 
 /**
@@ -557,6 +587,50 @@ export async function updateSosAlertStatus(
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("storage"));
     window.dispatchEvent(new CustomEvent("sigapbumi:sos-updated", { detail: { id, status: newStatus } }));
+  }
+
+  return { success: true };
+}
+
+/**
+ * Menghapus panggilan darurat SOS secara live (Supabase, local cache, dan sinkronisasi real-time)
+ */
+export async function deleteSosAlertLive(
+  id: string,
+  actorName: string = "Petugas Pusdalops"
+): Promise<{ success: boolean; error?: string }> {
+  // 1. Tandai di cache deleted
+  markSosAsDeleted(id);
+
+  // 2. Hapus dari local SOS cache
+  const localCache = getLocalSosCache();
+  const filtered = localCache.filter((x) => x.id !== id);
+  saveLocalSosCache(filtered);
+
+  // 3. Dispatch event agar seluruh layar dan tab segera sinkron
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("sigapbumi:sos-updated", { detail: { id } }));
+    window.dispatchEvent(new CustomEvent("sigapbumi:sos-deleted", { detail: { id } }));
+  }
+
+  // 4. Panggil DELETE API backend
+  try {
+    await fetch("/api/admin/status", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reportId: id, actorName, isSos: true }),
+    });
+  } catch (err) {
+    console.warn("deleteSosAlertLive API call error:", err);
+  }
+
+  // 5. Coba langsung hapus dari Supabase
+  try {
+    await supabase.from("sos_alerts").delete().eq("id", id);
+    await supabase.from("reports").delete().or(`id.eq.${id},tracking_code.eq.${id}`);
+  } catch (err) {
+    console.warn("deleteSosAlertLive Supabase error:", err);
   }
 
   return { success: true };

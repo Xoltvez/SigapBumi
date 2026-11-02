@@ -15,10 +15,17 @@ import {
   CheckCircle2,
   Pause,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import type { SosAssistanceType } from "@/types";
-import { fetchLiveSosAlerts, updateSosAlertStatus, type LiveSosItem } from "@/lib/services/sos";
+import {
+  fetchLiveSosAlerts,
+  updateSosAlertStatus,
+  deleteSosAlertLive,
+  getDeletedSosIds,
+  type LiveSosItem,
+} from "@/lib/services/sos";
 import { playSosSiren } from "@/lib/audio/siren";
 import { supabase } from "@/lib/supabase/client";
 
@@ -69,11 +76,16 @@ export default function AdminSosPage() {
   const knownIdsRef = React.useRef<Set<string>>(new Set());
   const isFirstLoadRef = React.useRef<boolean>(true);
 
-  // Category counts
-  const countMedis = 14;
-  const countKebakaran = 11;
-  const countKeamanan = 2;
-  const countLainnya = 3;
+  // Modal & Toast states for delete
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<DisplaySosItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Dynamic Category counts
+  const countMedis = useMemo(() => sosList.filter((x) => x.type === "medis").length, [sosList]);
+  const countKebakaran = useMemo(() => sosList.filter((x) => x.type === "damkar").length, [sosList]);
+  const countKeamanan = useMemo(() => sosList.filter((x) => x.type === "polisi").length, [sosList]);
+  const countLainnya = useMemo(() => sosList.filter((x) => x.type === "bnpb_bpbd" || x.type === "lainnya").length, [sosList]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -101,20 +113,30 @@ export default function AdminSosPage() {
         };
       });
 
+      // Filter out deleted items
+      const deletedSos = getDeletedSosIds();
+      const filteredLive = mappedLive.filter(
+        (item) => !deletedSos.has(item.id) && !deletedSos.has(item.displayCode)
+      );
+
       // Trigger siren if incoming new active SOS
-      const hasNewActive = mappedLive.some(
+      const hasNewActive = filteredLive.some(
         (item) => item.status === "aktif" && !knownIdsRef.current.has(item.id)
       );
       if (!isFirstLoadRef.current && hasNewActive && !isSirenMuted) {
         playSosSiren(4, 0.4);
       }
-      mappedLive.forEach((item) => knownIdsRef.current.add(item.id));
+      filteredLive.forEach((item) => knownIdsRef.current.add(item.id));
       isFirstLoadRef.current = false;
 
-      // Gabungkan data live dan default agar data tidak hilang saat status berubah
-      const combined = [...mappedLive];
+      // Gabungkan data live dan default agar data tidak hilang saat status berubah (kecuali yang sudah dihapus)
+      const combined = [...filteredLive];
       for (const def of DEFAULT_SOS_ITEMS) {
-        if (!combined.some((item) => item.id === def.id)) {
+        if (
+          !deletedSos.has(def.id) &&
+          !deletedSos.has(def.displayCode) &&
+          !combined.some((item) => item.id === def.id)
+        ) {
           combined.push(def);
         }
       }
@@ -143,6 +165,7 @@ export default function AdminSosPage() {
     if (typeof window !== "undefined") {
       window.addEventListener("sigapbumi:sos-created", handleLocalUpdate);
       window.addEventListener("sigapbumi:sos-updated", handleLocalUpdate);
+      window.addEventListener("sigapbumi:sos-deleted", handleLocalUpdate);
       window.addEventListener("storage", handleLocalUpdate);
     }
 
@@ -161,6 +184,7 @@ export default function AdminSosPage() {
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:sos-created", handleLocalUpdate);
         window.removeEventListener("sigapbumi:sos-updated", handleLocalUpdate);
+        window.removeEventListener("sigapbumi:sos-deleted", handleLocalUpdate);
         window.removeEventListener("storage", handleLocalUpdate);
       }
       supabase.removeChannel(channel);
@@ -190,6 +214,28 @@ export default function AdminSosPage() {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmTarget) return;
+    const target = deleteConfirmTarget;
+    setIsDeleting(true);
+
+    // Optimistic UI removal
+    setSosList((prev) => prev.filter((item) => item.id !== target.id));
+    setActiveSosCount((prev) => Math.max(0, prev - (target.status === "aktif" ? 1 : 0)));
+
+    try {
+      await deleteSosAlertLive(target.id, "Petugas Posko Terpadu");
+      setToastMessage(`Panggilan darurat ${target.displayCode} (${target.title}) berhasil dihapus.`);
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err) {
+      console.error("Gagal menghapus SOS:", err);
+      alert("Terjadi kendala saat menghapus SOS.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmTarget(null);
+    }
+  };
+
   // Filter based on active agency unit
   const visibleSosList = useMemo(() => {
     if (activeUnit === "semua" || activeUnit === "bnpb_bpbd") {
@@ -205,6 +251,23 @@ export default function AdminSosPage() {
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-12 select-none">
+      {/* Toast Feedback */}
+      {toastMessage && (
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between shadow-xs">
+          <span className="flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            {toastMessage}
+          </span>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="text-[11px] underline text-emerald-700 cursor-pointer"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
       {/* 1. Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -472,17 +535,29 @@ export default function AdminSosPage() {
                 </div>
               </div>
 
-              {/* Bottom Action Buttons: Navigasi GPS & Process/Resolve */}
+              {/* Bottom Action Buttons: Navigasi GPS, Hapus, & Process/Resolve */}
               <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100">
-                <a
-                  href={`https://www.google.com/maps?q=${encodeURIComponent(item.coordinates)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-9 px-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-2 shadow-2xs transition-colors"
-                >
-                  <Navigation className="w-3.5 h-3.5 text-slate-600" />
-                  <span>Navigasi GPS</span>
-                </a>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`https://www.google.com/maps?q=${encodeURIComponent(item.coordinates)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-9 px-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-2 shadow-2xs transition-colors"
+                  >
+                    <Navigation className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Navigasi GPS</span>
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmTarget(item)}
+                    className="h-9 px-2.5 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                    title="Hapus panggilan SOS ini"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Hapus</span>
+                  </button>
+                </div>
 
                 <div>
                   {isAktif && (
@@ -518,7 +593,60 @@ export default function AdminSosPage() {
             </div>
           );
         })}
+
+        {/* Empty State */}
+        {visibleSosList.length === 0 && (
+          <div className="col-span-full py-16 bg-white rounded-2xl border border-slate-100 text-center space-y-2 shadow-xs">
+            <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+            <p className="text-sm font-bold text-slate-800">Tidak Ada Panggilan Darurat SOS</p>
+            <p className="text-xs text-slate-400">
+              Semua panggilan darurat telah dibersihkan atau ditangani secara tuntas.
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Modal Dialog Konfirmasi Hapus SOS */}
+      {deleteConfirmTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-rose-200 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-full bg-rose-100 text-rose-600 shrink-0 mt-0.5">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Konfirmasi Hapus SOS</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Apakah Anda yakin ingin menghapus panggilan darurat{" "}
+                  <strong className="text-slate-800">
+                    {deleteConfirmTarget.displayCode} ({deleteConfirmTarget.title})
+                  </strong>
+                  ? Tindakan ini akan menghapus sinyal darurat dari pantauan posko terpadu.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmTarget(null)}
+                disabled={isDeleting}
+                className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                {isDeleting ? "Menghapus..." : "Ya, Hapus SOS"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
