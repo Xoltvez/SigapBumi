@@ -16,6 +16,9 @@ import {
   Pause,
   Plus,
   Trash2,
+  Clock,
+  Layers,
+  Filter,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import type { SosAssistanceType } from "@/types";
@@ -81,11 +84,20 @@ export default function AdminSosPage() {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Kategori Filter Status
+  const [statusFilter, setStatusFilter] = useState<"semua" | "aktif" | "ditangani" | "selesai">("semua");
+
   // Dynamic Category counts
   const countMedis = useMemo(() => sosList.filter((x) => x.type === "medis").length, [sosList]);
   const countKebakaran = useMemo(() => sosList.filter((x) => x.type === "damkar").length, [sosList]);
   const countKeamanan = useMemo(() => sosList.filter((x) => x.type === "polisi").length, [sosList]);
   const countLainnya = useMemo(() => sosList.filter((x) => x.type === "bnpb_bpbd" || x.type === "lainnya").length, [sosList]);
+
+  // Status Filter counts
+  const countAktif = useMemo(() => sosList.filter((x) => x.status === "aktif").length, [sosList]);
+  const countDitangani = useMemo(() => sosList.filter((x) => x.status === "ditangani").length, [sosList]);
+  const countSelesai = useMemo(() => sosList.filter((x) => x.status === "selesai" || x.status === "palsu").length, [sosList]);
+  const countTotal = sosList.length;
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -236,18 +248,30 @@ export default function AdminSosPage() {
     }
   };
 
-  // Filter based on active agency unit
+  // Filter based on active agency unit and status category
   const visibleSosList = useMemo(() => {
-    if (activeUnit === "semua" || activeUnit === "bnpb_bpbd") {
-      return sosList;
-    }
     return sosList.filter((item) => {
-      if (activeUnit === "damkar") return item.type === "damkar";
-      if (activeUnit === "medis") return item.type === "medis";
-      if (activeUnit === "polisi") return item.type === "polisi";
+      // 1. Filter Instansi Unit
+      if (activeUnit !== "semua" && activeUnit !== "bnpb_bpbd") {
+        if (activeUnit === "damkar" && item.type !== "damkar") return false;
+        if (activeUnit === "medis" && item.type !== "medis") return false;
+        if (activeUnit === "polisi" && item.type !== "polisi") return false;
+      }
+
+      // 2. Filter Kategori Status
+      if (statusFilter === "aktif") {
+        return item.status === "aktif";
+      }
+      if (statusFilter === "ditangani") {
+        return item.status === "ditangani";
+      }
+      if (statusFilter === "selesai") {
+        return item.status === "selesai" || item.status === "palsu";
+      }
+
       return true;
     });
-  }, [sosList, activeUnit]);
+  }, [sosList, activeUnit, statusFilter]);
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-12 select-none">
@@ -371,6 +395,115 @@ export default function AdminSosPage() {
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+        </div>
+      </div>
+
+      {/* 2.5 Filter Bar Kategori Status */}
+      <div className="bg-white rounded-2xl border border-slate-100 p-2 sm:p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          {/* Tab Semua */}
+          <button
+            type="button"
+            onClick={() => setStatusFilter("semua")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer shrink-0 ${
+              statusFilter === "semua"
+                ? "bg-slate-900 text-white shadow-sm"
+                : "bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Semua</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                statusFilter === "semua"
+                  ? "bg-slate-800 text-slate-200"
+                  : "bg-slate-200/80 text-slate-600"
+              }`}
+            >
+              {countTotal}
+            </span>
+          </button>
+
+          {/* Tab Belum Diproses */}
+          <button
+            type="button"
+            onClick={() => setStatusFilter("aktif")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer shrink-0 ${
+              statusFilter === "aktif"
+                ? "bg-rose-600 text-white shadow-sm ring-2 ring-rose-200"
+                : "bg-rose-50/80 text-rose-700 hover:bg-rose-100/70 border border-rose-100"
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                statusFilter === "aktif" ? "bg-white" : "bg-rose-500"
+              } ${countAktif > 0 ? "animate-pulse" : ""}`}
+            />
+            <span>Belum Diproses</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                statusFilter === "aktif"
+                  ? "bg-rose-700 text-white"
+                  : "bg-rose-200/80 text-rose-800"
+              }`}
+            >
+              {countAktif}
+            </span>
+          </button>
+
+          {/* Tab Sedang Ditangani */}
+          <button
+            type="button"
+            onClick={() => setStatusFilter("ditangani")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer shrink-0 ${
+              statusFilter === "ditangani"
+                ? "bg-amber-600 text-white shadow-sm ring-2 ring-amber-200"
+                : "bg-amber-50/80 text-amber-700 hover:bg-amber-100/70 border border-amber-100"
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>Sedang Ditangani</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                statusFilter === "ditangani"
+                  ? "bg-amber-700 text-white"
+                  : "bg-amber-200/80 text-amber-800"
+              }`}
+            >
+              {countDitangani}
+            </span>
+          </button>
+
+          {/* Tab Selesai */}
+          <button
+            type="button"
+            onClick={() => setStatusFilter("selesai")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer shrink-0 ${
+              statusFilter === "selesai"
+                ? "bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-200"
+                : "bg-emerald-50/80 text-emerald-700 hover:bg-emerald-100/70 border border-emerald-100"
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Selesai</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                statusFilter === "selesai"
+                  ? "bg-emerald-700 text-white"
+                  : "bg-emerald-200/80 text-emerald-800"
+              }`}
+            >
+              {countSelesai}
+            </span>
+          </button>
+        </div>
+
+        {/* Counter keterangan */}
+        <div className="text-[11px] text-slate-500 font-medium px-2 shrink-0 flex items-center gap-1.5">
+          <Filter className="w-3 h-3 text-slate-400" />
+          <span>
+            Menampilkan <strong className="text-slate-800 font-bold">{visibleSosList.length}</strong> dari {sosList.length} panggilan
+          </span>
         </div>
       </div>
 
@@ -598,10 +731,33 @@ export default function AdminSosPage() {
         {visibleSosList.length === 0 && (
           <div className="col-span-full py-16 bg-white rounded-2xl border border-slate-100 text-center space-y-2 shadow-xs">
             <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-            <p className="text-sm font-bold text-slate-800">Tidak Ada Panggilan Darurat SOS</p>
-            <p className="text-xs text-slate-400">
-              Semua panggilan darurat telah dibersihkan atau ditangani secara tuntas.
+            <p className="text-sm font-bold text-slate-800">
+              {statusFilter === "aktif"
+                ? "Tidak Ada Panggilan SOS Belum Diproses"
+                : statusFilter === "ditangani"
+                ? "Tidak Ada Panggilan SOS Sedang Ditangani"
+                : statusFilter === "selesai"
+                ? "Belum Ada Panggilan SOS Selesai"
+                : "Tidak Ada Panggilan Darurat SOS"}
             </p>
+            <p className="text-xs text-slate-400">
+              {statusFilter === "aktif"
+                ? "Seluruh sinyal darurat warga telah ditindaklanjuti oleh petugas posko."
+                : statusFilter === "ditangani"
+                ? "Tidak ada panggilan darurat yang sedang berjalan di lapangan saat ini."
+                : statusFilter === "selesai"
+                ? "Belum ada panggilan darurat yang ditandai selesai."
+                : "Semua panggilan darurat telah dibersihkan atau ditangani secara tuntas."}
+            </p>
+            {statusFilter !== "semua" && (
+              <button
+                type="button"
+                onClick={() => setStatusFilter("semua")}
+                className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs cursor-pointer"
+              >
+                <span>Lihat Semua Status</span>
+              </button>
+            )}
           </div>
         )}
       </div>
