@@ -111,18 +111,18 @@ export function AdminSidebar({
               ? pathname === "/admin"
               : pathname.startsWith(item.href);
 
-          const activeClasses = "bg-[#FFF4EC] text-[#EA580C] font-semibold";
-          const iconActiveColor = "text-[#EA580C]";
+          const activeClasses = "bg-orange-600 text-white font-semibold shadow-sm border border-orange-600";
+          const iconActiveColor = "text-white";
 
           return (
             <Link
               key={item.href}
               href={item.href}
               title={isCollapsed ? item.label : undefined}
-              className={`group flex items-center gap-3.5 px-4 py-3 rounded-xl text-[13px] transition-all relative ${
+              className={`group flex items-center gap-3.5 px-4 py-3 rounded-xl text-[13px] transition-all relative border ${
                 isActive
                   ? activeClasses
-                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
+                  : "border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
               } ${isCollapsed ? "justify-center px-0" : ""}`}
             >
               <Icon
@@ -138,7 +138,13 @@ export function AdminSidebar({
               )}
 
               {!isCollapsed && item.badge && (
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold text-white bg-[#EF4444] shadow-xs">
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[11px] font-bold shadow-xs transition-colors ${
+                    isActive
+                      ? "text-orange-600 bg-white"
+                      : "text-white bg-[#EF4444]"
+                  }`}
+                >
                   {item.badge}
                 </span>
               )}
@@ -184,17 +190,17 @@ export function AdminSidebar({
         <Link
           href="/admin/pengaturan"
           title={isCollapsed ? "Pengaturan" : undefined}
-          className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-[13px] transition-colors ${
+          className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-[13px] transition-colors border ${
             pathname.startsWith("/admin/pengaturan")
-              ? "bg-[#FFF4EC] text-[#EA580C] font-semibold"
-              : "text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
+              ? "bg-orange-600 text-white font-semibold shadow-sm border-orange-600"
+              : "border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
           } ${
             isCollapsed ? "justify-center px-0" : ""
           }`}
         >
           <Settings
             className={`w-[18px] h-[18px] shrink-0 ${
-              pathname.startsWith("/admin/pengaturan") ? "text-[#EA580C]" : "text-slate-400"
+              pathname.startsWith("/admin/pengaturan") ? "text-white" : "text-slate-400"
             }`}
           />
           {!isCollapsed && <span className="truncate">Pengaturan</span>}
