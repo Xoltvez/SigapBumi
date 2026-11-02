@@ -43,6 +43,7 @@ export function SosFab() {
   const [dispatchedTeam, setDispatchedTeam] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isTrackingOpen, setIsTrackingOpen] = useState(false);
 
   const [selectedAssistance, setSelectedAssistance] =
     useState<SosAssistanceType | null>(null);
@@ -401,7 +402,7 @@ export function SosFab() {
       )}
 
       {/* 2. Floating Mini-Tracker saat pop up diminimalkan */}
-      {isSent && isMinimized && !isOpen && trackingCode && (
+      {isSent && isMinimized && !isOpen && !isTrackingOpen && trackingCode && (
         <aside
           aria-label="Status Pelacakan SOS Aktif"
           className="fixed bottom-20 md:bottom-6 right-20 md:right-24 z-40 bg-slate-900/95 text-white p-2.5 sm:p-3 rounded-2xl shadow-2xl border border-slate-700/90 backdrop-blur-md flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 select-none"
@@ -423,7 +424,7 @@ export function SosFab() {
           <button
             type="button"
             onClick={() => {
-              setIsOpen(true);
+              setIsTrackingOpen(true);
               setIsMinimized(false);
             }}
             className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer ml-1 inline-flex items-center gap-1"
@@ -504,53 +505,57 @@ export function SosFab() {
                 </button>
               </div>
             ) : (
-              /* FASE 2: POP UP LACAK PELAPORAN SOS LANGSUNG MUNCUL */
+              /* FASE 2: POPUP SOS BERHASIL DIKIRIM */
               <div>
-                {/* Header Pelacakan */}
+                {/* Header SOS Dikirim */}
                 <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
-                  <div>
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold mb-1">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>Sinyal SOS Aktif & Terpantau Posko</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+                      <CheckCircle2 className="w-6 h-6" />
                     </div>
-                    <h2
-                      id="sos-modal-title"
-                      className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight"
-                    >
-                      Pelacakan Sinyal Darurat SOS
-                    </h2>
-                    <p className="text-slate-500 text-xs mt-0.5">
-                      Panggilan Anda terhubung ke radar tanggap darurat posko secara real-time.
-                    </p>
+                    <div>
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                        <span>Sinyal Darurat Terpancar</span>
+                      </div>
+                      <h2
+                        id="sos-modal-title"
+                        className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight"
+                      >
+                        Panggilan SOS Diterima Posko
+                      </h2>
+                    </div>
                   </div>
 
                   <button
                     type="button"
                     onClick={handleMinimizeTracking}
-                    title="Minimalkan pop-up pelacakan"
+                    title="Tutup dialog"
                     className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer shrink-0"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                {/* Kartu Kode Lacak Utama */}
-                <div className="mt-4 p-3.5 sm:p-4 rounded-2xl bg-linear-to-r from-orange-50 via-amber-50 to-orange-50 border border-orange-200/80 flex items-center justify-between gap-3">
-                  <div>
-                    <span className="text-[10px] font-extrabold text-orange-700 uppercase tracking-wider block">
-                      Kode Pelacakan Darurat
+                {/* Card Status Pelaporan dengan Button untuk Memunculkan Popup Pelacakan */}
+                <div className="mt-4 p-4 rounded-2xl bg-linear-to-r from-orange-50 via-amber-50 to-orange-50 border border-orange-200">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-extrabold text-orange-800 uppercase tracking-wider">
+                      Kode Pelaporan Darurat
                     </span>
-                    <span className="font-mono text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                      {trackingCode || "MEMUAT..."}
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                      Aktif di Radar Posko
                     </span>
                   </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span className="font-mono text-2xl font-black text-slate-900 tracking-tight">
+                      {trackingCode || "MEMUAT..."}
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleCopyCode(trackingCode || "")}
                       className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs transition-colors inline-flex items-center gap-1 cursor-pointer"
-                      title="Salin Kode Pelacakan"
                     >
                       {copied ? (
                         <>
@@ -564,141 +569,33 @@ export function SosFab() {
                         </>
                       )}
                     </button>
-
-                    {trackingCode && (
-                      <Link
-                        href={`/lacak?kode=${encodeURIComponent(trackingCode)}`}
-                        onClick={() => setIsOpen(false)}
-                        className="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-2xs transition-colors inline-flex items-center gap-1"
-                      >
-                        <span>Lacak Penuh</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </Link>
-                    )}
                   </div>
+
+                  {/* BUTTON KHUSUS: MEMUNCULKAN POPUP PELACAKAN TERPISAH */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOpen(false);
+                      setIsTrackingOpen(true);
+                    }}
+                    className="w-full h-11 sm:h-12 rounded-xl bg-orange-600 hover:bg-orange-500 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-orange-600/25 transition-all cursor-pointer"
+                  >
+                    <Radio className="w-4 h-4 animate-pulse text-amber-200" />
+                    <span>Lacak Status Pelaporan SOS</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
 
-                {/* Live Step-by-Step Progress Tracker */}
-                <div className="mt-4 p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/70">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-3">
-                    Progres Penanganan Operasional:
-                  </span>
-
-                  <div className="space-y-3 relative before:absolute before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
-                    {/* Step 1 */}
-                    <div className="flex items-start gap-3 relative">
-                      <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs shrink-0 shadow-xs z-10">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-1">
-                          <p className="text-xs font-bold text-slate-900">Sinyal SOS Dipancarkan</p>
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
-                            Terkirim
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          Koordinat GPS akurat & data darurat telah dikirim dari ponsel Anda.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Step 2 */}
-                    <div className="flex items-start gap-3 relative">
-                      <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs shrink-0 shadow-xs z-10">
-                        <Radio className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-1">
-                          <p className="text-xs font-bold text-slate-900">Diterima di Radar Posko</p>
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
-                            Terpantau
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          Terkoneksi langsung ke dasbor siaga instansi terkait.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Step 3 */}
-                    <div className="flex items-start gap-3 relative">
-                      <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs shrink-0 shadow-xs z-10 ${
-                          sosStatus === "ditangani" || sosStatus === "selesai"
-                            ? "bg-emerald-500 text-white"
-                            : "bg-orange-500 text-white animate-pulse"
-                        }`}
-                      >
-                        <Clock className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-1">
-                          <p className="text-xs font-bold text-slate-900">Validasi & Penugasan Regu</p>
-                          <span
-                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                              sosStatus === "ditangani" || sosStatus === "selesai"
-                                ? "text-emerald-700 bg-emerald-100"
-                                : "text-orange-700 bg-orange-100 animate-pulse"
-                            }`}
-                          >
-                            {sosStatus === "ditangani" || sosStatus === "selesai" ? "Ditugaskan" : "Dalam Proses"}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          {sosStatus === "ditangani" || sosStatus === "selesai"
-                            ? `Regu penyelamat ditugaskan: ${dispatchedTeam || "Tim Reaksi Cepat Posko"}.`
-                            : "Petugas posko sedang memvalidasi lokasi dan menugaskan armada siaga terdekat."}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Step 4 */}
-                    <div className="flex items-start gap-3 relative">
-                      <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs shrink-0 shadow-xs z-10 ${
-                          sosStatus === "selesai"
-                            ? "bg-emerald-500 text-white"
-                            : sosStatus === "ditangani"
-                            ? "bg-blue-600 text-white animate-pulse"
-                            : "bg-slate-200 text-slate-500"
-                        }`}
-                      >
-                        <Navigation className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-1">
-                          <p className="text-xs font-bold text-slate-900">Armada Menuju Titik Anda</p>
-                          <span
-                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                              sosStatus === "selesai"
-                                ? "text-emerald-700 bg-emerald-100"
-                                : sosStatus === "ditangani"
-                                ? "text-blue-700 bg-blue-100 animate-pulse"
-                                : "text-slate-500 bg-slate-200"
-                            }`}
-                          >
-                            {sosStatus === "selesai"
-                              ? "Selesai"
-                              : sosStatus === "ditangani"
-                              ? "Dalam Perjalanan"
-                              : "Siaga"}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          {sosStatus === "selesai"
-                            ? "Penanganan operasional darurat telah selesai dilakukan di lokasi."
-                            : sosStatus === "ditangani"
-                            ? "Armada sedang meluncur ke titik koordinat darurat Anda. Pastikan ponsel tetap aktif."
-                            : "Menunggu instruksi komando pengerahan unit dari posko."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                {/* Dispatch Disclaimer Notice */}
+                <div className="mt-3 p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-left text-[11px] text-amber-900 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                  <p className="leading-relaxed">
+                    <strong>Penting:</strong> Platform prototipe WIA 2026. Untuk situasi kritis mengancam nyawa, segera hubungi <strong>112</strong> bebas pulsa.
+                  </p>
                 </div>
 
                 {/* Titik Lokasi GPS Terkini */}
-                <div className="mt-3.5 p-3 rounded-2xl bg-white border border-slate-200 text-xs flex items-center justify-between gap-2 shadow-2xs">
+                <div className="mt-3 p-3 rounded-2xl bg-white border border-slate-200 text-xs flex items-center justify-between gap-2 shadow-2xs">
                   <div className="flex items-center gap-2 min-w-0">
                     <MapPin className="w-4 h-4 text-orange-600 shrink-0" />
                     <div className="min-w-0">
@@ -723,7 +620,7 @@ export function SosFab() {
                 </div>
 
                 {/* Pilih / Sesuaikan Jenis Bantuan Darurat */}
-                <div className="mt-3.5">
+                <div className="mt-3">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
                     Instansi Bantuan yang Dihubungi:
                   </span>
@@ -783,7 +680,7 @@ export function SosFab() {
                 </div>
 
                 {/* Input No. HP / WhatsApp Verifikasi Posko */}
-                <div className="mt-3.5 p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs">
+                <div className="mt-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs">
                   <div className="flex items-center justify-between mb-1">
                     <label htmlFor="sos-phone-field" className="font-bold text-slate-800 flex items-center gap-1.5 text-[11px]">
                       <Phone className="w-3.5 h-3.5 text-orange-600" />
@@ -821,7 +718,7 @@ export function SosFab() {
                 </div>
 
                 {/* Panggilan Darurat Bebas Pulsa */}
-                <div className="mt-3.5 pt-3 border-t border-slate-100">
+                <div className="mt-3 pt-3 border-t border-slate-100">
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
                     Panggilan Suara Langsung (Bebas Pulsa):
                   </p>
@@ -850,28 +747,271 @@ export function SosFab() {
                   </div>
                 </div>
 
-                {/* Tombol Aksi Bawah */}
-                <div className="mt-5 flex flex-col sm:flex-row items-center gap-2">
-                  {trackingCode && (
-                    <Link
-                      href={`/lacak?kode=${encodeURIComponent(trackingCode)}`}
-                      onClick={() => setIsOpen(false)}
-                      className="w-full sm:flex-1 h-11 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      <span>Buka Pelacakan Lengkap</span>
-                    </Link>
-                  )}
+                {/* Tombol Tutup Modal SOS */}
+                <div className="mt-4">
                   <button
                     type="button"
                     onClick={handleMinimizeTracking}
-                    className="w-full sm:w-auto px-5 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                    className="w-full h-11 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
                   >
-                    Minimalkan Pop Up
+                    Tutup Dialog
                   </button>
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 4. POPUP KEDUA: MODAL PELACAKAN SOS TERPISAH */}
+      {isTrackingOpen && trackingCode && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tracking-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white rounded-3xl p-5 sm:p-6 shadow-2xl text-left relative border border-slate-100 font-sans">
+            {/* Header Pelacakan */}
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold mb-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Sinyal SOS Aktif & Terpantau Posko</span>
+                </div>
+                <h2
+                  id="tracking-modal-title"
+                  className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight"
+                >
+                  Pelacakan Sinyal Darurat SOS
+                </h2>
+                <p className="text-slate-500 text-xs mt-0.5">
+                  Panggilan Anda terhubung ke radar tanggap darurat posko secara real-time.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTrackingOpen(false);
+                  setIsMinimized(true);
+                }}
+                title="Tutup pelacakan"
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Kartu Kode Lacak Utama (Persis Screenshot) */}
+            <div className="mt-4 p-3.5 sm:p-4 rounded-2xl bg-linear-to-r from-orange-50 via-amber-50 to-orange-50 border border-orange-200/80 flex items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] font-extrabold text-orange-700 uppercase tracking-wider block">
+                  KODE PELACAKAN DARURAT
+                </span>
+                <span className="font-mono text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  {trackingCode}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleCopyCode(trackingCode)}
+                  className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs transition-colors inline-flex items-center gap-1 cursor-pointer"
+                  title="Salin Kode Pelacakan"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-emerald-700">Tersalin</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Salin</span>
+                    </>
+                  )}
+                </button>
+
+                <Link
+                  href={`/lacak?kode=${encodeURIComponent(trackingCode)}`}
+                  onClick={() => setIsTrackingOpen(false)}
+                  className="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-2xs transition-colors inline-flex items-center gap-1"
+                >
+                  <span>Lacak Penuh</span>
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Live Step-by-Step Progress Tracker (Persis Screenshot) */}
+            <div className="mt-4 p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/70">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-3">
+                PROGRES PENANGANAN OPERASIONAL:
+              </span>
+
+              <div className="space-y-3 relative before:absolute before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
+                {/* Step 1 */}
+                <div className="flex items-start gap-3 relative">
+                  <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs shrink-0 shadow-xs z-10">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-xs font-bold text-slate-900">Sinyal SOS Dipancarkan</p>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                        Terkirim
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Koordinat GPS akurat & data darurat telah dikirim dari ponsel Anda.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="flex items-start gap-3 relative">
+                  <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs shrink-0 shadow-xs z-10">
+                    <Radio className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-xs font-bold text-slate-900">Diterima di Radar Posko</p>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                        Terpantau
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Terkoneksi langsung ke dasbor siaga instansi terkait.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="flex items-start gap-3 relative">
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs shrink-0 shadow-xs z-10 ${
+                      sosStatus === "ditangani" || sosStatus === "selesai"
+                        ? "bg-emerald-500 text-white"
+                        : "bg-orange-500 text-white animate-pulse"
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-xs font-bold text-slate-900">Validasi & Penugasan Regu</p>
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          sosStatus === "ditangani" || sosStatus === "selesai"
+                            ? "text-emerald-700 bg-emerald-100"
+                            : "text-orange-700 bg-orange-100 animate-pulse"
+                        }`}
+                      >
+                        {sosStatus === "ditangani" || sosStatus === "selesai" ? "Ditugaskan" : "Dalam Proses"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      {sosStatus === "ditangani" || sosStatus === "selesai"
+                        ? `Regu penyelamat ditugaskan: ${dispatchedTeam || "Tim Reaksi Cepat Posko"}.`
+                        : "Petugas posko sedang memvalidasi lokasi dan menugaskan armada siaga terdekat."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 4 */}
+                <div className="flex items-start gap-3 relative">
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs shrink-0 shadow-xs z-10 ${
+                      sosStatus === "selesai"
+                        ? "bg-emerald-500 text-white"
+                        : sosStatus === "ditangani"
+                        ? "bg-blue-600 text-white animate-pulse"
+                        : "bg-slate-200 text-slate-500"
+                    }`}
+                  >
+                    <Navigation className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-xs font-bold text-slate-900">Armada Menuju Titik Anda</p>
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          sosStatus === "selesai"
+                            ? "text-emerald-700 bg-emerald-100"
+                            : sosStatus === "ditangani"
+                            ? "text-blue-700 bg-blue-100 animate-pulse"
+                            : "text-slate-500 bg-slate-200"
+                        }`}
+                      >
+                        {sosStatus === "selesai"
+                          ? "Selesai"
+                          : sosStatus === "ditangani"
+                          ? "Dalam Perjalanan"
+                          : "Siaga"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      {sosStatus === "selesai"
+                        ? "Penanganan operasional darurat telah selesai dilakukan di lokasi."
+                        : sosStatus === "ditangani"
+                        ? "Armada sedang meluncur ke titik koordinat darurat Anda. Pastikan ponsel tetap aktif."
+                        : "Menunggu instruksi komando pengerahan unit dari posko."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Titik Lokasi GPS Terkini */}
+            <div className="mt-3.5 p-3 rounded-2xl bg-white border border-slate-200 text-xs flex items-center justify-between gap-2 shadow-2xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <MapPin className="w-4 h-4 text-orange-600 shrink-0" />
+                <div className="min-w-0">
+                  <span className="font-bold text-slate-800 text-[11px] block">
+                    Titik Koordinat Terpancar:
+                  </span>
+                  <p className="font-mono text-slate-500 text-[11px] truncate">
+                    {currentCoords.lat.toFixed(5)}, {currentCoords.lng.toFixed(5)}
+                    {gpsAccuracy ? ` (±${Math.round(gpsAccuracy)}m)` : ""}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => startGpsTracking()}
+                title="Perbarui koordinat GPS sekarang"
+                className="p-1.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-[11px] font-semibold flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
+              >
+                <RefreshCw className={`w-3 h-3 ${gpsStatus === "acquiring" ? "animate-spin text-orange-600" : "text-slate-500"}`} />
+                <span>Perbarui</span>
+              </button>
+            </div>
+
+            {/* Tombol Aksi Bawah Pop Up Pelacakan */}
+            <div className="mt-5 flex flex-col sm:flex-row items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTrackingOpen(false);
+                  setIsOpen(true);
+                }}
+                className="w-full sm:flex-1 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>Lihat Detail SOS & Kontak</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTrackingOpen(false);
+                  setIsMinimized(true);
+                }}
+                className="w-full sm:w-auto px-5 h-11 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                Tutup Pelacakan
+              </button>
+            </div>
           </div>
         </div>
       )}
