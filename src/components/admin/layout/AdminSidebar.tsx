@@ -111,7 +111,7 @@ export function AdminSidebar({
               ? pathname === "/admin"
               : pathname.startsWith(item.href);
 
-          const activeClasses = "bg-orange-600 text-white font-semibold shadow-sm border border-orange-600";
+          const activeClasses = "bg-[#F97316] text-white font-semibold shadow-sm border border-[#F97316]";
           const iconActiveColor = "text-white";
 
           return (
@@ -141,7 +141,7 @@ export function AdminSidebar({
                 <span
                   className={`px-2 py-0.5 rounded-full text-[11px] font-bold shadow-xs transition-colors ${
                     isActive
-                      ? "text-orange-600 bg-white"
+                      ? "text-[#F97316] bg-white font-bold"
                       : "text-white bg-[#EF4444]"
                   }`}
                 >
@@ -192,7 +192,7 @@ export function AdminSidebar({
           title={isCollapsed ? "Pengaturan" : undefined}
           className={`flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-[13px] transition-colors border ${
             pathname.startsWith("/admin/pengaturan")
-              ? "bg-orange-600 text-white font-semibold shadow-sm border-orange-600"
+              ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
               : "border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
           } ${
             isCollapsed ? "justify-center px-0" : ""
