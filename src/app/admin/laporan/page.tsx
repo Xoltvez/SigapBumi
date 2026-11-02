@@ -796,28 +796,28 @@ function LaporanContent() {
           <table className="w-full text-left text-xs">
             <thead className="bg-[#FAFBFD] font-bold text-slate-800 border-b border-slate-100">
               <tr>
-                <th scope="col" className="py-3.5 px-5 w-28">
+                <th scope="col" className="py-3.5 px-5 w-28 whitespace-nowrap">
                   Prioritas
                 </th>
-                <th scope="col" className="py-3.5 px-4 w-32">
+                <th scope="col" className="py-3.5 px-4 w-32 whitespace-nowrap">
                   Kode Tracking
                 </th>
-                <th scope="col" className="py-3.5 px-4 w-28">
+                <th scope="col" className="py-3.5 px-4 w-28 whitespace-nowrap">
                   Jenis
                 </th>
-                <th scope="col" className="py-3.5 px-4">
+                <th scope="col" className="py-3.5 px-4 min-w-[240px]">
                   Judul & Lokasi Kejadian
                 </th>
-                <th scope="col" className="py-3.5 px-4 w-28">
+                <th scope="col" className="py-3.5 px-4 min-w-[130px] whitespace-nowrap">
                   Status
                 </th>
-                <th scope="col" className="py-3.5 px-4 w-28">
+                <th scope="col" className="py-3.5 px-4 w-28 whitespace-nowrap">
                   Konfirmasi
                 </th>
-                <th scope="col" className="py-3.5 px-4 w-36">
+                <th scope="col" className="py-3.5 px-4 w-36 whitespace-nowrap">
                   Waktu Masuk
                 </th>
-                <th scope="col" className="py-3.5 px-4 w-60 text-right">
+                <th scope="col" className="py-3.5 px-4 w-60 text-right whitespace-nowrap">
                   Aksi & Tindak Lanjut
                 </th>
               </tr>
@@ -846,7 +846,7 @@ function LaporanContent() {
                       className="hover:bg-slate-50/70 transition-colors h-16 group"
                     >
                       {/* Prioritas Badge */}
-                      <td className="py-3 px-5">
+                      <td className="py-3 px-5 whitespace-nowrap">
                         {row.priority === "Kritis" && (
                           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#FFF1F2] text-[#E11D48] border border-rose-200/80 inline-flex items-center gap-1.5 shadow-2xs">
                             <AlertCircle className="w-3 h-3 text-[#E11D48]" />
@@ -874,12 +874,12 @@ function LaporanContent() {
                       </td>
 
                       {/* Kode Tracking */}
-                      <td className="py-3 px-4 font-mono font-bold text-slate-800 text-xs">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-800 text-xs whitespace-nowrap">
                         {row.tracking_code}
                       </td>
 
                       {/* Jenis Bencana */}
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-1.5 font-medium text-slate-700">
                           {getDisasterIcon(row.disaster_type)}
                           <span>{getDisasterLabel(row.disaster_type)}</span>
@@ -906,36 +906,36 @@ function LaporanContent() {
                       </td>
 
                       {/* Status */}
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 whitespace-nowrap">
                         {row.status === "diterima" && (
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#EFF6FF] text-[#2563EB] border border-blue-200/80 shadow-2xs">
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#EFF6FF] text-[#2563EB] border border-blue-200/80 shadow-2xs inline-flex items-center justify-center whitespace-nowrap">
                             Diterima
                           </span>
                         )}
                         {row.status === "ditindaklanjuti" && (
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#FFFBEB] text-[#D97706] border border-amber-200/80 shadow-2xs">
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#FFFBEB] text-[#D97706] border border-amber-200/80 shadow-2xs inline-flex items-center justify-center whitespace-nowrap">
                             Dalam Proses
                           </span>
                         )}
                         {row.status === "diverifikasi" && (
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#FAF5FF] text-[#9333EA] border border-purple-200/80 shadow-2xs">
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#FAF5FF] text-[#9333EA] border border-purple-200/80 shadow-2xs inline-flex items-center justify-center whitespace-nowrap">
                             Diverifikasi
                           </span>
                         )}
                         {row.status === "selesai" && (
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#ECFDF5] text-[#059669] border border-emerald-200/80 shadow-2xs">
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#ECFDF5] text-[#059669] border border-emerald-200/80 shadow-2xs inline-flex items-center justify-center whitespace-nowrap">
                             Selesai
                           </span>
                         )}
                         {row.status === "ditolak" && (
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs">
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs inline-flex items-center justify-center whitespace-nowrap">
                             Ditolak
                           </span>
                         )}
                       </td>
 
                       {/* Konfirmasi */}
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 whitespace-nowrap">
                         {row.confirmation_count > 0 ? (
                           <span className="flex items-center gap-1 text-amber-600 font-semibold text-xs">
                             <Shield className="w-3.5 h-3.5 text-amber-500" />
@@ -947,12 +947,12 @@ function LaporanContent() {
                       </td>
 
                       {/* Waktu Masuk */}
-                      <td className="py-3 px-4 text-slate-600 text-xs font-normal">
+                      <td className="py-3 px-4 text-slate-600 text-xs font-normal whitespace-nowrap">
                         {row.time}
                       </td>
 
                       {/* Aksi & Tindak Lanjut */}
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                           {/* Tombol Tandai Proses */}
                           {row.status !== "ditindaklanjuti" && row.status !== "selesai" && (
