@@ -7,7 +7,6 @@ import {
   Flame,
   Mountain,
   CheckSquare,
-  Square,
   AlertTriangle,
   HeartPulse,
 } from "lucide-react";
@@ -191,27 +190,14 @@ const SURVIVAL_KIT_ITEMS = [
 
 export default function EdukasiPage() {
   const [selectedDisasterId, setSelectedDisasterId] = useState<string>("gempa");
-  const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({});
 
   const activeGuide =
     GUIDES.find((g) => g.id === selectedDisasterId) || GUIDES[0];
-
-  const toggleCheck = (index: number) => {
-    setCheckedItems((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
-  };
-
-  const checkedCount = Object.values(checkedItems).filter(Boolean).length;
 
   return (
     <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 pb-28 md:pb-12 space-y-10">
       {/* Top Header */}
       <div className="text-center max-w-2xl mx-auto">
-        <span className="inline-block px-3 py-1 rounded-full bg-primary-soft text-primary-hover text-xs font-semibold mb-3">
-          Panduan Mitigasi & Kesiapsiagaan Bencana
-        </span>
         <h1 className="text-2xl md:text-3xl font-bold text-ink">
           Edukasi Tanggap Bencana
         </h1>
@@ -329,39 +315,22 @@ export default function EdukasiPage() {
             </p>
           </div>
           <div className="text-xs font-semibold px-3 py-1 rounded-full bg-primary-soft text-primary-hover self-start sm:self-center">
-            {checkedCount} dari {SURVIVAL_KIT_ITEMS.length} Barang Tercentang
+            {SURVIVAL_KIT_ITEMS.length} Barang Wajib Siap (Tercentang)
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {SURVIVAL_KIT_ITEMS.map((item, idx) => {
-            const isChecked = !!checkedItems[idx];
-            return (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => toggleCheck(idx)}
-                className={`flex items-start gap-3 p-3.5 rounded-lg border text-left transition-colors ${
-                  isChecked
-                    ? "bg-primary-soft/40 border-primary text-ink"
-                    : "bg-surface border-line text-ink hover:bg-bg"
-                }`}
-              >
-                {isChecked ? (
-                  <CheckSquare className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                ) : (
-                  <Square className="w-5 h-5 text-ink-muted shrink-0 mt-0.5" />
-                )}
-                <span
-                  className={`text-xs leading-relaxed ${
-                    isChecked ? "font-semibold text-primary-hover" : "text-ink-soft"
-                  }`}
-                >
-                  {item}
-                </span>
-              </button>
-            );
-          })}
+          {SURVIVAL_KIT_ITEMS.map((item, idx) => (
+            <div
+              key={idx}
+              className="flex items-start gap-3 p-3.5 rounded-lg border bg-primary-soft/30 border-primary/40 text-ink shadow-2xs"
+            >
+              <CheckSquare className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <span className="text-xs leading-relaxed font-semibold text-primary-hover">
+                {item}
+              </span>
+            </div>
+          ))}
         </div>
       </section>
 
