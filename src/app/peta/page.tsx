@@ -12,6 +12,14 @@ import {
   Clock,
   AlertCircle,
   ExternalLink,
+  Search,
+  Navigation,
+  ArrowUpDown,
+  ThumbsUp,
+  Waves,
+  Mountain,
+  Flame,
+  AlertTriangle,
 } from "lucide-react";
 import { MapFilter } from "@/components/peta/MapFilter";
 import type { MapPoint } from "@/components/peta/DisasterMap";
@@ -52,6 +60,10 @@ function PetaContent() {
   const [selectedRegion, setSelectedRegion] = useState<string>("Semua Wilayah");
   const [showSos, setShowSos] = useState<boolean>(true);
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
+
+  // State untuk pencarian & pengurutan di Tampilan Daftar
+  const [listSearch, setListSearch] = useState<string>("");
+  const [listSort, setListSort] = useState<"terbaru" | "vouch">("terbaru");
 
   // Fokus otomatis ke titik jika terdapat query param kode/koordinat
   useEffect(() => {
@@ -205,6 +217,34 @@ function PetaContent() {
     });
   }, [points, selectedCategory, selectedStatus, selectedRegion, showSos]);
 
+  // Data terfilter untuk Mode Tampilan Daftar (pencarian kata kunci + sortir)
+  const displayedListPoints = useMemo(() => {
+    let list = [...filteredPoints];
+    if (listSearch.trim()) {
+      const q = listSearch.toLowerCase().trim();
+      list = list.filter(
+        (p) =>
+          p.title?.toLowerCase().includes(q) ||
+          p.location_name?.toLowerCase().includes(q) ||
+          p.tracking_code?.toLowerCase().includes(q) ||
+          p.disaster_type?.toLowerCase().includes(q)
+      );
+    }
+    if (listSort === "vouch") {
+      list.sort((a, b) => (b.confirmation_count || 0) - (a.confirmation_count || 0));
+    }
+    return list;
+  }, [filteredPoints, listSearch, listSort]);
+
+  // Navigasi langsung dari Daftar Kejadian ke Titik Peta
+  const handleOpenInMap = (item: MapPoint) => {
+    setSelectedPoint(item);
+    setViewMode("peta");
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 120, behavior: "smooth" });
+    }
+  };
+
   const getStatusBadge = (status: ReportStatus) => {
     switch (status) {
       case "diterima":
@@ -230,38 +270,49 @@ function PetaContent() {
               <Layers className="w-6 h-6 text-primary" />
               <span>Peta Bencana Publik Terbuka</span>
             </h1>
+            <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 border border-amber-300">
+              MODE DEMO / DATA SIMULASI
+            </span>
           </div>
           <p className="text-xs text-ink-soft mt-0.5">
-            Peta sebaran laporan kebencanaan dan titik panggilan darurat SOS terverifikasi di seluruh wilayah.
+            Sebaran informasi kebencanaan dan titik panggilan darurat SOS dengan dukungan mode peta dan alternatif daftar.
           </p>
         </div>
 
         {/* View Mode Switcher (Peta vs Daftar) */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center p-1 bg-surface border border-line rounded-md text-xs font-semibold">
+          <div
+            role="tablist"
+            aria-label="Mode Tampilan Peta atau Daftar"
+            className="flex items-center p-1 bg-surface border border-line rounded-lg text-xs font-semibold shadow-sm"
+          >
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === "peta"}
               onClick={() => setViewMode("peta")}
-              className={`h-9 px-3 rounded flex items-center gap-1.5 transition-colors ${
+              className={`h-9 px-3.5 rounded-md flex items-center gap-1.5 transition-all min-h-[36px] ${
                 viewMode === "peta"
-                  ? "bg-primary text-white"
-                  : "text-ink-soft hover:text-ink"
+                  ? "bg-primary text-white shadow-sm font-bold"
+                  : "text-ink-soft hover:text-ink hover:bg-bg"
               }`}
             >
-              <MapIcon className="w-3.5 h-3.5" />
-              <span>Peta</span>
+              <MapIcon className="w-4 h-4" />
+              <span>Tampilan Peta</span>
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === "daftar"}
               onClick={() => setViewMode("daftar")}
-              className={`h-9 px-3 rounded flex items-center gap-1.5 transition-colors ${
+              className={`h-9 px-3.5 rounded-md flex items-center gap-1.5 transition-all min-h-[36px] ${
                 viewMode === "daftar"
-                  ? "bg-primary text-white"
-                  : "text-ink-soft hover:text-ink"
+                  ? "bg-primary text-white shadow-sm font-bold"
+                  : "text-ink-soft hover:text-ink hover:bg-bg"
               }`}
             >
-              <List className="w-3.5 h-3.5" />
-              <span>Daftar ({filteredPoints.length})</span>
+              <List className="w-4 h-4" />
+              <span>Tampilan Daftar ({filteredPoints.length})</span>
             </button>
           </div>
         </div>
@@ -312,47 +363,120 @@ function PetaContent() {
               </div>
             </div>
           )}
-
         </div>
 
         {/* Content Container (Desktop 9 cols) */}
         <div className="lg:col-span-9">
           {viewMode === "peta" ? (
-            <div className="h-[550px] md:h-[650px]">
-              <DisasterMap
-                points={filteredPoints}
-                selectedPointId={selectedPoint?.id}
-                onSelectPoint={(pt) => setSelectedPoint(pt)}
-              />
-            </div>
-          ) : (
-            // LIST VIEW ALTERNATIVE (FR-04 & Master Prompt Section 6.4)
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-line">
-                <span className="text-xs font-bold text-ink uppercase tracking-wider">
-                  Daftar Kejadian Bencana ({filteredPoints.length} Laporan)
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-ink-muted px-1">
+                <span className="flex items-center gap-1 font-medium">
+                  <MapPin className="w-3.5 h-3.5 text-primary" />
+                  <span>Klik pada pin di peta untuk membuka ringkasan status kejadian</span>
                 </span>
-                <span className="text-xs text-ink-muted">
-                  Klik untuk melihat timeline penanganan
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("daftar")}
+                  className="text-primary hover:underline font-semibold flex items-center gap-1"
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span>Beralih ke Tampilan Daftar</span>
+                </button>
               </div>
 
-              {filteredPoints.length === 0 ? (
-                <div className="p-12 text-center bg-surface border border-line rounded-lg space-y-2">
-                  <AlertCircle className="w-8 h-8 text-ink-muted mx-auto" />
-                  <p className="text-sm font-bold text-ink">Tidak ada laporan yang sesuai</p>
-                  <p className="text-xs text-ink-soft">
-                    Coba sesuaikan filter kategori atau status di sebelah kiri.
+              <div className="h-[550px] md:h-[650px] rounded-lg overflow-hidden border border-line shadow-card">
+                <DisasterMap
+                  points={filteredPoints}
+                  selectedPointId={selectedPoint?.id}
+                  onSelectPoint={(pt) => setSelectedPoint(pt)}
+                />
+              </div>
+            </div>
+          ) : (
+            // LIST VIEW ALTERNATIVE (FR-04 & Master Prompt Section 3.2 & 6.4)
+            <div className="space-y-4">
+              {/* Header List Controls: Search & Sort */}
+              <div className="bg-surface border border-line rounded-lg p-3.5 shadow-card space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={listSearch}
+                      onChange={(e) => setListSearch(e.target.value)}
+                      placeholder="Cari judul, lokasi, atau kode laporan (contoh: Semanan, LPR-...)"
+                      className="w-full h-10 pl-9 pr-3 text-xs md:text-sm bg-bg border border-line rounded-md text-ink placeholder:text-ink-muted focus:outline-none focus:border-primary"
+                    />
+                    {listSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setListSearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-muted hover:text-ink"
+                      >
+                        Batal
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-ink-muted flex items-center gap-1">
+                      <ArrowUpDown className="w-3.5 h-3.5" />
+                      <span>Urutkan:</span>
+                    </span>
+                    <select
+                      value={listSort}
+                      onChange={(e) => setListSort(e.target.value as "terbaru" | "vouch")}
+                      className="h-10 px-2.5 text-xs bg-bg border border-line rounded-md text-ink font-semibold focus:outline-none focus:border-primary"
+                    >
+                      <option value="terbaru">Terbaru Masuk</option>
+                      <option value="vouch">Konfirmasi Warga Terbanyak</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-ink-muted pt-2 border-t border-line">
+                  <span>
+                    Menampilkan <strong>{displayedListPoints.length}</strong> dari {filteredPoints.length} kejadian bencana
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("peta")}
+                    className="text-primary hover:underline font-semibold flex items-center gap-1"
+                  >
+                    <MapIcon className="w-3.5 h-3.5" />
+                    <span>Kembali ke Tampilan Peta</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* List Cards Grid */}
+              {displayedListPoints.length === 0 ? (
+                <div className="p-12 text-center bg-surface border border-line rounded-lg space-y-3">
+                  <AlertCircle className="w-9 h-9 text-ink-muted mx-auto" />
+                  <p className="text-sm font-bold text-ink">Tidak ada kejadian yang cocok</p>
+                  <p className="text-xs text-ink-soft max-w-sm mx-auto">
+                    {listSearch
+                      ? `Tidak ditemukan hasil pencarian untuk "${listSearch}". Coba gunakan kata kunci lain.`
+                      : "Coba sesuaikan filter kategori, status, atau wilayah di bilah sebelah kiri."}
                   </p>
+                  {listSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setListSearch("")}
+                      className="px-4 py-2 text-xs font-semibold bg-primary text-white rounded-md hover:bg-primary-hover transition-colors"
+                    >
+                      Bersihkan Pencarian
+                    </button>
+                  )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {filteredPoints.map((item) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {displayedListPoints.map((item) => (
                     <div
                       key={item.id}
-                      className="bg-surface border border-line rounded-lg p-4 shadow-card hover:border-primary/50 transition-colors flex flex-col justify-between space-y-3"
+                      className="bg-surface border border-line rounded-lg p-4 shadow-card hover:border-primary/50 transition-all flex flex-col justify-between space-y-3.5"
                     >
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-mono text-xs font-bold text-primary">
@@ -364,10 +488,13 @@ function PetaContent() {
                               </span>
                             )}
                             {item.is_sos && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-danger-soft text-danger">
-                                SOS
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-danger-soft text-danger animate-pulse">
+                                Darurat SOS
                               </span>
                             )}
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-bg text-ink-soft border border-line uppercase">
+                              {item.disaster_type}
+                            </span>
                           </div>
                           {getStatusBadge(item.status)}
                         </div>
@@ -376,31 +503,51 @@ function PetaContent() {
                           {item.title}
                         </h3>
 
-                        <p className="text-xs text-ink-soft flex items-start gap-1">
+                        <p className="text-xs text-ink-soft flex items-start gap-1.5">
                           <MapPin className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                          <span>{item.location_name}</span>
+                          <span className="line-clamp-2">{item.location_name}</span>
                         </p>
                       </div>
 
-                      <div className="pt-2 border-t border-line flex items-center justify-between text-xs">
-                        <span className="text-ink-muted flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          <span>{item.created_at}</span>
-                        </span>
-
-                        {!item.is_sos ? (
-                          <Link
-                            href={`/lacak?kode=${item.tracking_code}`}
-                            className="font-semibold text-primary hover:underline inline-flex items-center gap-1"
-                          >
-                            <span>Lacak &amp; Timeline</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </Link>
-                        ) : (
-                          <span className="text-xs font-bold text-danger">
-                            Sinyal Darurat
+                      <div className="pt-3 border-t border-line space-y-2">
+                        <div className="flex items-center justify-between text-xs text-ink-muted">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{item.created_at}</span>
                           </span>
-                        )}
+                          {item.confirmation_count ? (
+                            <span className="flex items-center gap-1 font-semibold text-ink">
+                              <ThumbsUp className="w-3 h-3 text-primary" />
+                              <span>{item.confirmation_count} Warga Mengonfirmasi</span>
+                            </span>
+                          ) : null}
+                        </div>
+
+                        {/* Card Action Buttons */}
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenInMap(item)}
+                            className="h-8 px-3 rounded-md text-xs font-semibold border border-primary/30 text-primary hover:bg-primary-soft transition-colors flex items-center gap-1.5 min-h-[32px]"
+                          >
+                            <MapPin className="w-3.5 h-3.5" />
+                            <span>Lihat di Peta</span>
+                          </button>
+
+                          {!item.is_sos ? (
+                            <Link
+                              href={`/lacak?kode=${item.tracking_code}`}
+                              className="h-8 px-3 rounded-md text-xs font-semibold bg-primary hover:bg-primary-hover text-white transition-colors inline-flex items-center gap-1.5 min-h-[32px]"
+                            >
+                              <span>Detail &amp; Lacak</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          ) : (
+                            <span className="text-xs font-bold text-danger px-2 py-1 rounded bg-danger-soft">
+                              Panggilan Darurat
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
