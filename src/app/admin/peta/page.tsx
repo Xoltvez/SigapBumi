@@ -277,12 +277,6 @@ export default function AdminPetaPage() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
-          {/* Live GIS Badge */}
-          <div className="px-3.5 py-1.5 rounded-full bg-[#ECFDF5] text-[#059669] border border-emerald-200/80 text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-            <span>Live GIS</span>
-          </div>
-
           {/* Segarkan Data Button */}
           <button
             type="button"
