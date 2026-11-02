@@ -32,21 +32,7 @@ function getLocalSosCache(): LiveSosItem[] {
     const raw = localStorage.getItem(LOCAL_STORAGE_SOS_KEY);
     if (!raw) return [];
     const parsed: LiveSosItem[] = JSON.parse(raw);
-    // Hapus data demo/mock agar hanya data darurat riil yang tersimpan
-    const realOnly = parsed.filter(
-      (item) =>
-        item &&
-        item.id &&
-        !item.id.startsWith("sos-10") &&
-        item.id !== "sos-1" &&
-        item.id !== "sos-2" &&
-        item.id !== "sos-sample" &&
-        !item.address?.includes("Citra 2")
-    );
-    if (realOnly.length !== parsed.length) {
-      localStorage.setItem(LOCAL_STORAGE_SOS_KEY, JSON.stringify(realOnly));
-    }
-    return realOnly;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -445,38 +431,23 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
   }
 
   // Gabungkan hasil: Supabase live + Local Cache (HANYA DATA RIIL WARGA)
+  // Gabungkan hasil: Supabase live + Local Cache
   const mergedMap = new Map<string, LiveSosItem>();
 
-  // 1. Masukkan sinyal darurat riil dari local cache
-  localItems.forEach((item) => {
-    if (
-      item &&
-      item.id &&
-      !item.id.startsWith("sos-10") &&
-      item.id !== "sos-1" &&
-      item.id !== "sos-2" &&
-      item.id !== "sos-sample" &&
-      !item.address?.includes("Citra 2")
-    ) {
+  // 1. Masukkan sinyal dari Supabase
+  supabaseItems.forEach((item) => {
+    if (item && item.id) {
       mergedMap.set(item.id, item);
     }
   });
 
-  // 2. Timpa dengan sinyal darurat riil dari Supabase
-  supabaseItems.forEach((item) => {
-    if (
-      item &&
-      item.id &&
-      !item.id.startsWith("sos-10") &&
-      item.id !== "sos-1" &&
-      item.id !== "sos-2" &&
-      item.id !== "sos-sample" &&
-      !item.address?.includes("Citra 2")
-    ) {
+  // 2. Masukkan / timpa dengan sinyal dari local cache (agar status lokal selalu terbaru)
+  localItems.forEach((item) => {
+    if (item && item.id) {
       const prev = mergedMap.get(item.id);
       mergedMap.set(item.id, {
+        ...(prev || {}),
         ...item,
-        phone_number: item.phone_number || prev?.phone_number,
       });
     }
   });
@@ -517,12 +488,26 @@ export async function updateSosAlertStatus(
 ): Promise<{ success: boolean; error?: string }> {
   // Update local cache
   const localItems = getLocalSosCache();
-  const existing = localItems.find((x) => x.id === id);
-  if (existing) {
-    existing.status = newStatus;
-    if (dispatchedTeam) existing.dispatched_team = dispatchedTeam;
-    saveLocalSosCache(localItems);
+  const existingIndex = localItems.findIndex((x) => x.id === id);
+  if (existingIndex >= 0) {
+    localItems[existingIndex].status = newStatus;
+    if (dispatchedTeam) localItems[existingIndex].dispatched_team = dispatchedTeam;
+  } else {
+    localItems.push({
+      id,
+      source: "Ponsel Warga (GPS Sensor)",
+      assistance_type: "damkar",
+      address: "Titik Darurat Warga",
+      coordinates: "-6.2088, 106.8456",
+      lat: -6.2088,
+      lng: 106.8456,
+      time_ago: "Baru saja",
+      status: newStatus,
+      dispatched_team: dispatchedTeam,
+      created_at: new Date().toISOString(),
+    });
   }
+  saveLocalSosCache(localItems);
 
   // Coba update ke Supabase
   try {

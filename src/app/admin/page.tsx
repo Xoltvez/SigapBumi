@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import type { ReportStatus, DisasterType, SosAssistanceType, PriorityLabel } from "@/types";
-import { fetchLiveReports, DEFAULT_MOCK_REPORTS } from "@/lib/services/reports";
+import { fetchLiveReports, updateReportStatusLive, DEFAULT_MOCK_REPORTS } from "@/lib/services/reports";
 import { fetchLiveSosAlerts } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
 
@@ -83,6 +83,37 @@ export default function AdminRingkasanPage() {
   const { activeUnit, activeUnitName, setActiveSosCount, setIsLiveConnected } = useAdmin();
   const [reports, setReports] = useState<AdminReportItem[]>([]);
   const [sosAlerts, setSosAlerts] = useState<SosAlertItem[]>(INITIAL_SOS_ALERTS);
+  const [updatingReportId, setUpdatingReportId] = useState<string | null>(null);
+
+  const handleQuickStatusChange = async (
+    reportId: string,
+    newStatus: ReportStatus,
+    e?: React.MouseEvent
+  ) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setUpdatingReportId(reportId);
+    setReports((prev) =>
+      prev.map((r) => (r.id === reportId ? { ...r, status: newStatus } : r))
+    );
+
+    const defaultNote =
+      newStatus === "ditindaklanjuti"
+        ? "Laporan ditandai dalam proses oleh petugas posko."
+        : newStatus === "selesai"
+        ? "Laporan ditandai selesai ditangani secara tuntas oleh tim lapangan."
+        : `Status diperbarui menjadi ${newStatus}`;
+
+    try {
+      await updateReportStatusLive(reportId, newStatus, defaultNote, "Petugas Posko Terpadu");
+    } catch (err) {
+      console.warn("Gagal update status:", err);
+    } finally {
+      setUpdatingReportId(null);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -262,7 +293,7 @@ export default function AdminRingkasanPage() {
             </div>
             <div>
               <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
-                11
+                {reports.length > 0 ? reports.filter((r) => r.status === "diterima").length : 11}
               </p>
               <p className="text-xs text-slate-400 font-medium mt-1">
                 Laporan Baru
@@ -291,7 +322,7 @@ export default function AdminRingkasanPage() {
             </div>
             <div>
               <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
-                15
+                {reports.length > 0 ? reports.filter((r) => r.status === "ditindaklanjuti" || r.status === "diverifikasi").length : 15}
               </p>
               <p className="text-xs text-slate-400 font-medium mt-1">
                 Laporan Diproses
@@ -320,7 +351,7 @@ export default function AdminRingkasanPage() {
             </div>
             <div>
               <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
-                37
+                {reports.length > 0 ? reports.filter((r) => r.status === "selesai").length : 37}
               </p>
               <p className="text-xs text-slate-400 font-medium mt-1">
                 Laporan Selesai
@@ -393,13 +424,21 @@ export default function AdminRingkasanPage() {
 
           {/* List Laporan */}
           <div className="divide-y divide-slate-100">
-            {INITIAL_FEATURED_REPORTS.map((item) => (
-              <Link
+            {(reports.length > 0
+              ? reports.slice(0, 4).map((r, idx) => ({
+                  id: r.id,
+                  title: r.title,
+                  location: `${r.location} · ${r.time}`,
+                  status: r.status === "ditindaklanjuti" ? "diproses" : r.status === "selesai" ? "selesai" : "baru",
+                  image: INITIAL_FEATURED_REPORTS[idx % INITIAL_FEATURED_REPORTS.length].image,
+                }))
+              : INITIAL_FEATURED_REPORTS
+            ).map((item) => (
+              <div
                 key={item.id}
-                href="/admin/laporan"
-                className="py-3.5 first:pt-1 last:pb-1 flex items-center justify-between gap-4 group hover:bg-slate-50/60 -mx-2 px-2 rounded-xl transition-colors"
+                className="py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group hover:bg-slate-50/60 -mx-2 px-2 rounded-xl transition-colors"
               >
-                <div className="flex items-center gap-3.5 min-w-0">
+                <div className="flex items-center gap-3.5 min-w-0 flex-1">
                   {/* Foto Thumbnail Kebencanaan Landscape */}
                   <div className="w-16 h-11 md:w-20 md:h-14 rounded-xl overflow-hidden bg-slate-100 shrink-0 relative shadow-2xs">
                     <Image
@@ -413,9 +452,12 @@ export default function AdminRingkasanPage() {
 
                   {/* Judul & Lokasi Waktu */}
                   <div className="min-w-0">
-                    <h3 className="text-sm font-bold text-slate-900 truncate group-hover:text-[#EA580C] transition-colors">
+                    <Link
+                      href={`/admin/laporan/${item.id}`}
+                      className="text-sm font-bold text-slate-900 truncate block hover:text-[#EA580C] transition-colors"
+                    >
                       {item.title}
-                    </h3>
+                    </Link>
                     <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-1">
                       <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span className="truncate">{item.location}</span>
@@ -423,27 +465,53 @@ export default function AdminRingkasanPage() {
                   </div>
                 </div>
 
-                {/* Status Badge & Chevron */}
-                <div className="flex items-center gap-3 shrink-0">
-                  {item.status === "diproses" && (
-                    <span className="px-3.5 py-1 rounded-full text-xs font-semibold bg-[#EFF6FF] text-[#2563EB] border border-blue-200/80 shadow-2xs">
-                      Diproses
-                    </span>
+                {/* Status Badge & Action Buttons */}
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                  {/* Quick Action: Tandai Proses */}
+                  {item.status !== "diproses" && item.status !== "selesai" && (
+                    <button
+                      type="button"
+                      disabled={updatingReportId === item.id}
+                      onClick={(e) => handleQuickStatusChange(item.id, "ditindaklanjuti", e)}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#FFF7ED] text-[#EA580C] border border-amber-200/90 hover:bg-amber-100/80 transition-colors shadow-2xs inline-flex items-center gap-1 cursor-pointer disabled:opacity-60"
+                      title="Tandai sedang diproses"
+                    >
+                      <Clock className="w-3 h-3 text-amber-600" />
+                      <span>Tandai Proses</span>
+                    </button>
                   )}
-                  {item.status === "baru" && (
-                    <span className="px-3.5 py-1 rounded-full text-xs font-semibold bg-[#FFF1F2] text-[#E11D48] border border-rose-200/80 shadow-2xs">
-                      Baru
-                    </span>
-                  )}
-                  {item.status === "selesai" && (
-                    <span className="px-3.5 py-1 rounded-full text-xs font-semibold bg-[#ECFDF5] text-[#059669] border border-emerald-200/80 shadow-2xs">
-                      Selesai
+
+                  {/* Quick Action: Tandai Selesai */}
+                  {item.status !== "selesai" ? (
+                    <button
+                      type="button"
+                      disabled={updatingReportId === item.id}
+                      onClick={(e) => handleQuickStatusChange(item.id, "selesai", e)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors shadow-2xs inline-flex items-center gap-1 cursor-pointer disabled:opacity-60 ${
+                        item.status === "diproses"
+                          ? "bg-[#059669] hover:bg-[#047857] text-white"
+                          : "bg-[#ECFDF5] text-[#059669] border border-emerald-200/90 hover:bg-emerald-100/80"
+                      }`}
+                      title="Tandai telah selesai"
+                    >
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>Tandai Selesai</span>
+                    </button>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#ECFDF5] text-[#059669] border border-emerald-200/80 shadow-2xs inline-flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>Selesai</span>
                     </span>
                   )}
 
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+                  <Link
+                    href={`/admin/laporan/${item.id}`}
+                    className="p-1 rounded-lg hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </section>

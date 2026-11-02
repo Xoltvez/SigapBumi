@@ -10,13 +10,16 @@ export function generateStaticParams() {
   ];
 }
 
-export default async function AdminDetailLaporanPage({
+async function DetailLoader({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <DetailLaporanClient reportId={id} />;
+}
+
+export default function AdminDetailLaporanPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-
   return (
     <Suspense
       fallback={
@@ -25,7 +28,7 @@ export default async function AdminDetailLaporanPage({
         </div>
       }
     >
-      <DetailLaporanClient reportId={id} />
+      <DetailLoader params={params} />
     </Suspense>
   );
 }

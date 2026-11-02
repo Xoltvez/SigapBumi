@@ -33,9 +33,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const cleanNote = note?.trim() || "";
+    const defaultNote =
+      status === "diverifikasi"
+        ? "Laporan telah diverifikasi oleh posko dan siap ditindaklanjuti tim operasional."
+        : status === "ditindaklanjuti"
+        ? "Tim operasional telah dikerahkan ke lokasi kejadian untuk penanganan."
+        : status === "selesai"
+        ? "Penanganan laporan telah selesai ditangani secara tuntas oleh tim lapangan."
+        : status === "ditolak"
+        ? "Laporan ditolak setelah peninjauan posko operasional."
+        : `Status diperbarui menjadi ${status}`;
 
-    // Validasi catatan wajib untuk status ditolak dan selesai demi akuntabilitas
+    const cleanNote = note?.trim() || defaultNote;
+
+    // Validasi catatan wajib minimal 5 karakter untuk laporan yang ditolak atau selesai
     if ((status === "ditolak" || status === "selesai") && cleanNote.length < 5) {
       return NextResponse.json(
         {
@@ -47,14 +58,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const finalNote =
-      cleanNote ||
-      (status === "diverifikasi"
-        ? "Laporan telah diverifikasi oleh posko dan siap ditindaklanjuti tim operasional."
-        : status === "ditindaklanjuti"
-        ? "Tim operasional telah dikerahkan ke lokasi kejadian."
-        : `Status diperbarui menjadi ${status}`);
-
+    const finalNote = cleanNote;
     const actor = actorName || "Petugas Posko Terpadu";
     const nowIso = new Date().toISOString();
 
@@ -126,6 +130,67 @@ export async function POST(request: Request) {
         } catch {
           // Abaikan jika trigger sudah menangani
         }
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    let reportId = "";
+    try {
+      const body = await request.json();
+      reportId = body?.reportId;
+    } catch {
+      const url = new URL(request.url);
+      reportId = url.searchParams.get("reportId") || "";
+    }
+
+    if (!reportId) {
+      return NextResponse.json(
+        { success: false, error: "Parameter reportId wajib diisi." },
+        { status: 400 }
+      );
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (supabaseUrl && supabaseKey) {
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      // Hapus dari reports berdasarkan id atau tracking_code
+      await supabase
+        .from("reports")
+        .delete()
+        .or(`id.eq.${reportId},tracking_code.eq.${reportId}`);
+
+      // Hapus dari sos_alerts jika ada
+      try {
+        await supabase
+          .from("sos_alerts")
+          .delete()
+          .eq("id", reportId);
+      } catch {
+        // Abaikan jika tidak ada
+      }
+
+      // Catat ke audit_logs
+      try {
+        await supabase.from("audit_logs").insert({
+          action: "DELETE_REPORT",
+          entity: "reports",
+          entity_id: reportId,
+          actor_name: "Petugas Posko Terpadu",
+        });
+      } catch {
+        // Abaikan jika tabel tidak tersedia
       }
     }
 

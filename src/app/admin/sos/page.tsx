@@ -111,8 +111,13 @@ export default function AdminSosPage() {
       mappedLive.forEach((item) => knownIdsRef.current.add(item.id));
       isFirstLoadRef.current = false;
 
-      // Gunakan live jika tersedia, jika kosong gunakan default demo
-      const combined = mappedLive.length > 0 ? mappedLive : DEFAULT_SOS_ITEMS;
+      // Gabungkan data live dan default agar data tidak hilang saat status berubah
+      const combined = [...mappedLive];
+      for (const def of DEFAULT_SOS_ITEMS) {
+        if (!combined.some((item) => item.id === def.id)) {
+          combined.push(def);
+        }
+      }
 
       // Sort: Active first, then by status
       combined.sort((a, b) => {

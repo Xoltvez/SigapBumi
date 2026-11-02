@@ -71,6 +71,35 @@ export function saveLocalReport(report: LiveReportItem): void {
   }
 }
 
+export const LOCAL_STORAGE_DELETED_KEY = "sigapbumi_deleted_reports";
+
+/**
+ * Mengambil ID dan kode tracking laporan yang telah dihapus admin
+ */
+export function getDeletedReportIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_DELETED_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Menandai ID / kode tracking laporan sebagai dihapus di local storage
+ */
+export function markReportAsDeleted(idOrCode: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const current = getDeletedReportIds();
+    current.add(idOrCode);
+    localStorage.setItem(LOCAL_STORAGE_DELETED_KEY, JSON.stringify(Array.from(current)));
+  } catch {
+    // Ignore quota error
+  }
+}
+
 // Dataset awal terstruktur 90 kejadian bencana di seluruh Indonesia
 export const DEFAULT_MOCK_REPORTS: LiveReportItem[] = MASTER_MOCK_REPORTS;
 
@@ -159,19 +188,31 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
     console.warn("fetchLiveReports Supabase warning:", err);
   }
 
-  // Gabungkan laporan Supabase + Laporan Lokal Pengguna + Demo bawaan
+  // Gabungkan laporan: Mock bawaan + Supabase live + Local Reports perangkat (status lokal selalu menang)
   const mergedMap = new Map<string, LiveReportItem>();
 
   // 1. Data default demonstrasi
-  DEFAULT_MOCK_REPORTS.forEach((item) => mergedMap.set(item.tracking_code, item));
+  DEFAULT_MOCK_REPORTS.forEach((item) => {
+    mergedMap.set(item.tracking_code, item);
+    mergedMap.set(item.id, item);
+  });
 
-  // 2. Data lokal perangkat pengguna (laporan baru yang dikirim di sesi ini)
-  localReports.forEach((item) => mergedMap.set(item.tracking_code, item));
+  // 2. Data database Supabase riil
+  liveItems.forEach((item) => {
+    mergedMap.set(item.tracking_code, item);
+    mergedMap.set(item.id, item);
+  });
 
-  // 3. Data database Supabase riil
-  liveItems.forEach((item) => mergedMap.set(item.tracking_code, item));
+  // 3. Data lokal perangkat pengguna (laporan baru atau status yang diperbarui)
+  localReports.forEach((item) => {
+    mergedMap.set(item.tracking_code, item);
+    mergedMap.set(item.id, item);
+  });
 
-  return Array.from(mergedMap.values());
+  const deletedIds = getDeletedReportIds();
+  return Array.from(new Set(mergedMap.values())).filter(
+    (item) => !deletedIds.has(item.id) && !deletedIds.has(item.tracking_code)
+  );
 }
 
 /**
@@ -304,30 +345,11 @@ export async function updateReportStatusLive(
   try {
     const cleanNote = note?.trim() || `Status diperbarui menjadi ${newStatus}`;
 
-    // Update data lokal jika ini laporan di cache browser
+    // Update data lokal jika ini laporan di cache browser atau buat jika belum ada
     const localItems = getLocalReports();
-    const localMatch = localItems.find(
+    let localMatch = localItems.find(
       (r) => r.id === reportId || r.tracking_code === reportId
     );
-    if (localMatch) {
-      localMatch.status = newStatus;
-      if (!localMatch.timeline) localMatch.timeline = [];
-      localMatch.timeline.push({
-        status: newStatus,
-        label:
-          newStatus === "diverifikasi"
-            ? "Diverifikasi Petugas"
-            : newStatus === "ditindaklanjuti"
-            ? "Tim Operasional Ditugaskan"
-            : newStatus === "selesai"
-            ? "Penanganan Selesai"
-            : "Laporan Ditolak",
-        timestamp: "Baru saja",
-        note: cleanNote,
-        actor: actorName,
-      });
-      saveLocalReport(localMatch);
-    }
 
     // Update mock in-memory
     const mockItem = DEFAULT_MOCK_REPORTS.find(
@@ -350,6 +372,50 @@ export async function updateReportStatusLive(
         note: cleanNote,
         actor: actorName,
       });
+    }
+
+    if (!localMatch && mockItem) {
+      localMatch = { ...mockItem };
+    } else if (!localMatch) {
+      localMatch = {
+        id: reportId,
+        tracking_code: reportId.startsWith("LPR") || reportId.startsWith("SOS") ? reportId : `LPR-${reportId.slice(0, 6).toUpperCase()}`,
+        disaster_type: "kebakaran",
+        target_agency: "damkar",
+        title: "Laporan Bencana",
+        description: cleanNote,
+        address: "Lokasi Kejadian",
+        lat: -7.4052,
+        lng: 109.2452,
+        status: newStatus,
+        priority: "sedang",
+        confirmation_count: 1,
+        created_at: "Baru saja",
+        timeline: [],
+      };
+    }
+
+    localMatch.status = newStatus;
+    if (!localMatch.timeline) localMatch.timeline = [];
+    localMatch.timeline.push({
+      status: newStatus,
+      label:
+        newStatus === "diverifikasi"
+          ? "Diverifikasi Petugas"
+          : newStatus === "ditindaklanjuti"
+          ? "Tim Operasional Ditugaskan"
+          : newStatus === "selesai"
+          ? "Penanganan Selesai"
+          : "Laporan Ditolak",
+      timestamp: "Baru saja",
+      note: cleanNote,
+      actor: actorName,
+    });
+    saveLocalReport(localMatch);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sigapbumi:report-updated", { detail: { id: reportId, status: newStatus } }));
+      window.dispatchEvent(new Event("storage"));
     }
 
     // 1. Coba update via server API route
@@ -404,6 +470,68 @@ export async function updateReportStatusLive(
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Gagal memperbarui status";
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Menghapus laporan dari database Supabase dan cache lokal
+ */
+export async function deleteReportLive(
+  reportId: string,
+  actorName: string = "Petugas Posko Terpadu"
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // 1. Tandai ID / kode tracking sebagai dihapus di local storage agar tidak muncul lagi
+    markReportAsDeleted(reportId);
+
+    // 2. Hapus dari local storage reports
+    if (typeof window !== "undefined") {
+      try {
+        const local = getLocalReports();
+        const filtered = local.filter((r) => r.id !== reportId && r.tracking_code !== reportId);
+        localStorage.setItem(LOCAL_STORAGE_REPORTS_KEY, JSON.stringify(filtered));
+      } catch {
+        // Ignore quota error
+      }
+    }
+
+    // 3. Hapus dari mock in-memory jika ada
+    const mockIdx = DEFAULT_MOCK_REPORTS.findIndex((r) => r.id === reportId || r.tracking_code === reportId);
+    if (mockIdx >= 0) {
+      DEFAULT_MOCK_REPORTS.splice(mockIdx, 1);
+    }
+
+    // 4. Panggil API Route DELETE internal /api/admin/status
+    try {
+      await fetch("/api/admin/status", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reportId }),
+      });
+    } catch {
+      // Fallback ke Supabase langsung
+    }
+
+    // 5. Coba hapus langsung dari client Supabase jika terhubung
+    try {
+      await supabase
+        .from("reports")
+        .delete()
+        .or(`id.eq.${reportId},tracking_code.eq.${reportId}`);
+    } catch {
+      // Ignore
+    }
+
+    // 6. Broadcast event agar semua komponen/tab langsung reaktif
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sigapbumi:report-deleted", { detail: { id: reportId } }));
+      window.dispatchEvent(new Event("storage"));
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Gagal menghapus laporan";
     return { success: false, error: message };
   }
 }

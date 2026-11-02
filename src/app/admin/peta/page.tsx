@@ -30,8 +30,9 @@ import {
   DEFAULT_MOCK_REPORTS,
   reportsToMapPoints,
   fetchLiveReports,
+  updateReportStatusLive,
 } from "@/lib/services/reports";
-import { fetchLiveSosAlerts } from "@/lib/services/sos";
+import { fetchLiveSosAlerts, updateSosAlertStatus } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
 
 // Dynamic import for Leaflet client component
@@ -179,14 +180,32 @@ export default function AdminPetaPage() {
     return points.find((p) => p.id === selectedPointId);
   }, [points, selectedPointId]);
 
-  // Handle local status transition
-  const handleUpdateStatus = (newStatus: ReportStatus) => {
+  // Handle local and remote status transition
+  const handleUpdateStatus = async (newStatus: ReportStatus) => {
     if (!selectedPointId) return;
     setPoints((prev) =>
       prev.map((pt) => (pt.id === selectedPointId ? { ...pt, status: newStatus } : pt))
     );
-    setActionNotice(`Status kejadian berhasil diperbarui menjadi "${newStatus}".`);
+    const readable = newStatus === "ditindaklanjuti" ? "Diproses" : newStatus === "selesai" ? "Selesai" : newStatus;
+    setActionNotice(`Status kejadian berhasil diperbarui menjadi "${readable}".`);
     setTimeout(() => setActionNotice(null), 3500);
+
+    try {
+      const pt = points.find((p) => p.id === selectedPointId);
+      if (pt?.is_sos) {
+        await updateSosAlertStatus(selectedPointId, newStatus === "selesai" ? "selesai" : "ditangani");
+      } else {
+        const note =
+          newStatus === "ditindaklanjuti"
+            ? "Status diperbarui menjadi diproses oleh posko melalui peta operasional taktis."
+            : newStatus === "selesai"
+            ? "Kejadian bencana telah ditangani dan dinyatakan selesai."
+            : `Status diperbarui menjadi ${newStatus}`;
+        await updateReportStatusLive(selectedPointId, newStatus, note, "Petugas Pusdalops Peta");
+      }
+    } catch (err) {
+      console.warn("Gagal update status di peta:", err);
+    }
   };
 
   // KPI Metrics riil tanpa fallback palsu

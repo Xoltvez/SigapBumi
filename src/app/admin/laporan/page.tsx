@@ -18,10 +18,11 @@ import {
   ChevronRight,
   MoreVertical,
   Check,
+  Trash2,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import type { ReportStatus, DisasterType, PriorityLabel } from "@/types";
-import { fetchLiveReports } from "@/lib/services/reports";
+import { fetchLiveReports, updateReportStatusLive, deleteReportLive } from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 
 interface AdminReportRow {
@@ -116,6 +117,10 @@ function LaporanContent() {
   const { activeUnit } = useAdmin();
   const [reports, setReports] = useState<AdminReportRow[]>(DEFAULT_REPORTS);
   const [isLoading, setIsLoading] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<AdminReportRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Filters
   const [searchCode, setSearchCode] = useState("");
@@ -125,6 +130,66 @@ function LaporanContent() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 5;
+
+  const handleDeleteReport = async () => {
+    if (!deleteConfirmTarget) return;
+    setIsDeleting(true);
+    const target = deleteConfirmTarget;
+
+    // Optimistic removal
+    setReports((prev) =>
+      prev.filter((r) => r.id !== target.id && r.tracking_code !== target.tracking_code)
+    );
+    setDeleteConfirmTarget(null);
+
+    try {
+      await deleteReportLive(target.id);
+      setToastMessage(`Laporan ${target.tracking_code} berhasil dihapus dari sistem.`);
+      setTimeout(() => setToastMessage(null), 3500);
+    } catch (err) {
+      console.warn("Gagal hapus laporan:", err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleQuickStatusChange = async (
+    reportId: string,
+    newStatus: ReportStatus,
+    e?: React.MouseEvent
+  ) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setUpdatingId(reportId);
+
+    // Optimistic update
+    setReports((prev) =>
+      prev.map((r) => (r.id === reportId ? { ...r, status: newStatus } : r))
+    );
+
+    const defaultNote =
+      newStatus === "ditindaklanjuti"
+        ? "Laporan ditandai dalam proses dan tim operasional dikerahkan ke lokasi."
+        : newStatus === "selesai"
+        ? "Penanganan laporan telah selesai ditangani secara tuntas oleh tim lapangan."
+        : `Status diperbarui menjadi ${newStatus}`;
+
+    try {
+      await updateReportStatusLive(reportId, newStatus, defaultNote, "Petugas Posko Terpadu");
+      setToastMessage(
+        `Laporan berhasil ditandai sebagai: ${
+          newStatus === "ditindaklanjuti" ? "DALAM PROSES" : newStatus.toUpperCase()
+        }`
+      );
+      setTimeout(() => setToastMessage(null), 3500);
+    } catch (err) {
+      console.warn("Gagal update status cepat:", err);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -223,11 +288,11 @@ function LaporanContent() {
     };
   }, []);
 
-  // Hitung jumlah untuk 4 KPI card
-  const totalCount = reports.length === 5 ? 142 : reports.length;
-  const menungguCount = reports.filter((r) => r.status === "diterima").length === 2 ? 28 : (reports.filter((r) => r.status === "diterima").length || 28);
-  const penangananCount = reports.filter((r) => r.status === "ditindaklanjuti" || r.status === "diverifikasi").length === 2 ? 67 : (reports.filter((r) => r.status === "ditindaklanjuti" || r.status === "diverifikasi").length || 67);
-  const selesaiCount = reports.filter((r) => r.status === "selesai").length === 1 ? 47 : (reports.filter((r) => r.status === "selesai").length || 47);
+  // Hitung jumlah untuk 4 KPI card secara dinamis
+  const totalCount = reports.length;
+  const menungguCount = reports.filter((r) => r.status === "diterima" || r.status === "diverifikasi").length;
+  const penangananCount = reports.filter((r) => r.status === "ditindaklanjuti").length;
+  const selesaiCount = reports.filter((r) => r.status === "selesai").length;
 
   // Filtered reports
   const filteredReports = useMemo(() => {
@@ -298,6 +363,23 @@ function LaporanContent() {
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-10">
+      {/* Toast Alert Feedback */}
+      {toastMessage && (
+        <div className="p-3.5 px-4 rounded-xl bg-emerald-50 border border-emerald-200/90 text-emerald-800 text-xs font-bold flex items-center justify-between shadow-2xs animate-in fade-in">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{toastMessage}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="text-[11px] text-emerald-600 hover:underline cursor-pointer ml-3 shrink-0"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
       {/* Top Header Halaman */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -525,8 +607,8 @@ function LaporanContent() {
                 <th scope="col" className="py-3.5 px-4 w-36">
                   Waktu Masuk
                 </th>
-                <th scope="col" className="py-3.5 px-4 w-16 text-center">
-                  Aksi
+                <th scope="col" className="py-3.5 px-4 w-60 text-right">
+                  Aksi & Tindak Lanjut
                 </th>
               </tr>
             </thead>
@@ -659,15 +741,76 @@ function LaporanContent() {
                         {row.time}
                       </td>
 
-                      {/* Aksi */}
-                      <td className="py-3 px-4 text-center">
-                        <Link
-                          href={`/admin/laporan/${row.id}`}
-                          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors inline-flex items-center justify-center"
-                          title="Lihat Detail & Tindak Lanjuti"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </Link>
+                      {/* Aksi & Tindak Lanjut */}
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                          {/* Tombol Tandai Proses */}
+                          {row.status !== "ditindaklanjuti" && row.status !== "selesai" && (
+                            <button
+                              type="button"
+                              disabled={updatingId === row.id}
+                              onClick={(e) => handleQuickStatusChange(row.id, "ditindaklanjuti", e)}
+                              className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#FFF7ED] text-[#EA580C] border border-amber-200/90 hover:bg-amber-100/80 transition-colors shadow-2xs inline-flex items-center gap-1 shrink-0 cursor-pointer disabled:opacity-60"
+                              title="Tandai laporan sedang diproses / ditindaklanjuti"
+                            >
+                              {updatingId === row.id ? (
+                                <RotateCw className="w-3 h-3 animate-spin text-amber-600" />
+                              ) : (
+                                <Clock className="w-3 h-3 text-amber-600" />
+                              )}
+                              <span>Tandai Proses</span>
+                            </button>
+                          )}
+
+                          {/* Tombol Tandai Selesai */}
+                          {row.status !== "selesai" ? (
+                            <button
+                              type="button"
+                              disabled={updatingId === row.id}
+                              onClick={(e) => handleQuickStatusChange(row.id, "selesai", e)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors shadow-2xs inline-flex items-center gap-1 shrink-0 cursor-pointer disabled:opacity-60 ${
+                                row.status === "ditindaklanjuti"
+                                  ? "bg-[#059669] hover:bg-[#047857] text-white"
+                                  : "bg-[#ECFDF5] text-[#059669] border border-emerald-200/90 hover:bg-emerald-100/80"
+                              }`}
+                              title="Tandai laporan telah selesai ditangani"
+                            >
+                              {updatingId === row.id ? (
+                                <RotateCw className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="w-3 h-3" />
+                              )}
+                              <span>Tandai Selesai</span>
+                            </button>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 inline-flex items-center gap-1">
+                              <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+                              <span>Selesai</span>
+                            </span>
+                          )}
+
+                          <Link
+                            href={`/admin/laporan/${row.id}`}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors inline-flex items-center justify-center shrink-0 ml-0.5"
+                            title="Buka Lembar Kerja Laporan"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </Link>
+
+                          {/* Tombol Hapus Laporan */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setDeleteConfirmTarget(row);
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors inline-flex items-center justify-center shrink-0 cursor-pointer"
+                            title="Hapus Laporan Ini"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -765,6 +908,63 @@ function LaporanContent() {
           </div>
         </div>
       </section>
+
+      {/* Modal Dialog Konfirmasi Hapus Laporan */}
+      {deleteConfirmTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4 animate-in fade-in zoom-in-95 border border-slate-100">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Konfirmasi Hapus Laporan
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Apakah Anda yakin ingin menghapus laporan{" "}
+                  <strong className="font-mono text-slate-800">
+                    {deleteConfirmTarget.tracking_code}
+                  </strong>{" "}
+                  (&quot;{deleteConfirmTarget.title}&quot;)?
+                </p>
+                <div className="mt-2.5 p-2.5 rounded-xl bg-rose-50/80 border border-rose-200/80 text-[11px] text-rose-700 font-medium leading-relaxed">
+                  ⚠️ Tindakan ini bersifat permanen dan akan menghapus seluruh data kejadian serta log tindak lanjut dari antrean posko.
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteConfirmTarget(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteReport}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+              >
+                {isDeleting ? (
+                  <>
+                    <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Menghapus...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Ya, Hapus Laporan</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
