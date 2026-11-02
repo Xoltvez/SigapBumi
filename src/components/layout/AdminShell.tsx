@@ -121,7 +121,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     }
   }, [isSirenMuted]);
 
-  // Sinkronisasi jumlah sinyal SOS aktif riil secara global di dashboard
+  // Sinkronisasi jumlah sinyal SOS aktif riil secara global di dashboard sesuai role
   useEffect(() => {
     if (isLoginPage) return;
     let isMounted = true;
@@ -130,7 +130,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       try {
         const alerts = await fetchLiveSosAlerts();
         if (isMounted && alerts) {
-          const activeOnly = alerts.filter((s) => s.status === "aktif");
+          const activeOnly = alerts.filter((s) => {
+            if (s.status !== "aktif") return false;
+            if (activeUnit === "pemerintahan" || activeUnit === "semua") return true;
+            if (activeUnit === "damkar") return s.assistance_type === "damkar";
+            if (activeUnit === "medis") return s.assistance_type === "medis";
+            if (activeUnit === "polisi") return s.assistance_type === "polisi";
+            // bnpb_bpbd
+            return (
+              s.assistance_type === "bnpb_bpbd" ||
+              (s.assistance_type as string) === "evakuasi" ||
+              (s.assistance_type as string) === "lainnya"
+            );
+          });
           setActiveSosCount(activeOnly.length);
         }
       } catch {
@@ -142,14 +154,27 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
     const handleIncomingSos = (e?: CustomEvent<{ id?: string; assistanceType?: string }>) => {
       syncSosCount();
-      triggerSiren();
-      setEmergencyNotice({
-        id: e?.detail?.id || `sos-${Date.now()}`,
-        text: `Panggilan Darurat Baru Masuk${
-          e?.detail?.assistanceType ? ` (Bantuan: ${e.detail.assistanceType.toUpperCase()})` : ""
-        }! Segera lakukan respons taktis.`,
-        time: "Baru saja",
-      });
+      const type = e?.detail?.assistanceType;
+      const isRelevant =
+        !type ||
+        activeUnit === "pemerintahan" ||
+        activeUnit === "semua" ||
+        (activeUnit === "damkar" && type === "damkar") ||
+        (activeUnit === "medis" && type === "medis") ||
+        (activeUnit === "polisi" && type === "polisi") ||
+        (activeUnit === "bnpb_bpbd" &&
+          (type === "bnpb_bpbd" || (type as string) === "evakuasi" || (type as string) === "lainnya"));
+
+      if (isRelevant) {
+        triggerSiren();
+        setEmergencyNotice({
+          id: e?.detail?.id || `sos-${Date.now()}`,
+          text: `Panggilan Darurat Baru Masuk${
+            e?.detail?.assistanceType ? ` (Bantuan: ${e.detail.assistanceType.toUpperCase()})` : ""
+          }! Segera lakukan respons taktis.`,
+          time: "Baru saja",
+        });
+      }
     };
 
     const handleLocalSync = () => {
@@ -206,7 +231,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       }
       supabase.removeChannel(channel);
     };
-  }, [isLoginPage, triggerSiren]);
+  }, [isLoginPage, triggerSiren, activeUnit]);
 
   const logout = () => {
     try {

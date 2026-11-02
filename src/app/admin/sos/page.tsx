@@ -96,7 +96,9 @@ export default function AdminSosPage() {
     if (activeUnit === "medis") return sosList.filter((x) => x.type === "medis");
     if (activeUnit === "polisi") return sosList.filter((x) => x.type === "polisi");
     // bnpb_bpbd
-    return sosList.filter((x) => x.type === "bnpb_bpbd" || (x.type as string) === "lainnya");
+    return sosList.filter(
+      (x) => x.type === "bnpb_bpbd" || (x.type as string) === "lainnya" || (x.type as string) === "evakuasi"
+    );
   }, [sosList, activeUnit]);
 
   // Dynamic Category counts
@@ -110,6 +112,11 @@ export default function AdminSosPage() {
   const countDitangani = useMemo(() => baseSosList.filter((x) => x.status === "ditangani").length, [baseSosList]);
   const countSelesai = useMemo(() => baseSosList.filter((x) => x.status === "selesai" || x.status === "palsu").length, [baseSosList]);
   const countTotal = baseSosList.length;
+
+  // Sinkronisasi badge SOS di sidebar sesuai dengan role unit aktif
+  useEffect(() => {
+    setActiveSosCount(countAktif);
+  }, [countAktif, setActiveSosCount]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -173,14 +180,12 @@ export default function AdminSosPage() {
       });
 
       setSosList(combined);
-      const activeCount = combined.filter((e) => e.status === "aktif").length;
-      setActiveSosCount(activeCount);
     } catch (err) {
       console.warn("Gagal sinkronisasi data SOS:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [setActiveSosCount, isSirenMuted]);
+  }, [isSirenMuted]);
 
   useEffect(() => {
     loadData();
@@ -245,7 +250,6 @@ export default function AdminSosPage() {
 
     // Optimistic UI removal
     setSosList((prev) => prev.filter((item) => item.id !== target.id));
-    setActiveSosCount((prev) => Math.max(0, prev - (target.status === "aktif" ? 1 : 0)));
 
     try {
       await deleteSosAlertLive(target.id, "Petugas Posko Terpadu");

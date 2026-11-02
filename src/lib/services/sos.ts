@@ -434,10 +434,17 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
         const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
         const phoneMatch = row.description ? (row.description as string).match(/\[Kontak:\s*([^\]]+)\]/) : null;
         const extractedPhone = phoneMatch ? phoneMatch[1].trim() : undefined;
-        let aType: SosAssistanceType = "damkar";
-        if (row.title?.includes("MEDIS")) aType = "medis";
-        else if (row.title?.includes("POLISI")) aType = "polisi";
-        else if (row.title?.includes("BNPB") || row.title?.includes("BPBD")) aType = "bnpb_bpbd";
+        let aType: SosAssistanceType = "bnpb_bpbd";
+        const titleUpper = (row.title || "").toUpperCase();
+        if (titleUpper.includes("DAMKAR") || row.disaster_type === "kebakaran" || row.disaster_type === "karhutla") {
+          aType = "damkar";
+        } else if (titleUpper.includes("MEDIS") || titleUpper.includes("KESEHATAN") || titleUpper.includes("AMBULANS")) {
+          aType = "medis";
+        } else if (titleUpper.includes("POLISI") || titleUpper.includes("KEAMANAN")) {
+          aType = "polisi";
+        } else if (titleUpper.includes("BNPB") || titleUpper.includes("BPBD") || titleUpper.includes("EVAKUASI") || titleUpper.includes("SAR")) {
+          aType = "bnpb_bpbd";
+        }
 
         supabaseItems.push({
           id: row.id,

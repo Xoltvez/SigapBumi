@@ -27,10 +27,12 @@ interface AdminSidebarProps {
 export function AdminSidebar({
   isCollapsed,
   onToggleCollapse,
-  activeSosCount = 0,
+  activeSosCount,
 }: AdminSidebarProps) {
   const pathname = usePathname();
-  const { logout, adminUser } = useAdmin();
+  const { logout, adminUser, activeSosCount: contextSosCount } = useAdmin();
+
+  const effectiveSosCount = activeSosCount !== undefined ? activeSosCount : (contextSosCount || 0);
 
   const navItems = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -39,7 +41,7 @@ export function AdminSidebar({
       href: "/admin/sos",
       label: "Monitor SOS",
       icon: Bell,
-      badge: activeSosCount > 0 ? `${activeSosCount}` : undefined,
+      badge: effectiveSosCount > 0 ? `${effectiveSosCount}` : undefined,
     },
     { href: "/admin/peta", label: "Peta Operasional", icon: MapPin },
     { href: "/admin/statistik", label: "Rekap & Statistik", icon: BarChart2 },
