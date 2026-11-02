@@ -16,7 +16,7 @@ export const metadata = {
 
 const SAMPLE_MY_REPORTS = [
   {
-    tracking_code: "LPR-8F3K2Q",
+    tracking_code: "SB-2026-8F3K",
     title: "Banjir Luapan Kali Semanan 60 cm",
     location: "Kalideres, Jakarta Barat",
     date: "27 Okt 2026, 14:15 WIB",
@@ -25,7 +25,7 @@ const SAMPLE_MY_REPORTS = [
     statusColor: "bg-warning-soft text-warning-text border-warning/30",
   },
   {
-    tracking_code: "LPR-4K9W1Z",
+    tracking_code: "SB-2026-4K9W",
     title: "Tebing Penahan Longsor Ambrol",
     location: "Cisarua, Kab. Bogor",
     date: "27 Okt 2026, 15:30 WIB",

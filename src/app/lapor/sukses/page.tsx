@@ -16,7 +16,7 @@ import {
 
 function SuksesContent() {
   const searchParams = useSearchParams();
-  const kode = searchParams.get("kode") || "LPR-8F3K2Q";
+  const kode = searchParams.get("kode") || "SB-2026-8F3K";
   const statusParam = searchParams.get("status");
   const isLocalOnly = statusParam === "local";
   const [copied, setCopied] = useState(false);

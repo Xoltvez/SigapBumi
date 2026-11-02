@@ -18,7 +18,7 @@ export const metadata = {
 const SAMPLE_NOTIFICATIONS = [
   {
     id: "notif-1",
-    tracking_code: "LPR-8F3K2Q",
+    tracking_code: "SB-2026-8F3K",
     title: "Laporan Banjir Telah Ditindaklanjuti",
     body: "Regu Damkar & TRC BPBD Sektor Barat telah tiba di lokasi Kalideres dengan 2 perahu karet evakuasi.",
     time: "25 menit lalu",
@@ -27,7 +27,7 @@ const SAMPLE_NOTIFICATIONS = [
   },
   {
     id: "notif-2",
-    tracking_code: "LPR-4K9W1Z",
+    tracking_code: "SB-2026-4K9W",
     title: "Laporan Longsor Telah Diverifikasi",
     body: "Petugas posko telah memverifikasi laporan tebing ambrol di Cisarua. Berkoordinasi dengan tim alat berat.",
     time: "1 jam lalu",
@@ -36,7 +36,7 @@ const SAMPLE_NOTIFICATIONS = [
   },
   {
     id: "notif-3",
-    tracking_code: "LPR-2X7M9P",
+    tracking_code: "SB-2026-2X7M",
     title: "Penanganan Kebakaran Dinyatakan Selesai",
     body: "Api di pemukiman Tambora telah padam sepenuhnya dan tahap pendinginan selesai.",
     time: "4 jam lalu",

@@ -39,9 +39,9 @@ interface ReportDetail {
 }
 
 const SAMPLE_REPORTS: Record<string, ReportDetail> = {
-  "LPR-8F3K2Q": {
+  "SB-2026-8F3K": {
     id: "rep-1",
-    tracking_code: "LPR-8F3K2Q",
+    tracking_code: "SB-2026-8F3K",
     disaster_type: "banjir",
     title: "Banjir Luapan Kali Semanan Tinggi 50-70 cm",
     description:
@@ -76,9 +76,9 @@ const SAMPLE_REPORTS: Record<string, ReportDetail> = {
       },
     ],
   },
-  "LPR-4K9W1Z": {
+  "SB-2026-4K9W": {
     id: "rep-11",
-    tracking_code: "LPR-4K9W1Z",
+    tracking_code: "SB-2026-4K9W",
     disaster_type: "longsor",
     title: "Tanah Longsor Menutup Sebagian Badan Jalan Desa",
     description:
@@ -106,9 +106,9 @@ const SAMPLE_REPORTS: Record<string, ReportDetail> = {
       },
     ],
   },
-  "LPR-2X7M9P": {
+  "SB-2026-2X7M": {
     id: "rep-3",
-    tracking_code: "LPR-2X7M9P",
+    tracking_code: "SB-2026-2X7M",
     disaster_type: "kebakaran",
     title: "Kebakaran Rumah Tinggal Padat Penduduk",
     description:
@@ -149,13 +149,18 @@ const SAMPLE_REPORTS: Record<string, ReportDetail> = {
   },
 };
 
+// Aliases kompatibilitas mundur untuk format lama
+SAMPLE_REPORTS["LPR-8F3K2Q"] = SAMPLE_REPORTS["SB-2026-8F3K"];
+SAMPLE_REPORTS["LPR-4K9W1Z"] = SAMPLE_REPORTS["SB-2026-4K9W"];
+SAMPLE_REPORTS["LPR-2X7M9P"] = SAMPLE_REPORTS["SB-2026-2X7M"];
+
 function LacakContent() {
   const searchParams = useSearchParams();
   const urlKode = searchParams.get("kode") || "";
 
-  const [searchInput, setSearchInput] = useState(urlKode || "LPR-8F3K2Q");
+  const [searchInput, setSearchInput] = useState(urlKode || "SB-2026-8F3K");
   const [activeReport, setActiveReport] = useState<ReportDetail | null>(
-    urlKode ? null : SAMPLE_REPORTS["LPR-8F3K2Q"]
+    urlKode ? null : SAMPLE_REPORTS["SB-2026-8F3K"]
   );
   const [hasSearched, setHasSearched] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -324,7 +329,7 @@ function LacakContent() {
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Contoh: LPR-8F3K2Q"
+              placeholder="Contoh: SB-2026-8F3K atau LPR-8F3K2Q"
               className="w-full h-12 pl-12 pr-4 rounded-md border border-line bg-surface text-ink text-base font-mono uppercase placeholder:normal-case placeholder:font-sans focus-visible:outline-primary focus-visible:border-primary shadow-sm"
             />
           </div>
@@ -342,24 +347,24 @@ function LacakContent() {
           <span className="text-ink-muted">Contoh kode demo:</span>
           <button
             type="button"
-            onClick={() => selectPreset("LPR-8F3K2Q")}
+            onClick={() => selectPreset("SB-2026-8F3K")}
             className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
           >
-            LPR-8F3K2Q (Banjir)
+            SB-2026-8F3K (Banjir)
           </button>
           <button
             type="button"
-            onClick={() => selectPreset("LPR-4K9W1Z")}
+            onClick={() => selectPreset("SB-2026-4K9W")}
             className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
           >
-            LPR-4K9W1Z (Longsor)
+            SB-2026-4K9W (Longsor)
           </button>
           <button
             type="button"
-            onClick={() => selectPreset("LPR-2X7M9P")}
+            onClick={() => selectPreset("SB-2026-2X7M")}
             className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
           >
-            LPR-2X7M9P (Kebakaran)
+            SB-2026-2X7M (Kebakaran)
           </button>
           <button
             type="button"
@@ -527,11 +532,11 @@ function LacakContent() {
             Kode Tracking Tidak Ditemukan
           </h2>
           <p className="text-sm text-ink-soft mb-6 leading-relaxed">
-            Tidak ada laporan bencana dengan kode <strong>&quot;{searchInput}&quot;</strong> di sistem. Pastikan format kode sudah benar (contoh: <code>LPR-8F3K2Q</code>) atau pilih salah satu kode contoh di atas.
+            Tidak ada laporan bencana dengan kode <strong>&quot;{searchInput}&quot;</strong> di sistem. Pastikan format kode sudah benar (contoh: <code>SB-2026-8F3K</code> atau <code>LPR-8F3K2Q</code>) atau pilih salah satu kode contoh di atas.
           </p>
           <button
             type="button"
-            onClick={() => selectPreset("LPR-8F3K2Q")}
+            onClick={() => selectPreset("SB-2026-8F3K")}
             className="h-11 px-5 rounded-md bg-ink text-white font-semibold text-sm hover:bg-ink-soft transition-colors min-h-[44px]"
           >
             Tampilkan Contoh Laporan
