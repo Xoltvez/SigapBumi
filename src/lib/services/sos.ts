@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase/client";
 import { parsePostGISPoint } from "@/lib/geo";
 import type { SosAssistanceType } from "@/types";
-import { removeEmojis } from "@/lib/services/reports";
+import { removeEmojis, saveLocalReport } from "@/lib/services/reports";
 
 export interface LiveSosItem {
   id: string;
@@ -202,6 +202,25 @@ export async function sendSosAlert(params: {
     if (repError) {
       console.warn("sendSosAlert reports insert info:", repError.message);
     }
+
+    try {
+      saveLocalReport({
+        id: generatedId,
+        tracking_code: trackingCode,
+        disaster_type: disasterType,
+        target_agency: params.assistanceType || "damkar",
+        title: `PANGGILAN DARURAT SOS (${(params.assistanceType || "damkar").toUpperCase()})`,
+        description: formattedNote,
+        address: `Titik Darurat Warga (${params.lat.toFixed(4)}, ${params.lng.toFixed(4)})`,
+        lat: params.lat,
+        lng: params.lng,
+        status: "diterima",
+        priority: "tinggi",
+        confirmation_count: 1,
+        created_at: "Baru saja",
+        is_demo: false,
+      });
+    } catch {}
   } catch (err) {
     console.warn("sendSosAlert reports network error:", err);
   }
