@@ -22,7 +22,12 @@ import {
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import type { ReportStatus, DisasterType, PriorityLabel } from "@/types";
-import { fetchLiveReports, updateReportStatusLive, deleteReportLive } from "@/lib/services/reports";
+import {
+  fetchLiveReports,
+  updateReportStatusLive,
+  deleteReportLive,
+  removeEmojis,
+} from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 
 interface AdminReportRow {
@@ -682,12 +687,12 @@ function LaporanContent() {
                           href={`/admin/laporan/${row.id}`}
                           className="font-bold text-slate-900 group-hover:text-orange-600 transition-colors flex items-center gap-1.5"
                         >
-                          {isSosRow ? (
-                            <span className="text-red-500 text-xs shrink-0">🌋</span>
-                          ) : (
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                          )}
-                          <span className="truncate">{row.title}</span>
+                          <AlertTriangle
+                            className={`w-3.5 h-3.5 shrink-0 ${
+                              isSosRow ? "text-rose-500" : "text-amber-500"
+                            }`}
+                          />
+                          <span className="truncate">{removeEmojis(row.title)}</span>
                         </Link>
                         <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 truncate">
                           <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
@@ -929,7 +934,7 @@ function LaporanContent() {
                   (&quot;{deleteConfirmTarget.title}&quot;)?
                 </p>
                 <div className="mt-2.5 p-2.5 rounded-xl bg-rose-50/80 border border-rose-200/80 text-[11px] text-rose-700 font-medium leading-relaxed">
-                  ⚠️ Tindakan ini bersifat permanen dan akan menghapus seluruh data kejadian serta log tindak lanjut dari antrean posko.
+                  Tindakan ini bersifat permanen dan akan menghapus seluruh data kejadian serta log tindak lanjut dari antrean posko.
                 </div>
               </div>
             </div>

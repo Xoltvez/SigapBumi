@@ -15,8 +15,12 @@ import {
   Siren,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
-import type { ReportStatus, DisasterType, SosAssistanceType, PriorityLabel } from "@/types";
-import { fetchLiveReports, updateReportStatusLive, DEFAULT_MOCK_REPORTS } from "@/lib/services/reports";
+import {
+  fetchLiveReports,
+  updateReportStatusLive,
+  DEFAULT_MOCK_REPORTS,
+  removeEmojis,
+} from "@/lib/services/reports";
 import { fetchLiveSosAlerts } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
 
@@ -133,8 +137,8 @@ export default function AdminRingkasanPage() {
               tracking_code: r.tracking_code,
               disaster_type: r.disaster_type,
               target_agency: r.target_agency,
-              title: r.title,
-              location: r.address,
+              title: removeEmojis(r.title),
+              location: removeEmojis(r.address),
               time: r.created_at,
               status: r.status,
               priority: pLabel,

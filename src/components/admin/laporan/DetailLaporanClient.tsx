@@ -29,6 +29,7 @@ import {
   updateReportStatusLive,
   recordAuditLog,
   deleteReportLive,
+  removeEmojis,
 } from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 
@@ -179,8 +180,8 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
             id: found.id,
             tracking_code: found.tracking_code,
             disaster_type: found.disaster_type,
-            title: found.title,
-            description: found.description,
+            title: removeEmojis(found.title),
+            description: removeEmojis(found.description),
             address: found.address,
             lat: found.lat,
             lng: found.lng,
@@ -403,7 +404,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
       {/* Toast Feedback */}
       {toastMessage && (
         <div className="p-3.5 rounded-md bg-success-soft border border-success/30 text-success-text text-xs font-bold flex items-center justify-between shadow-xs">
-          <span>✓ {toastMessage}</span>
+          <span>{toastMessage}</span>
           <button
             type="button"
             onClick={() => setToastMessage(null)}
@@ -657,7 +658,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
               {report.status === "selesai" && (
                 <div className="space-y-2">
                   <div className="p-3 bg-success-soft border border-success/30 rounded-md text-success-text text-xs text-center font-bold">
-                    ✓ Penanganan Kasus Selesai (Kasus Ditutup)
+                    Penanganan Kasus Selesai (Kasus Ditutup)
                   </div>
                   <button
                     type="button"
@@ -672,7 +673,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
               {report.status === "ditolak" && (
                 <div className="space-y-2">
                   <div className="p-3 bg-danger-soft border border-danger/30 rounded-md text-danger-text text-xs text-center font-bold">
-                    ✕ Laporan Ditolak / Tidak Valid
+                    Laporan Ditolak / Tidak Valid
                   </div>
                   <button
                     type="button"

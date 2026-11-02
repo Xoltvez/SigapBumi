@@ -88,7 +88,7 @@ export default function AdminPetaPage() {
             id: s.id,
             tracking_code: s.id.startsWith("SOS") ? s.id : `SOS-${s.id.slice(0, 4).toUpperCase()}`,
             disaster_type: (s.assistance_type === "damkar" ? "kebakaran" : "lainnya") as DisasterType,
-            title: `🚨 Panggilan Darurat: Bantuan ${s.assistance_type.toUpperCase()}`,
+            title: `Panggilan Darurat: Bantuan ${s.assistance_type.toUpperCase()}`,
             location_name: s.address,
             lat: s.lat,
             lng: s.lng,

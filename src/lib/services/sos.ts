@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase/client";
 import { parsePostGISPoint } from "@/lib/geo";
 import type { SosAssistanceType } from "@/types";
+import { removeEmojis } from "@/lib/services/reports";
 
 export interface LiveSosItem {
   id: string;
@@ -188,7 +189,7 @@ export async function sendSosAlert(params: {
       id: generatedId,
       tracking_code: trackingCode,
       disaster_type: disasterType,
-      title: `🚨 PANGGILAN DARURAT SOS (${(params.assistanceType || "damkar").toUpperCase()})`,
+      title: `PANGGILAN DARURAT SOS (${(params.assistanceType || "damkar").toUpperCase()})`,
       description: formattedNote,
       location: `POINT(${params.lng} ${params.lat})`,
       address: `Titik Darurat Warga (${params.lat.toFixed(4)}, ${params.lng.toFixed(4)})`,
@@ -303,7 +304,7 @@ export async function updateSosAssistanceType(
       .from("reports")
       .update({
         disaster_type: disasterType,
-        title: `🚨 PANGGILAN DARURAT SOS (${assistanceType.toUpperCase()})`,
+        title: `PANGGILAN DARURAT SOS (${assistanceType.toUpperCase()})`,
         description: existing?.note || `Panggilan Darurat Warga - Butuh Bantuan ${assistanceType.toUpperCase()}`,
         updated_at: new Date().toISOString(),
       })

@@ -53,6 +53,20 @@ export function getLocalReports(): LiveReportItem[] {
 }
 
 /**
+ * Menghapus segala bentuk emoticon / emoji dari string
+ */
+export function removeEmojis(str: string): string {
+  if (!str) return "";
+  return str
+    .replace(
+      /[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\uFE0E\uFE0F\u200D]/gu,
+      ""
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * Menyimpan laporan baru warga ke cache lokal perangkat
  */
 export function saveLocalReport(report: LiveReportItem): void {
@@ -171,9 +185,9 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
           tracking_code: row.tracking_code,
           disaster_type: disaster,
           target_agency: agency,
-          title: row.title,
-          description: row.description,
-          address: row.address || "Lokasi Koordinat GPS Terdeteksi",
+          title: removeEmojis(row.title),
+          description: removeEmojis(row.description),
+          address: removeEmojis(row.address) || "Lokasi Koordinat GPS Terdeteksi",
           lat: coords.lat,
           lng: coords.lng,
           status: row.status as ReportStatus,
@@ -303,9 +317,9 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         tracking_code: data.tracking_code,
         disaster_type: disaster,
         target_agency: agency,
-        title: data.title,
-        description: data.description,
-        address: data.address || "Lokasi Koordinat GPS",
+        title: removeEmojis(data.title),
+        description: removeEmojis(data.description),
+        address: removeEmojis(data.address) || "Lokasi Koordinat GPS",
         lat: coords.lat,
         lng: coords.lng,
         status: data.status as ReportStatus,

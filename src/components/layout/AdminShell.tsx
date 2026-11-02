@@ -260,7 +260,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </div>
               <div>
                 <h4 className="font-extrabold text-sm uppercase tracking-wide flex items-center gap-1.5">
-                  <span>🚨 SIAGA SOS MASUK</span>
+                  <span>SIAGA SOS MASUK</span>
                   <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono">
                     {emergencyNotice.time}
                   </span>
