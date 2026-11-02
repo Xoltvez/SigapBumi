@@ -26,6 +26,13 @@ interface UnitOption {
 
 const UNIT_OPTIONS: UnitOption[] = [
   {
+    id: "pemerintahan",
+    name: "Pemerintahan (Mencakup Semua Data Masuk)",
+    shortName: "Pemerintahan",
+    demoNip: "PEMDA-PST-001",
+    demoOfficer: "Drs. Tri Wahyudi (Koordinator Operasi)",
+  },
+  {
     id: "bnpb_bpbd",
     name: "BNPB / BPBD (Badan Penanggulangan Bencana)",
     shortName: "BPBD Komando",
@@ -60,8 +67,8 @@ function AdminLoginContent() {
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get("redirect") || "/admin";
 
-  const [selectedUnit, setSelectedUnit] = useState<string>("bnpb_bpbd");
-  const [nip, setNip] = useState<string>("BPBD-JKT-042");
+  const [selectedUnit, setSelectedUnit] = useState<string>("pemerintahan");
+  const [nip, setNip] = useState<string>("PEMDA-PST-001");
   const [password, setPassword] = useState<string>("admin123");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(true);

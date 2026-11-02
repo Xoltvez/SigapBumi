@@ -302,7 +302,7 @@ function LaporanContent() {
   // Filtered reports
   const filteredReports = useMemo(() => {
     return reports.filter((r) => {
-      if (activeUnit !== "semua" && activeUnit !== "bnpb_bpbd") {
+      if (activeUnit !== "semua" && activeUnit !== "bnpb_bpbd" && activeUnit !== "pemerintahan") {
         const isSos = r.tracking_code.startsWith("SOS") || r.title.includes("SOS");
         if (!isSos) {
           const unitMap: Record<string, DisasterType[]> = {

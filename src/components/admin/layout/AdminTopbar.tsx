@@ -121,7 +121,9 @@ export function AdminTopbar({
         {/* Agency Unit Badge (Terkunci sesuai role saat login, tidak bisa diganti di topbar) */}
         <div
           title={`Akses Terkunci: Masuk sebagai ${
-            activeUnit === "damkar"
+            activeUnit === "pemerintahan" || activeUnit === "semua"
+              ? "Pemerintahan (Mencakup Seluruh Data Laporan & SOS Masuk)"
+              : activeUnit === "damkar"
               ? "Dinas Pemadam Kebakaran"
               : activeUnit === "medis"
               ? "Dinas Kesehatan / Medis"
@@ -135,7 +137,9 @@ export function AdminTopbar({
             <span className="font-extrabold text-[9px] leading-none">▲</span>
           </div>
           <span>
-            {activeUnit === "bnpb_bpbd"
+            {activeUnit === "pemerintahan" || activeUnit === "semua"
+              ? "Pemerintahan"
+              : activeUnit === "bnpb_bpbd"
               ? "BNPB / BPBD"
               : activeUnit === "damkar"
               ? "Dinas Damkar"
@@ -143,7 +147,7 @@ export function AdminTopbar({
               ? "Medis / Dinkes"
               : activeUnit === "polisi"
               ? "Polri"
-              : "BNPB / BPBD"}
+              : "Pemerintahan"}
           </span>
         </div>
 

@@ -252,7 +252,7 @@ export default function AdminSosPage() {
   const visibleSosList = useMemo(() => {
     return sosList.filter((item) => {
       // 1. Filter Instansi Unit
-      if (activeUnit !== "semua" && activeUnit !== "bnpb_bpbd") {
+      if (activeUnit !== "semua" && activeUnit !== "bnpb_bpbd" && activeUnit !== "pemerintahan") {
         if (activeUnit === "damkar" && item.type !== "damkar") return false;
         if (activeUnit === "medis" && item.type !== "medis") return false;
         if (activeUnit === "polisi" && item.type !== "polisi") return false;
