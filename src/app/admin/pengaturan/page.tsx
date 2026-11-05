@@ -590,6 +590,67 @@ export default function AdminPengaturanPage() {
                 </div>
               </div>
             </div>
+
+            {/* Keamanan Sesi & Auto-Logout */}
+            <div className="p-6 md:p-8 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-orange-50 text-[#EA580C] border border-orange-100/80">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">
+                      Keamanan Sesi & Auto-Logout
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Protokol keamanan inaktivitas (idle) dan pemutusan sesi peramban
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Batas Waktu Idle (Inaktivitas)
+                  </label>
+                  <select
+                    value={settings.sessionIdleTimeoutMinutes || 15}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        sessionIdleTimeoutMinutes: parseInt(e.target.value, 10),
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 focus:border-[#EA580C] font-semibold text-slate-800 cursor-pointer"
+                  >
+                    <option value={5}>5 Menit (Keamanan Ketat)</option>
+                    <option value={10}>10 Menit</option>
+                    <option value={15}>15 Menit (Standar Rekomendasi)</option>
+                    <option value={30}>30 Menit</option>
+                    <option value={60}>60 Menit (Operasional Khusus)</option>
+                  </select>
+                  <p className="text-[11px] text-slate-400 mt-1 leading-normal">
+                    Peringatan akan muncul 60 detik sebelum sesi ditutup otomatis jika tidak ada aktivitas.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Logout Saat Keluar Website
+                  </label>
+                  <div className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/70 text-slate-700 flex items-center justify-between">
+                    <span className="font-semibold text-xs">Tutup Tab / Peramban</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-extrabold border border-emerald-200">
+                      Selalu Aktif
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1 leading-normal">
+                    Sesi diterminasi seketika saat peramban atau tab posko ditutup demi kepatuhan SOP BPBD.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Right Preview Card */}

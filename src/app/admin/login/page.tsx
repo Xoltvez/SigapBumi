@@ -14,7 +14,11 @@ import {
   AlertCircle,
   CheckCircle2,
   Building2,
+  Clock,
+  ShieldAlert,
+  Shield,
 } from "lucide-react";
+import { setAdminSession, type AdminAuthSession } from "@/lib/adminAuth";
 
 interface UnitOption {
   id: string;
@@ -66,6 +70,7 @@ function AdminLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get("redirect") || "/admin";
+  const reason = searchParams.get("reason");
 
   const [selectedUnit, setSelectedUnit] = useState<string>("pemerintahan");
   const [nip, setNip] = useState<string>("PEMDA-PST-001");
@@ -75,6 +80,20 @@ function AdminLoginContent() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [successMsg, setSuccessMsg] = useState<string>("");
+
+  // Muat pilihan instansi yang sebelumnya diingat jika ada
+  React.useEffect(() => {
+    try {
+      const savedUnit = localStorage.getItem("sigapbumi_remember_unit");
+      if (savedUnit && UNIT_OPTIONS.some((u) => u.id === savedUnit)) {
+        setSelectedUnit(savedUnit);
+        const target = UNIT_OPTIONS.find((u) => u.id === savedUnit);
+        if (target) {
+          setNip(target.demoNip);
+        }
+      }
+    } catch {}
+  }, []);
 
   const handleUnitChange = (unitId: string) => {
     setSelectedUnit(unitId);
@@ -105,7 +124,7 @@ function AdminLoginContent() {
       UNIT_OPTIONS.find((u) => u.id === selectedUnit) || UNIT_OPTIONS[0];
 
     setTimeout(() => {
-      const sessionPayload = {
+      const sessionPayload: AdminAuthSession = {
         nip: nip.trim(),
         name: activeUnitData.demoOfficer,
         email: `${selectedUnit}@sigapbumi.go.id`,
@@ -116,22 +135,21 @@ function AdminLoginContent() {
       };
 
       try {
-        localStorage.setItem(
-          "sigapbumi_admin_auth",
-          JSON.stringify(sessionPayload)
-        );
+        setAdminSession(sessionPayload);
         if (rememberMe) {
           localStorage.setItem("sigapbumi_remember_unit", selectedUnit);
+        } else {
+          localStorage.removeItem("sigapbumi_remember_unit");
         }
       } catch (err) {
         console.warn("Storage error", err);
       }
 
-      setSuccessMsg(`Berhasil diverifikasi. Mengalihkan ke dashboard...`);
+      setSuccessMsg(`Berhasil diverifikasi. Mengalihkan ke dashboard posko...`);
       setTimeout(() => {
         router.push(redirectPath);
-      }, 500);
-    }, 400);
+      }, 400);
+    }, 350);
   };
 
   return (
@@ -169,6 +187,50 @@ function AdminLoginContent() {
               Silakan masuk ke sistem posko komando SigapBumi
             </p>
           </div>
+
+          {/* Security & Reason Alerts */}
+          {reason === "idle" && !errorMsg && !successMsg && (
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5 shadow-2xs">
+              <Clock className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold">Sesi Berakhir Otomatis (Idle)</p>
+                <p className="text-[11px] text-amber-700 leading-normal">
+                  Sesi posko Anda ditutup otomatis karena tidak ada aktivitas (inactivity timeout) demi menjaga keamanan komando. Silakan masuk kembali.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {reason === "left" && !errorMsg && !successMsg && (
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs flex items-start gap-2.5 shadow-2xs">
+              <ShieldAlert className="w-4 h-4 shrink-0 text-slate-600 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold">Sesi Telah Berakhir</p>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Sesi aktif telah terputus saat jendela atau peramban ditutup. Silakan masuk kembali untuk melanjutkan tugas posko.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {reason === "unauthorized" && !errorMsg && !successMsg && (
+            <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-start gap-2.5 shadow-2xs">
+              <Shield className="w-4 h-4 shrink-0 text-blue-600 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold">Akses Terproteksi</p>
+                <p className="text-[11px] text-blue-700 leading-normal">
+                  Halaman pusat komando memerlukan verifikasi akun petugas posko. Silakan lakukan otentikasi login.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {reason === "manual" && !errorMsg && !successMsg && (
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              <span className="font-medium">Anda telah berhasil keluar dari posko komando.</span>
+            </div>
+          )}
 
           {/* Feedback Alerts */}
           {errorMsg && (
@@ -279,7 +341,7 @@ function AdminLoginContent() {
               </div>
             </div>
 
-            {/* Remember Me */}
+            {/* Remember Unit Preference */}
             <div className="flex items-center justify-between pt-1">
               <label className="inline-flex items-center gap-2 cursor-pointer select-none">
                 <input
@@ -288,7 +350,7 @@ function AdminLoginContent() {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="w-4 h-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
                 />
-                <span className="text-xs text-slate-600">Ingat sesi saya</span>
+                <span className="text-xs text-slate-600">Ingat pilihan instansi di perangkat ini</span>
               </label>
             </div>
 

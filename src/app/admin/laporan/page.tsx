@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Search,
   RotateCw,
+  RotateCcw,
   Waves,
   Mountain,
   Flame,
@@ -681,11 +682,11 @@ function LaporanContent() {
         </div>
       </div>
 
-      {/* Search & Filter Bar (Responsif dan Tidak Terpotong) */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3.5">
-          {/* Search Input Box */}
-          <div className="relative w-full xl:w-72 2xl:w-80 shrink-0">
+      {/* Search & Filter Bar (Tata Letak Sejajar, Terstruktur, dan Rapi) */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4">
+        {/* Baris 1: Kolom Pencarian & Ringkasan Hasil */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-lg">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
@@ -694,8 +695,8 @@ function LaporanContent() {
                 setSearchCode(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Cari laporan..."
-              className="w-full h-10 pl-10 pr-9 rounded-xl bg-slate-50/80 hover:bg-slate-100/60 focus:bg-white border border-slate-200/90 text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
+              placeholder="Cari kode tracking (contoh: SOS-1399), judul bencana, atau lokasi..."
+              className="w-full h-10 pl-10 pr-9 rounded-xl bg-slate-50/90 hover:bg-slate-100/70 focus:bg-white border border-slate-200 text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
             />
             {searchCode && (
               <button
@@ -705,100 +706,17 @@ function LaporanContent() {
                   setCurrentPage(1);
                 }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-200/60 cursor-pointer"
-                title="Hapus pencarian"
+                title="Hapus kata kunci"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* Chips: Status & Prioritas (Semua opsi tampil utuh & responsif wrap) */}
-          <div className="flex items-center gap-2.5 sm:gap-3 text-xs flex-wrap">
-            {/* GRUP 1: STATUS PENANGANAN */}
-            <div className="flex items-center gap-1.5 bg-slate-50/80 p-1 rounded-xl border border-slate-200/70 flex-wrap">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] uppercase tracking-wider shrink-0">
-                <Clock className="w-3 h-3 text-blue-600" />
-                <span>Status</span>
-              </span>
-              <div className="flex items-center gap-1 flex-wrap">
-                {(
-                  [
-                    ["semua", "Semua"],
-                    ["diterima", "Diterima"],
-                    ["diverifikasi", "Diverifikasi"],
-                    ["ditindaklanjuti", "Ditindaklanjuti"],
-                    ["selesai", "Selesai"],
-                    ["ditolak", "Ditolak"],
-                  ] as const
-                ).map(([val, label]) => {
-                  const active = selectedStatus === val;
-                  return (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => {
-                        setSelectedStatus(val);
-                        setCurrentPage(1);
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all cursor-pointer ${
-                        active
-                          ? "bg-blue-600 text-white shadow-2xs"
-                          : "bg-white text-slate-600 hover:bg-slate-100/80 border border-slate-200/80"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* GRUP 2: PRIORITAS URGENSI */}
-            <div className="flex items-center gap-1.5 bg-slate-50/80 p-1 rounded-xl border border-slate-200/70 flex-wrap">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-50 text-rose-700 font-bold text-[11px] uppercase tracking-wider shrink-0">
-                <AlertTriangle className="w-3 h-3 text-rose-600" />
-                <span>Prioritas</span>
-              </span>
-              <div className="flex items-center gap-1 flex-wrap">
-                {(
-                  [
-                    { val: "semua", label: "Semua", dot: null, activeClass: "bg-slate-900 text-white" },
-                    { val: "Kritis", label: "Kritis", dot: "bg-rose-500", activeClass: "bg-rose-600 text-white shadow-2xs" },
-                    { val: "Tinggi", label: "Tinggi", dot: "bg-amber-500", activeClass: "bg-amber-600 text-white shadow-2xs" },
-                    { val: "Sedang", label: "Sedang", dot: "bg-blue-500", activeClass: "bg-blue-600 text-white shadow-2xs" },
-                    { val: "Rendah", label: "Rendah", dot: "bg-emerald-500", activeClass: "bg-emerald-600 text-white shadow-2xs" },
-                  ] as const
-                ).map(({ val, label, dot, activeClass }) => {
-                  const active = selectedPriority === val;
-                  return (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => {
-                        setSelectedPriority(val);
-                        setCurrentPage(1);
-                      }}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all cursor-pointer ${
-                        active
-                          ? activeClass
-                          : "bg-white text-slate-700 hover:bg-slate-100/80 border border-slate-200/80"
-                      }`}
-                    >
-                      {dot && (
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                            active ? "bg-white ring-1 ring-white/50" : dot
-                          }`}
-                        />
-                      )}
-                      <span>{label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Reset Filter Button */}
+          <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+            <span className="text-xs text-slate-500 font-medium">
+              Menampilkan <span className="font-bold text-slate-900">{filteredReports.length}</span> dari {totalCount} laporan
+            </span>
             {(selectedStatus !== "semua" || selectedPriority !== "semua" || searchCode) && (
               <button
                 type="button"
@@ -808,12 +726,99 @@ function LaporanContent() {
                   setSearchCode("");
                   setCurrentPage(1);
                 }}
-                className="text-[11px] text-slate-500 hover:text-orange-600 font-semibold px-2.5 py-1 rounded-lg hover:bg-slate-100 border border-slate-200/80 transition-colors inline-flex items-center gap-1 cursor-pointer shrink-0"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 transition-colors cursor-pointer"
               >
-                <X className="w-3 h-3" />
-                <span>Reset</span>
+                <X className="w-3.5 h-3.5" />
+                <span>Reset Filter</span>
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Baris 2: Tombol Filter Status & Prioritas Sejajar */}
+        <div className="border-t border-slate-100 pt-3.5 flex flex-col gap-2.5">
+          {/* Baris Status */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="w-24 shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] uppercase tracking-wider border border-blue-100/80 justify-center">
+              <Clock className="w-3 h-3 text-blue-600" />
+              <span>Status</span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {(
+                [
+                  ["semua", "Semua"],
+                  ["diterima", "Diterima"],
+                  ["diverifikasi", "Diverifikasi"],
+                  ["ditindaklanjuti", "Ditindaklanjuti"],
+                  ["selesai", "Selesai"],
+                  ["ditolak", "Ditolak"],
+                ] as const
+              ).map(([val, label]) => {
+                const active = selectedStatus === val;
+                return (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => {
+                      setSelectedStatus(val);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                      active
+                        ? "bg-blue-600 text-white shadow-2xs font-bold"
+                        : "bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/80"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Baris Prioritas */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="w-24 shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-bold text-[11px] uppercase tracking-wider border border-rose-100/80 justify-center">
+              <AlertTriangle className="w-3 h-3 text-rose-600" />
+              <span>Prioritas</span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {(
+                [
+                  { val: "semua", label: "Semua", dot: null, activeClass: "bg-slate-900 text-white shadow-2xs font-bold" },
+                  { val: "Kritis", label: "Kritis", dot: "bg-rose-500", activeClass: "bg-rose-600 text-white shadow-2xs font-bold" },
+                  { val: "Tinggi", label: "Tinggi", dot: "bg-amber-500", activeClass: "bg-amber-600 text-white shadow-2xs font-bold" },
+                  { val: "Sedang", label: "Sedang", dot: "bg-blue-500", activeClass: "bg-blue-600 text-white shadow-2xs font-bold" },
+                  { val: "Rendah", label: "Rendah", dot: "bg-emerald-500", activeClass: "bg-emerald-600 text-white shadow-2xs font-bold" },
+                ] as const
+              ).map(({ val, label, dot, activeClass }) => {
+                const active = selectedPriority === val;
+                return (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPriority(val);
+                      setCurrentPage(1);
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                      active
+                        ? activeClass
+                        : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80"
+                    }`}
+                  >
+                    {dot && (
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          active ? "bg-white ring-2 ring-white/30" : dot
+                        }`}
+                      />
+                    )}
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -863,6 +868,21 @@ function LaporanContent() {
                   <td colSpan={8} className="py-16 text-center text-slate-400">
                     <p className="font-semibold text-slate-700">Tidak ada laporan yang sesuai filter</p>
                     <p className="text-xs text-slate-400 mt-1">Coba atur ulang pencarian atau filter status Anda.</p>
+                    {(selectedStatus !== "semua" || selectedPriority !== "semua" || searchCode) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedStatus("semua");
+                          setSelectedPriority("semua");
+                          setSearchCode("");
+                          setCurrentPage(1);
+                        }}
+                        className="mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#EA580C] text-xs font-semibold border border-orange-200 transition-colors cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Atur Ulang Seluruh Filter</span>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ) : (

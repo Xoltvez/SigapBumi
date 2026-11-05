@@ -1,25 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, createContext, useContext } from "react";
+import React, { useState, useEffect, useCallback, createContext, useContext, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Siren, Volume2, VolumeX, X } from "lucide-react";
+import { Siren, Volume2, VolumeX, X, Clock, ShieldAlert, AlertTriangle } from "lucide-react";
 import { AdminSidebar } from "@/components/admin/layout/AdminSidebar";
 import { AdminTopbar } from "@/components/admin/layout/AdminTopbar";
 import { playSosSiren, stopSosSiren } from "@/lib/audio/siren";
 import { supabase } from "@/lib/supabase/client";
 import { fetchLiveSosAlerts } from "@/lib/services/sos";
+import {
+  getAdminSession,
+  setAdminSession,
+  updateAdminActivity,
+  getTimeUntilIdleExpire,
+  clearAdminSession,
+  type AdminAuthSession,
+} from "@/lib/adminAuth";
+import { getAdminSettings } from "@/lib/services/settings";
 
-export interface AdminAuthSession {
-  nip: string;
-  name: string;
-  email: string;
-  unit: string;
-  unitName: string;
-  role: string;
-  loginAt: string;
-}
+export type { AdminAuthSession };
 
 interface AdminContextType {
   activeUnit: string;
@@ -34,7 +35,7 @@ interface AdminContextType {
   triggerSiren: () => void;
   adminUser: AdminAuthSession | null;
   updateAdminUser: (updated: Partial<AdminAuthSession>) => void;
-  logout: () => void;
+  logout: (reason?: "manual" | "idle" | "left" | "unauthorized") => void;
 }
 
 const AdminContext = createContext<AdminContextType>({
@@ -55,19 +56,11 @@ const AdminContext = createContext<AdminContextType>({
 
 export const useAdmin = () => useContext(AdminContext);
 
-const DEFAULT_OFFICER_SESSION: AdminAuthSession = {
-  nip: "198803152011011002",
-  name: "Kapten Hendra Gunawan",
-  email: "hendra.bpbd@sigapbumi.id",
-  unit: "bnpb_bpbd",
-  unitName: "BNPB / BPBD",
-  role: "Komandan Posko",
-  loginAt: "2026-11-01T08:00:00Z",
-};
-
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const isLoginPage = pathname === "/admin/login";
 
   const [activeUnit, setActiveUnit] = useState<string>("bnpb_bpbd");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
@@ -79,38 +72,122 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     text: string;
     time: string;
   } | null>(null);
-  const [adminUser, setAdminUser] = useState<AdminAuthSession | null>(DEFAULT_OFFICER_SESSION);
+  const [adminUser, setAdminUser] = useState<AdminAuthSession | null>(null);
+  const [isVerifyingAuth, setIsVerifyingAuth] = useState<boolean>(!isLoginPage);
+  const [idleWarningSeconds, setIdleWarningSeconds] = useState<number | null>(null);
+  const lastThrottleRef = useRef<number>(0);
 
-  // If user is directly on /admin/login, render without AdminShell frame
-  const isLoginPage = pathname === "/admin/login";
+  const logout = useCallback(
+    (reason: "manual" | "idle" | "left" | "unauthorized" = "manual") => {
+      stopSosSiren();
+      clearAdminSession();
+      setAdminUser(null);
+      setIsVerifyingAuth(false);
+      setIdleWarningSeconds(null);
+      router.replace(`/admin/login?reason=${reason}`);
+    },
+    [router]
+  );
 
+  // Verifikasi Sesi Admin Aktif Saat Membuka Halaman Admin
   useEffect(() => {
-    if (isLoginPage) return;
-
-    // Verify session
-    try {
-      const stored = localStorage.getItem("sigapbumi_admin_auth");
-      if (stored) {
-        const parsed: AdminAuthSession = JSON.parse(stored);
-        setAdminUser(parsed);
-        if (parsed.unit && parsed.unit !== "semua") {
-          setActiveUnit(parsed.unit);
-        }
-      } else {
-        localStorage.setItem("sigapbumi_admin_auth", JSON.stringify(DEFAULT_OFFICER_SESSION));
-      }
-    } catch {
-      // Local storage fallback
+    if (isLoginPage) {
+      setIsVerifyingAuth(false);
+      return;
     }
-  }, [isLoginPage]);
+
+    const settings = getAdminSettings();
+    const timeoutMin = settings.sessionIdleTimeoutMinutes || 15;
+    const session = getAdminSession(timeoutMin);
+
+    if (session) {
+      setAdminUser(session);
+      if (session.unit && session.unit !== "semua") {
+        setActiveUnit(session.unit);
+      }
+      setIsVerifyingAuth(false);
+      updateAdminActivity();
+    } else {
+      setIsVerifyingAuth(true);
+      logout("unauthorized");
+    }
+  }, [isLoginPage, logout]);
+
+  // Pantau Aktivitas Pengguna (Inactivity / Idle Timeout Auto Logout)
+  useEffect(() => {
+    if (isLoginPage || !adminUser) return;
+
+    const settings = getAdminSettings();
+    const timeoutMin = settings.sessionIdleTimeoutMinutes || 15;
+
+    const registerActivity = () => {
+      const now = Date.now();
+      if (now - lastThrottleRef.current > 1000) {
+        lastThrottleRef.current = now;
+        updateAdminActivity();
+        setIdleWarningSeconds(null);
+      }
+    };
+
+    const events: (keyof WindowEventMap)[] = [
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "scroll",
+      "touchstart",
+      "wheel",
+    ];
+
+    events.forEach((evt) => {
+      window.addEventListener(evt, registerActivity, { passive: true });
+    });
+
+    const timerInterval = setInterval(() => {
+      const remainingMs = getTimeUntilIdleExpire(timeoutMin);
+
+      if (remainingMs <= 0) {
+        clearInterval(timerInterval);
+        logout("idle");
+      } else {
+        const remainingSec = Math.ceil(remainingMs / 1000);
+        if (remainingSec <= 60) {
+          setIdleWarningSeconds(remainingSec);
+        } else {
+          setIdleWarningSeconds(null);
+        }
+      }
+    }, 1000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        const remainingMs = getTimeUntilIdleExpire(timeoutMin);
+        if (remainingMs <= 0) {
+          clearInterval(timerInterval);
+          logout("idle");
+        } else {
+          registerActivity();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleVisibilityChange);
+
+    return () => {
+      events.forEach((evt) => {
+        window.removeEventListener(evt, registerActivity);
+      });
+      clearInterval(timerInterval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
+    };
+  }, [isLoginPage, adminUser, logout]);
 
   const updateAdminUser = useCallback((updated: Partial<AdminAuthSession>) => {
     setAdminUser((prev) => {
       if (!prev) return null;
       const next = { ...prev, ...updated };
-      try {
-        localStorage.setItem("sigapbumi_admin_auth", JSON.stringify(next));
-      } catch {}
+      setAdminSession(next);
       return next;
     });
   }, []);
@@ -233,14 +310,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     };
   }, [isLoginPage, triggerSiren, activeUnit]);
 
-  const logout = () => {
-    try {
-      localStorage.removeItem("sigapbumi_admin_auth");
-    } catch (e) {
-      console.warn("Storage error", e);
-    }
-    setAdminUser(null);
-    router.push("/admin/login");
+  const handleExtendSession = () => {
+    updateAdminActivity();
+    setIdleWarningSeconds(null);
   };
 
   const unitNames: Record<string, string> = {
@@ -256,6 +328,30 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   if (isLoginPage) {
     return <>{children}</>;
+  }
+
+  // Tampilkan splash verifikasi otoritas jika sesi sedang divalidasi atau tidak valid
+  if (isVerifyingAuth || !adminUser) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#F8FAFC] text-slate-700 font-sans p-4">
+        <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-100 p-2 flex items-center justify-center mb-4 shadow-2xs animate-pulse">
+          <Image
+            src="/logo_sigapbumi.png"
+            alt="SigapBumi"
+            width={36}
+            height={36}
+            className="object-contain"
+          />
+        </div>
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+          <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+          <span>Memverifikasi Otoritas Akses Posko...</span>
+        </div>
+        <p className="text-xs text-slate-400 mt-1.5 text-center">
+          Menyiapkan kanal koordinasi darurat & radar kebencanaan
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -277,6 +373,42 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       }}
     >
       <div className="flex h-screen w-full bg-[#F8FAFC] text-slate-800 overflow-hidden relative font-sans">
+        {/* Modal Peringatan Idle Timeout Sebelum Auto-Logout */}
+        {idleWarningSeconds !== null && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 text-center animate-in fade-in zoom-in-95 duration-200">
+              <div className="w-14 h-14 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto mb-4 text-amber-600">
+                <Clock className="w-7 h-7 animate-pulse" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 mb-1">
+                Sesi Akan Berakhir
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                Tidak ada aktivitas terdeteksi pada posko. Sesi komando Anda akan ditutup otomatis demi keamanan dalam:
+              </p>
+              <div className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-amber-100 text-amber-900 font-mono text-2xl font-extrabold mb-5 tracking-wider border border-amber-300">
+                00:{idleWarningSeconds < 10 ? `0${idleWarningSeconds}` : idleWarningSeconds}
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => logout("manual")}
+                  className="flex-1 py-2.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Keluar Sekarang
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExtendSession}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+                >
+                  Tetap Masuk
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Banner Darurat Mengambang Saat Ada Panggilan SOS Baru */}
         {emergencyNotice && (
           <div className="fixed top-4 right-4 z-50 max-w-md w-full bg-[#EF4444] text-white p-4 rounded-xl shadow-2xl border-2 border-white/30 animate-pulse flex items-start justify-between gap-3">

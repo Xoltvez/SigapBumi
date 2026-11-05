@@ -37,6 +37,10 @@ export interface AdminSettingsConfig {
 
   // Mode Simulasi / Pelatihan
   simulationMode: boolean;
+
+  // Keamanan Sesi & Auto-Logout
+  sessionIdleTimeoutMinutes: number; // 5, 10, 15, 30, 60 (default 15)
+  autoLogoutOnClose: boolean; // default true
 }
 
 export const DEFAULT_ADMIN_SETTINGS: AdminSettingsConfig = {
@@ -67,6 +71,9 @@ export const DEFAULT_ADMIN_SETTINGS: AdminSettingsConfig = {
   showHeatmapDefault: false,
 
   simulationMode: true,
+
+  sessionIdleTimeoutMinutes: 15,
+  autoLogoutOnClose: true,
 };
 
 const SETTINGS_STORAGE_KEY = "sigapbumi_admin_settings_v1";
