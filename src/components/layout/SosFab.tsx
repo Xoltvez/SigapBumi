@@ -860,10 +860,6 @@ export function SosFab() {
                       <ShieldAlert className="w-6 h-6 animate-pulse" />
                     </div>
                     <div>
-                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-[10px] font-extrabold uppercase tracking-wide">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
-                        <span>Verifikasi Darurat Lapangan</span>
-                      </div>
                       <h2
                         id="sos-modal-title"
                         className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight"
@@ -894,7 +890,7 @@ export function SosFab() {
                       Wajib Nomor Kontak & Bukti Kamera
                     </p>
                     <p className="text-[11px] text-amber-800/90 mt-0.5">
-                      Untuk mencegah laporan palsu/iseng, posko mewajibkan nomor WhatsApp aktif dan foto kejadian langsung dari kamera. Sesuai Pasal 220 KUHP, laporan palsu dapat ditindak pidana.
+                      Untuk mencegah laporan palsu, posko mewajibkan nomor WhatsApp aktif dan foto kejadian langsung dari kamera. Sesuai Pasal 220 KUHP, laporan palsu dapat ditindak pidana.
                     </p>
                   </div>
                 </div>
@@ -1037,9 +1033,6 @@ export function SosFab() {
                       <span>Foto Kejadian Nyata dari Kamera</span>
                       <span className="text-red-500 font-black">*</span>
                     </label>
-                    <span className="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded-full font-bold">
-                      Kamera Langsung
-                    </span>
                   </div>
 
                   {/* Input File Camera (capture=environment memaksa kamera belakang ponsel) */}
@@ -1117,7 +1110,7 @@ export function SosFab() {
                 </div>
 
                 {/* Tombol Aksi Kirim SOS */}
-                <div className="mt-5 space-y-2 pt-2 border-t border-slate-100">
+                <div className="mt-5 space-y-2.5 pt-2 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={handleSubmitSos}
@@ -1129,18 +1122,8 @@ export function SosFab() {
                     }`}
                   >
                     <Radio className="w-4 h-4 text-white" />
-                    <span>PANCARKAN SINYAL DARURAT SOS</span>
+                    <span>KIRIM LAPORAN SOS</span>
                   </button>
-
-                  {!isFormValid && (
-                    <p className="text-[11px] text-center text-slate-500 font-medium">
-                      {!isPhoneValid && !cameraPhotoUrl
-                        ? "⚠️ Wajib isi nomor telepon dan ambil foto kamera untuk mengaktifkan tombol."
-                        : !isPhoneValid
-                        ? "⚠️ Masukkan nomor telepon yang valid (minimal 10 digit)."
-                        : "⚠️ Harap ambil foto bukti kejadian dari kamera."}
-                    </p>
-                  )}
 
                   <button
                     type="button"
@@ -1148,7 +1131,7 @@ export function SosFab() {
                       setIsOpen(false);
                       setCountdown(null);
                     }}
-                    className="w-full py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                    className="w-full h-11 rounded-2xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all cursor-pointer shadow-2xs"
                   >
                     Batal
                   </button>
