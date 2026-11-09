@@ -26,9 +26,222 @@ export interface ReverseGeocodeResult {
   fullAddress: string;
 }
 
+// In-memory cache agar request berulang pada koordinat berdekatan instan & bebas rate-limit
+const geocodeCache = new Map<string, { result: ReverseGeocodeResult; time: number }>();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 menit
+
+function getCoordKey(lat: number, lng: number): string {
+  // Pembulatan ke 4 desimal (~11 meter toleransi)
+  return `${lat.toFixed(4)}_${lng.toFixed(4)}`;
+}
+
 /**
- * Mengubah koordinat GPS (lat, lng) menjadi detail nama jalan, kecamatan, dan kabupaten
- * via Reverse Geocoding OpenStreetMap Nominatim dengan timeout cepat dan fallback otomatis.
+ * Menyimpan alamat valid terakhir ke localStorage untuk pertahanan offline/rate-limit
+ */
+function saveLastValidAddress(result: ReverseGeocodeResult) {
+  if (typeof window === "undefined") return;
+  try {
+    // Jangan simpan jika isinya cuma generic fallback
+    if (result.road.includes("Titik Darurat") && result.subdistrict.includes("Terpantau")) {
+      return;
+    }
+    localStorage.setItem("sigapbumi_last_valid_address", JSON.stringify(result));
+  } catch {}
+}
+
+/**
+ * Mengambil alamat tersimpan terakhir dari localStorage
+ */
+function getLastValidAddress(): ReverseGeocodeResult | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("sigapbumi_last_valid_address");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.subdistrict && parsed.city) {
+        return parsed;
+      }
+    }
+  } catch {}
+  return null;
+}
+
+/**
+ * Provider 1: BigDataCloud Client Reverse Geocode API
+ * Sangat cepat, ramah browser client-side, tanpa rate-limit ketat.
+ */
+async function fetchFromBigDataCloud(lat: number, lng: number): Promise<ReverseGeocodeResult | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=id`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeoutId);
+
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    const admin = data.localityInfo?.administrative || [];
+    const info = data.localityInfo?.informative || [];
+
+    // Cari nama jalan dari info informative atau kelurahan
+    let road = "";
+    for (const item of info) {
+      const desc = (item.description || "").toLowerCase();
+      if (desc.includes("road") || desc.includes("street") || desc.includes("route") || desc.includes("path")) {
+        road = item.name;
+        break;
+      }
+    }
+    if (!road && info.length > 0) {
+      road = info[0].name || "";
+    }
+
+    // Level 6 = Kecamatan, Level 7 = Kelurahan/Desa
+    const adminL6 = admin.find((x: { adminLevel?: number }) => x.adminLevel === 6);
+    const adminL7 = admin.find((x: { adminLevel?: number }) => x.adminLevel === 7);
+    const adminL5 = admin.find((x: { adminLevel?: number }) => x.adminLevel === 5);
+
+    if (!road && adminL7?.name) {
+      road = `Jl. Sekitar ${adminL7.name}`;
+    }
+    if (!road) {
+      road = data.locality ? `Jalan Sekitar ${data.locality}` : "Jalan Tanpa Nama";
+    }
+
+    const rawSub = adminL6?.name || data.locality || "Kecamatan Terdekat";
+    const rawCity = adminL5?.name || data.city || "Kabupaten Terdekat";
+    const rawProvince = data.principalSubdivision || "Indonesia";
+
+    const subdistrict = rawSub.toLowerCase().startsWith("kecamatan") ? rawSub : `Kecamatan ${rawSub}`;
+    const city = rawCity.toLowerCase().startsWith("kabupaten") || rawCity.toLowerCase().startsWith("kota")
+      ? rawCity
+      : `Kabupaten ${rawCity}`;
+
+    return {
+      road,
+      subdistrict,
+      city,
+      province: rawProvince,
+      fullAddress: `${road}, ${subdistrict}, ${city}, ${rawProvince}`,
+    };
+  } catch {
+    clearTimeout(timeoutId);
+    return null;
+  }
+}
+
+/**
+ * Provider 2: OpenStreetMap Nominatim Reverse Geocoding
+ */
+async function fetchFromNominatim(lat: number, lng: number): Promise<ReverseGeocodeResult | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3200);
+
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      {
+        signal: controller.signal,
+        headers: { "Accept-Language": "id,en" },
+      }
+    );
+    clearTimeout(timeoutId);
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const addr = data.address || {};
+
+    const road =
+      addr.road ||
+      addr.pedestrian ||
+      addr.street ||
+      addr.neighbourhood ||
+      addr.hamlet ||
+      "Jalan Tanpa Nama";
+
+    const rawSub =
+      addr.suburb ||
+      addr.city_district ||
+      addr.village ||
+      addr.town ||
+      "Kecamatan Terpantau";
+
+    const rawCity =
+      addr.city ||
+      addr.county ||
+      addr.regency ||
+      addr.state_district ||
+      "Kabupaten Terpantau";
+
+    const subdistrict = rawSub.toLowerCase().startsWith("kecamatan") ? rawSub : `Kecamatan ${rawSub}`;
+    const city = rawCity.toLowerCase().startsWith("kabupaten") || rawCity.toLowerCase().startsWith("kota")
+      ? rawCity
+      : `Kabupaten ${rawCity}`;
+    const province = addr.state || "Indonesia";
+
+    return {
+      road,
+      subdistrict,
+      city,
+      province,
+      fullAddress: data.display_name || `${road}, ${subdistrict}, ${city}, ${province}`,
+    };
+  } catch {
+    clearTimeout(timeoutId);
+    return null;
+  }
+}
+
+/**
+ * Provider 3: Photon Komoot Reverse Geocode (OSM Mirror)
+ */
+async function fetchFromPhoton(lat: number, lng: number): Promise<ReverseGeocodeResult | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    const res = await fetch(
+      `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeoutId);
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const feat = data.features?.[0];
+    if (!feat?.properties) return null;
+
+    const props = feat.properties;
+    const road = props.street || props.name || "Jalan Tanpa Nama";
+    const rawSub = props.district || props.suburb || props.locality || "Kecamatan Terpantau";
+    const rawCity = props.city || props.county || "Kabupaten Terpantau";
+    const province = props.state || "Indonesia";
+
+    const subdistrict = rawSub.toLowerCase().startsWith("kecamatan") ? rawSub : `Kecamatan ${rawSub}`;
+    const city = rawCity.toLowerCase().startsWith("kabupaten") || rawCity.toLowerCase().startsWith("kota")
+      ? rawCity
+      : `Kabupaten ${rawCity}`;
+
+    return {
+      road,
+      subdistrict,
+      city,
+      province,
+      fullAddress: `${road}, ${subdistrict}, ${city}, ${province}`,
+    };
+  } catch {
+    clearTimeout(timeoutId);
+    return null;
+  }
+}
+
+/**
+ * Mengubah koordinat GPS (lat, lng) menjadi detail nama jalan, kecamatan, kabupaten, dan provinsi
+ * dengan Multi-Provider Cascade (BigDataCloud -> Nominatim -> Photon -> LocalStorage Cache).
  */
 export async function getReverseGeocode(lat: number, lng: number): Promise<ReverseGeocodeResult> {
   if (typeof window === "undefined") {
@@ -37,80 +250,54 @@ export async function getReverseGeocode(lat: number, lng: number): Promise<Rever
       subdistrict: "Kecamatan Terpantau",
       city: "Kabupaten / Kota Terpantau",
       province: "Indonesia",
-      fullAddress: `Koordinat GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+      fullAddress: `GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
     };
   }
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2600);
-
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-      {
-        signal: controller.signal,
-        headers: {
-          "Accept-Language": "id,en",
-        },
-      }
-    );
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const data = await res.json();
-      const addr = data.address || {};
-
-      const road =
-        addr.road ||
-        addr.pedestrian ||
-        addr.street ||
-        addr.neighbourhood ||
-        addr.hamlet ||
-        "Jalan Tanpa Nama";
-
-      const rawSub =
-        addr.suburb ||
-        addr.city_district ||
-        addr.village ||
-        addr.town ||
-        "Kecamatan Terpantau";
-
-      const rawCity =
-        addr.city ||
-        addr.county ||
-        addr.regency ||
-        addr.state_district ||
-        "Kabupaten Terpantau";
-
-      const subdistrict = rawSub.toLowerCase().startsWith("kecamatan")
-        ? rawSub
-        : `Kecamatan ${rawSub}`;
-
-      const city =
-        rawCity.toLowerCase().startsWith("kabupaten") || rawCity.toLowerCase().startsWith("kota")
-          ? rawCity
-          : `Kabupaten ${rawCity}`;
-
-      const province = addr.state || "Jawa Barat";
-
-      return {
-        road,
-        subdistrict,
-        city,
-        province,
-        fullAddress: data.display_name || `${road}, ${subdistrict}, ${city}, ${province}`,
-      };
-    }
-  } catch {
-    // Jaringan timeout atau offline, gunakan fallback lokasi
+  // 1. Cek in-memory cache jika koordinat masih di area yang sama (~11m)
+  const cacheKey = getCoordKey(lat, lng);
+  const cached = geocodeCache.get(cacheKey);
+  if (cached && Date.now() - cached.time < CACHE_TTL_MS) {
+    return cached.result;
   }
 
+  // 2. Coba Provider 1: BigDataCloud (Paling andal di sisi client)
+  const bdcResult = await fetchFromBigDataCloud(lat, lng);
+  if (bdcResult) {
+    geocodeCache.set(cacheKey, { result: bdcResult, time: Date.now() });
+    saveLastValidAddress(bdcResult);
+    return bdcResult;
+  }
+
+  // 3. Coba Provider 2: Nominatim OpenStreetMap
+  const nomResult = await fetchFromNominatim(lat, lng);
+  if (nomResult) {
+    geocodeCache.set(cacheKey, { result: nomResult, time: Date.now() });
+    saveLastValidAddress(nomResult);
+    return nomResult;
+  }
+
+  // 4. Coba Provider 3: Photon Komoot
+  const photonResult = await fetchFromPhoton(lat, lng);
+  if (photonResult) {
+    geocodeCache.set(cacheKey, { result: photonResult, time: Date.now() });
+    saveLastValidAddress(photonResult);
+    return photonResult;
+  }
+
+  // 5. Jika semua provider online gagal / kena rate-limit, pakai alamat valid terakhir di localStorage
+  const lastValid = getLastValidAddress();
+  if (lastValid) {
+    return lastValid;
+  }
+
+  // 6. Fallback darurat jika perangkat benar-benar belum pernah tersambung geocoding
   return {
-    road: "Jalan Titik Darurat",
-    subdistrict: "Kecamatan Terpantau GPS",
-    city: "Kabupaten / Kota Terpantau",
+    road: "Jalan Sekitar Lokasi Kejadian",
+    subdistrict: "Kecamatan Area Warga",
+    city: "Kabupaten / Kota Terpantau Posko",
     province: "Indonesia",
-    fullAddress: `Koordinat: ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+    fullAddress: `Koordinat GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
   };
 }
 
@@ -139,9 +326,9 @@ export async function stampPhotoWithGpsTimestamp(
 ): Promise<string> {
   if (typeof window === "undefined") return "";
 
-  // 1. Dapatkan detail alamat jika belum ada di meta
+  // 1. Dapatkan detail alamat jika belum ada di meta atau jika masih generic
   let address = meta.addressDetails;
-  if (!address || !address.road) {
+  if (!address || !address.road || address.road.includes("Titik Darurat")) {
     try {
       const geo = await getReverseGeocode(meta.lat, meta.lng);
       address = {
@@ -151,9 +338,15 @@ export async function stampPhotoWithGpsTimestamp(
         province: geo.province,
       };
     } catch {
-      address = {
-        road: "Jalan Tanpa Nama",
-        subdistrict: "Kecamatan Terpantau",
+      const last = getLastValidAddress();
+      address = last ? {
+        road: last.road,
+        subdistrict: last.subdistrict,
+        city: last.city,
+        province: last.province,
+      } : {
+        road: "Jalan Sekitar Lokasi Kejadian",
+        subdistrict: "Kecamatan Terpantau Posko",
         city: "Kabupaten Terpantau",
         province: "Indonesia",
       };
@@ -352,9 +545,9 @@ export async function stampPhotoWithGpsTimestamp(
         const lines = [
           dateStr,
           headingStr,
-          address.road || "Jalan Tanpa Nama",
-          address.subdistrict || "Kecamatan Terpantau",
-          address.city || "Kabupaten Terpantau",
+          address.road || "Jalan Sekitar Lokasi Kejadian",
+          address.subdistrict || "Kecamatan Terpantau Posko",
+          address.city || "Kabupaten Terpantau Posko",
           address.province || "Indonesia",
           `Altitude:${altitudeVal}`,
           `Speed:${speedVal}`,

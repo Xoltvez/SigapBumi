@@ -224,14 +224,42 @@ export function SosFab() {
     }
   }, []);
 
-  // Reverse Geocoding otomatis saat koordinat GPS terkunci
+  const lastGeocodedCoordRef = useRef<{ lat: number; lng: number } | null>(null);
+  const resolvedAddressRef = useRef<ReverseGeocodeResult | null>(null);
+
   useEffect(() => {
-    if (currentCoords.lat && currentCoords.lng) {
-      getReverseGeocode(currentCoords.lat, currentCoords.lng)
-        .then((res) => setResolvedAddress(res))
-        .catch(() => {});
+    if (resolvedAddress) {
+      resolvedAddressRef.current = resolvedAddress;
     }
-  }, [currentCoords.lat, currentCoords.lng]);
+  }, [resolvedAddress]);
+
+  // Reverse Geocoding otomatis saat koordinat GPS terkunci (debounced & guarded)
+  useEffect(() => {
+    if (!currentCoords.lat || !currentCoords.lng) return;
+
+    if (lastGeocodedCoordRef.current) {
+      const dLat = Math.abs(lastGeocodedCoordRef.current.lat - currentCoords.lat);
+      const dLng = Math.abs(lastGeocodedCoordRef.current.lng - currentCoords.lng);
+      // Jika pergerakan kurang dari ~25m dan sudah ada alamat valid, tidak perlu spam fetch ulang
+      if (dLat < 0.00025 && dLng < 0.00025 && resolvedAddress) {
+        return;
+      }
+    }
+
+    const timer = setTimeout(() => {
+      lastGeocodedCoordRef.current = { lat: currentCoords.lat, lng: currentCoords.lng };
+      getReverseGeocode(currentCoords.lat, currentCoords.lng)
+        .then((res) => {
+          if (res) {
+            setResolvedAddress(res);
+            resolvedAddressRef.current = res;
+          }
+        })
+        .catch(() => {});
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [currentCoords.lat, currentCoords.lng, resolvedAddress]);
 
   // Pantau sensor kompas / orientasi perangkat warga
   useEffect(() => {
@@ -407,12 +435,12 @@ export function SosFab() {
         altitude: gpsAltitude,
         speed: gpsSpeed,
         heading: compassHeading,
-        addressDetails: resolvedAddress
+        addressDetails: (resolvedAddress || resolvedAddressRef.current)
           ? {
-              road: resolvedAddress.road,
-              subdistrict: resolvedAddress.subdistrict,
-              city: resolvedAddress.city,
-              province: resolvedAddress.province,
+              road: (resolvedAddress || resolvedAddressRef.current)!.road,
+              subdistrict: (resolvedAddress || resolvedAddressRef.current)!.subdistrict,
+              city: (resolvedAddress || resolvedAddressRef.current)!.city,
+              province: (resolvedAddress || resolvedAddressRef.current)!.province,
             }
           : undefined,
         timestamp: new Date(),
