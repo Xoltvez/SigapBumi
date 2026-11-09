@@ -36,7 +36,11 @@ import {
   updateSosLocation,
 } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
-import { stampPhotoWithGpsTimestamp } from "@/lib/cameraStamp";
+import {
+  stampPhotoWithGpsTimestamp,
+  getReverseGeocode,
+  type ReverseGeocodeResult,
+} from "@/lib/cameraStamp";
 
 export function SosFab() {
   const pathname = usePathname();
@@ -63,13 +67,17 @@ export function SosFab() {
   const [photoError, setPhotoError] = useState<string>("");
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Posisi default & status pelacakan GPS
+  // Posisi default & status pelacakan GPS, Kompas, Ketinggian & Alamat
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number }>({
     lat: -6.2088,
     lng: 106.8456,
   });
   const [gpsStatus, setGpsStatus] = useState<"idle" | "acquiring" | "locked" | "error">("idle");
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [gpsAltitude, setGpsAltitude] = useState<number | null>(null);
+  const [gpsSpeed, setGpsSpeed] = useState<number | null>(null);
+  const [compassHeading, setCompassHeading] = useState<number>(286);
+  const [resolvedAddress, setResolvedAddress] = useState<ReverseGeocodeResult | null>(null);
   const [isLocationRefined, setIsLocationRefined] = useState<boolean>(false);
 
   const watchIdRef = useRef<number | null>(null);
@@ -99,9 +107,12 @@ export function SosFab() {
     }
 
     const onLocationSuccess = (pos: GeolocationPosition) => {
-      const { latitude, longitude, accuracy } = pos.coords;
+      const { latitude, longitude, accuracy, altitude, speed, heading } = pos.coords;
       setCurrentCoords({ lat: latitude, lng: longitude });
       setGpsAccuracy(accuracy);
+      if (altitude !== null) setGpsAltitude(altitude);
+      if (speed !== null) setGpsSpeed(speed);
+      if (heading !== null && !isNaN(heading)) setCompassHeading(Math.round(heading));
       setGpsStatus("locked");
 
       try {
@@ -212,6 +223,38 @@ export function SosFab() {
       }
     }
   }, []);
+
+  // Reverse Geocoding otomatis saat koordinat GPS terkunci
+  useEffect(() => {
+    if (currentCoords.lat && currentCoords.lng) {
+      getReverseGeocode(currentCoords.lat, currentCoords.lng)
+        .then((res) => setResolvedAddress(res))
+        .catch(() => {});
+    }
+  }, [currentCoords.lat, currentCoords.lng]);
+
+  // Pantau sensor kompas / orientasi perangkat warga
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      // @ts-expect-error webkitCompassHeading exists on iOS Safari
+      const heading = e.webkitCompassHeading !== undefined ? e.webkitCompassHeading : (e.alpha !== null ? 360 - e.alpha : null);
+      if (heading !== null && !isNaN(heading)) {
+        setCompassHeading(Math.round(heading));
+      }
+    };
+
+    if (typeof window !== "undefined" && "DeviceOrientationEvent" in window) {
+      window.addEventListener("deviceorientation", handleOrientation, true);
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("deviceorientation", handleOrientation, true);
+      }
+    };
+  }, [isOpen]);
 
   // Cleanup watch saat unmount
   useEffect(() => {
@@ -361,6 +404,17 @@ export function SosFab() {
         lat: currentCoords.lat,
         lng: currentCoords.lng,
         accuracy: gpsAccuracy,
+        altitude: gpsAltitude,
+        speed: gpsSpeed,
+        heading: compassHeading,
+        addressDetails: resolvedAddress
+          ? {
+              road: resolvedAddress.road,
+              subdistrict: resolvedAddress.subdistrict,
+              city: resolvedAddress.city,
+              province: resolvedAddress.province,
+            }
+          : undefined,
         timestamp: new Date(),
       });
       setCameraPhotoUrl(stamped);
