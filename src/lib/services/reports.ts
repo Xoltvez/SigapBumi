@@ -21,6 +21,8 @@ export interface LiveReportItem {
   priority: "tinggi" | "sedang" | "normal";
   confirmation_count: number;
   created_at: string;
+  image_url?: string;
+  phone_number?: string;
   timeline?: TimelineStep[];
   is_demo?: boolean;
 }

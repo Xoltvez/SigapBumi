@@ -20,6 +20,10 @@ import {
   Clock,
   Layers,
   Filter,
+  Camera,
+  Eye,
+  X,
+  ShieldAlert,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import type { SosAssistanceType } from "@/types";
@@ -44,6 +48,7 @@ interface DisplaySosItem {
   status: "aktif" | "ditangani" | "selesai" | "palsu";
   phoneNumber: string;
   source: string;
+  photoUrl?: string;
 }
 
 const DEFAULT_SOS_ITEMS: DisplaySosItem[] = [
@@ -85,6 +90,7 @@ export default function AdminSosPage() {
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<DisplaySosItem | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
 
   // Kategori Filter Status
   const [statusFilter, setStatusFilter] = useState<"semua" | "aktif" | "ditangani" | "selesai">("semua");
@@ -141,6 +147,7 @@ export default function AdminSosPage() {
           status: e.status || "aktif",
           phoneNumber: e.phone_number || "0812-3456-7890",
           source: e.source || "Ponsel Warga (GPS Sensor)",
+          photoUrl: e.photo_url || undefined,
         };
       });
 
@@ -240,6 +247,22 @@ export default function AdminSosPage() {
       await updateSosAlertStatus(id, "selesai");
     } catch {
       // Local fallback
+    }
+  };
+
+  const handleMarkFake = async (id: string) => {
+    if (!confirm("Tandai sinyal SOS ini sebagai PALSU / HOAKS? Sinyal akan dibatalkan dan catatan disimpan.")) {
+      return;
+    }
+    setSosList((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: "palsu" } : item))
+    );
+    try {
+      await updateSosAlertStatus(id, "palsu", "Posko Terpadu (Verifikasi Gagal/Prank)");
+      setToastMessage("Sinyal SOS ditandai sebagai HOAKS / PALSU. Laporan darurat ditolak.");
+      setTimeout(() => setToastMessage(null), 3500);
+    } catch (err) {
+      console.error("Gagal menandai hoaks:", err);
     }
   };
 
@@ -723,6 +746,12 @@ export default function AdminSosPage() {
                         <span>Selesai / Aman</span>
                       </span>
                     )}
+                    {item.status === "palsu" && (
+                      <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-300 text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
+                        <span className="w-2 h-2 rounded-full bg-slate-400" />
+                        <span>Hoaks / Ditolak</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -777,6 +806,41 @@ export default function AdminSosPage() {
                   </div>
                 </div>
 
+                {/* Stamped Live Camera Photo Preview */}
+                {item.photoUrl && (
+                  <div className="rounded-xl border border-slate-200/90 overflow-hidden bg-slate-900/5 relative group">
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 text-white text-[11px] font-semibold">
+                      <span className="flex items-center gap-1.5">
+                        <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                        Bukti Kamera Riil (Stempel GPS & Waktu)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewPhotoUrl(item.photoUrl!)}
+                        className="text-[10px] text-emerald-300 hover:text-white underline cursor-pointer"
+                      >
+                        Perbesar
+                      </button>
+                    </div>
+                    <div
+                      onClick={() => setPreviewPhotoUrl(item.photoUrl!)}
+                      className="relative h-44 w-full bg-black cursor-pointer overflow-hidden flex items-center justify-center"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.photoUrl}
+                        alt="Bukti Foto Kamera Riil"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="bg-black/75 text-white text-xs px-3 py-1.5 rounded-lg font-medium backdrop-blur-xs flex items-center gap-1.5 shadow-lg">
+                          <Eye className="w-3.5 h-3.5" /> Klik untuk Melihat Detail Stempel
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Contact Phone & WhatsApp Buttons */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                   <a
@@ -829,6 +893,18 @@ export default function AdminSosPage() {
                     <Trash2 className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Hapus</span>
                   </button>
+
+                  {item.status !== "palsu" && item.status !== "selesai" && (
+                    <button
+                      type="button"
+                      onClick={() => handleMarkFake(item.id)}
+                      className="h-9 px-2.5 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                      title="Tandai sebagai panggilan palsu / prank"
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                      <span className="hidden sm:inline">Hoaks</span>
+                    </button>
+                  )}
                 </div>
 
                 <div>
@@ -937,6 +1013,51 @@ export default function AdminSosPage() {
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
               >
                 {isDeleting ? "Menghapus..." : "Ya, Hapus SOS"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox Modal: Foto Otentik Kamera dengan Stempel Real-Time */}
+      {previewPhotoUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setPreviewPhotoUrl(null)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between text-white">
+              <div className="flex items-center gap-2">
+                <Camera className="w-4 h-4 text-emerald-400" />
+                <span className="text-sm font-bold">Bukti Kamera Asli & Stempel Real-Time</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewPhotoUrl(null)}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-2 sm:p-4 bg-black flex items-center justify-center overflow-auto max-h-[calc(90vh-100px)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewPhotoUrl}
+                alt="Bukti Foto Kamera Riil"
+                className="max-w-full max-h-[75vh] object-contain rounded-lg"
+              />
+            </div>
+            <div className="px-4 py-2.5 bg-slate-900/90 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+              <span>Stempel lokasi & timestamp dibuat langsung saat pengambilan gambar oleh perangkat warga.</span>
+              <button
+                type="button"
+                onClick={() => setPreviewPhotoUrl(null)}
+                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold cursor-pointer"
+              >
+                Tutup
               </button>
             </div>
           </div>

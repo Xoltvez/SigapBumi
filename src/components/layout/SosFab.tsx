@@ -22,6 +22,11 @@ import {
   Clock,
   Navigation,
   ArrowRight,
+  Camera,
+  UploadCloud,
+  ShieldAlert,
+  Smartphone,
+  Eye,
 } from "lucide-react";
 import type { SosAssistanceType } from "@/types";
 import {
@@ -31,6 +36,7 @@ import {
   updateSosLocation,
 } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
+import { stampPhotoWithGpsTimestamp } from "@/lib/cameraStamp";
 
 export function SosFab() {
   const pathname = usePathname();
@@ -46,9 +52,16 @@ export function SosFab() {
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
 
   const [selectedAssistance, setSelectedAssistance] =
-    useState<SosAssistanceType | null>(null);
+    useState<SosAssistanceType | null>("damkar");
   const [phoneNumber, setPhoneNumber] = useState<string>("");
   const [isPhoneSaved, setIsPhoneSaved] = useState<boolean>(false);
+  const [phoneError, setPhoneError] = useState<string>("");
+
+  // Foto kamera riil berstempel GPS & Waktu
+  const [cameraPhotoUrl, setCameraPhotoUrl] = useState<string | null>(null);
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState<boolean>(false);
+  const [photoError, setPhotoError] = useState<string>("");
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   // Posisi default & status pelacakan GPS
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number }>({
@@ -133,7 +146,17 @@ export function SosFab() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedPhone = localStorage.getItem("sigapbumi_user_phone");
-      if (savedPhone) setPhoneNumber(savedPhone);
+      if (savedPhone) {
+        setPhoneNumber(savedPhone);
+      } else {
+        try {
+          const userRaw = localStorage.getItem("sigapbumi_current_user");
+          if (userRaw) {
+            const u = JSON.parse(userRaw);
+            if (u?.phone_number) setPhoneNumber(u.phone_number);
+          }
+        } catch {}
+      }
 
       const savedCoords = localStorage.getItem("sigapbumi_user_last_coords");
       if (savedCoords) {
@@ -157,6 +180,8 @@ export function SosFab() {
             setActiveSosId(parsed.id);
             activeSosIdRef.current = parsed.id;
             if (parsed.assistance) setSelectedAssistance(parsed.assistance);
+            if (parsed.phone) setPhoneNumber(parsed.phone);
+            if (parsed.photo) setCameraPhotoUrl(parsed.photo);
             setIsSent(true);
             setIsMinimized(true);
           }
@@ -272,6 +297,7 @@ export function SosFab() {
           gpsAccuracy ? ` [Akurasi GPS: ±${Math.round(gpsAccuracy)}m]` : ""
         }`,
         phoneNumber: phoneToSend,
+        photoUrl: cameraPhotoUrl || undefined,
       }).then((res) => {
         if (res.id) {
           setActiveSosId(res.id);
@@ -288,6 +314,8 @@ export function SosFab() {
                 id: res.id,
                 code,
                 assistance: selectedAssistance || "damkar",
+                phone: phoneToSend,
+                photo: cameraPhotoUrl,
                 time: Date.now(),
               })
             );
@@ -299,24 +327,88 @@ export function SosFab() {
         }
       });
     }
-  }, [countdown, pathname, currentCoords, selectedAssistance, phoneNumber, gpsAccuracy, gpsStatus]);
+  }, [countdown, pathname, currentCoords, selectedAssistance, phoneNumber, cameraPhotoUrl, gpsAccuracy, gpsStatus]);
 
-  // Memulai pemancaran SOS (Memulai delay 3 detik)
+  // Membuka dialog form verifikasi darurat SOS
   const handleStartSos = useCallback(() => {
     hasTriggeredRef.current = false;
+    setPhoneError("");
+    setPhotoError("");
     setActiveSosId(null);
     activeSosIdRef.current = null;
     setIsLocationRefined(false);
     setIsOpen(true);
     setIsMinimized(false);
-    setCountdown(3);
+    setCountdown(null); // Tampilkan form verifikasi awal
     setIsSent(false);
-    setSelectedAssistance(null);
+    setSelectedAssistance((prev) => prev || "damkar");
     setIsPhoneSaved(false);
     setSosStatus("aktif");
     setDispatchedTeam(null);
     startGpsTracking();
   }, [startGpsTracking]);
+
+  // Handler pengambilan foto langsung dari sensor kamera ponsel
+  const handleCaptureCamera = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhotoError("");
+    setIsProcessingPhoto(true);
+
+    try {
+      const stamped = await stampPhotoWithGpsTimestamp(file, {
+        lat: currentCoords.lat,
+        lng: currentCoords.lng,
+        accuracy: gpsAccuracy,
+        timestamp: new Date(),
+      });
+      setCameraPhotoUrl(stamped);
+    } catch (err) {
+      console.error("Gagal menstempel foto kamera:", err);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setCameraPhotoUrl((ev.target?.result as string) || null);
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setIsProcessingPhoto(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleRetakePhoto = () => {
+    setCameraPhotoUrl(null);
+    if (cameraInputRef.current) {
+      cameraInputRef.current.click();
+    }
+  };
+
+  const cleanPhoneDigits = phoneNumber.replace(/\D/g, "");
+  const isPhoneValid = cleanPhoneDigits.length >= 10;
+  const isFormValid = isPhoneValid && Boolean(cameraPhotoUrl) && !isProcessingPhoto;
+
+  const handleSubmitSos = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setPhoneError("");
+    setPhotoError("");
+
+    if (!isPhoneValid) {
+      setPhoneError("Nomor telepon/WhatsApp wajib diisi minimal 10 digit angka aktif.");
+      return;
+    }
+    if (!cameraPhotoUrl) {
+      setPhotoError("Wajib mengambil foto bukti kejadian langsung dari kamera.");
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sigapbumi_user_phone", phoneNumber.trim());
+    }
+
+    hasTriggeredRef.current = false;
+    setCountdown(3);
+  };
 
   // Listen to open-sos event triggered by Header SOS button or other emergency CTAs
   useEffect(() => {
@@ -504,7 +596,7 @@ export function SosFab() {
                   Batalkan Panggilan
                 </button>
               </div>
-            ) : (
+            ) : isSent ? (
               /* FASE 2: POPUP SOS BERHASIL DIKIRIM */
               <div>
                 {/* Header SOS Dikirim */}
@@ -755,6 +847,310 @@ export function SosFab() {
                     className="w-full h-11 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
                   >
                     Tutup Dialog
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* FASE 0: FORM VERIFIKASI WAJIB NO. HP & FOTO KAMERA LANGSUNG */
+              <div>
+                {/* Header Modal */}
+                <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-full bg-red-100 border border-red-300 flex items-center justify-center text-red-600 shrink-0 shadow-2xs">
+                      <ShieldAlert className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <div>
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-[10px] font-extrabold uppercase tracking-wide">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
+                        <span>Verifikasi Darurat Lapangan</span>
+                      </div>
+                      <h2
+                        id="sos-modal-title"
+                        className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight"
+                      >
+                        Panggilan Darurat SOS
+                      </h2>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOpen(false);
+                      setCountdown(null);
+                    }}
+                    title="Tutup dialog"
+                    className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer shrink-0"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Subtitle & Warning Hukum */}
+                <div className="mt-3.5 p-3 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-2.5 leading-relaxed">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-[11px] uppercase tracking-wide text-amber-800">
+                      Wajib Nomor Kontak & Bukti Kamera
+                    </p>
+                    <p className="text-[11px] text-amber-800/90 mt-0.5">
+                      Untuk mencegah laporan palsu/iseng, posko mewajibkan nomor WhatsApp aktif dan foto kejadian langsung dari kamera. Sesuai Pasal 220 KUHP, laporan palsu dapat ditindak pidana.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status GPS Terkunci */}
+                <div className="mt-3 p-2.5 px-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span className="font-bold text-slate-700 text-[11px]">GPS Terkunci:</span>
+                    <span className="font-mono text-slate-500 text-[11px] truncate">
+                      {currentCoords.lat.toFixed(5)}, {currentCoords.lng.toFixed(5)}
+                      {gpsAccuracy ? ` (±${Math.round(gpsAccuracy)}m)` : ""}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => startGpsTracking()}
+                    title="Perbarui koordinat GPS"
+                    className="p-1 px-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-[10px] font-semibold flex items-center gap-1 hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${gpsStatus === "acquiring" ? "animate-spin text-orange-600" : ""}`} />
+                    <span>Perbarui</span>
+                  </button>
+                </div>
+
+                {/* Pilih Instansi Bantuan */}
+                <div className="mt-3.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block mb-1.5">
+                    Pilih Jenis Bantuan Utama:
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAssistance("damkar")}
+                      className={`p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                        selectedAssistance === "damkar"
+                          ? "border-orange-500 bg-orange-50 text-orange-800 ring-2 ring-orange-500/20"
+                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <Flame className="w-4 h-4 text-red-500 shrink-0" />
+                      <span>Damkar</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAssistance("medis")}
+                      className={`p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                        selectedAssistance === "medis"
+                          ? "border-orange-500 bg-orange-50 text-orange-800 ring-2 ring-orange-500/20"
+                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <HeartPulse className="w-4 h-4 text-rose-500 shrink-0" />
+                      <span>Medis</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAssistance("polisi")}
+                      className={`p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                        selectedAssistance === "polisi"
+                          ? "border-orange-500 bg-orange-50 text-orange-800 ring-2 ring-orange-500/20"
+                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <Shield className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span>Polisi</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAssistance("bnpb_bpbd")}
+                      className={`p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                        selectedAssistance === "bnpb_bpbd"
+                          ? "border-orange-500 bg-orange-50 text-orange-800 ring-2 ring-orange-500/20"
+                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <LifeBuoy className="w-4 h-4 text-orange-600 shrink-0" />
+                      <span>SAR BPBD</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Form Wajib 1: Nomor Telepon / WhatsApp */}
+                <div className="mt-3.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label
+                      htmlFor="sos-verify-phone"
+                      className="block text-xs font-bold text-slate-800 flex items-center gap-1.5"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-orange-600" />
+                      <span>Nomor Telepon / WhatsApp Anda</span>
+                      <span className="text-red-500 font-black">*</span>
+                    </label>
+                    <span className="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded-full font-bold">
+                      Wajib Diisi
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="sos-verify-phone"
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => {
+                        setPhoneNumber(e.target.value);
+                        setPhoneError("");
+                      }}
+                      placeholder="Contoh: 081234567890 atau +62812..."
+                      className={`w-full h-11 pl-3.5 pr-10 rounded-xl border text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all ${
+                        phoneError
+                          ? "border-red-500 ring-2 ring-red-500/20 bg-red-50/20"
+                          : isPhoneValid
+                          ? "border-emerald-500 bg-emerald-50/10"
+                          : "border-slate-200 bg-slate-50/50 focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                      }`}
+                    />
+                    {isPhoneValid && (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    )}
+                  </div>
+                  {phoneError ? (
+                    <p className="text-[11px] text-red-600 font-semibold mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      <span>{phoneError}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Petugas posko akan langsung menelepon/WhatsApp nomor ini dalam 30 detik untuk panduan evakuasi.
+                    </p>
+                  )}
+                </div>
+
+                {/* Form Wajib 2: Foto Kejadian Nyata dari Sensor Kamera */}
+                <div className="mt-3.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-orange-600" />
+                      <span>Foto Kejadian Nyata dari Kamera</span>
+                      <span className="text-red-500 font-black">*</span>
+                    </label>
+                    <span className="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded-full font-bold">
+                      Kamera Langsung
+                    </span>
+                  </div>
+
+                  {/* Input File Camera (capture=environment memaksa kamera belakang ponsel) */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    ref={cameraInputRef}
+                    onChange={handleCaptureCamera}
+                    className="hidden"
+                    id="sos-camera-capture-input"
+                  />
+
+                  {isProcessingPhoto ? (
+                    <div className="p-6 rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50/40 text-center flex flex-col items-center justify-center gap-2">
+                      <RefreshCw className="w-6 h-6 text-orange-600 animate-spin" />
+                      <p className="text-xs font-bold text-slate-800">
+                        Mencap Stempel GPS & Waktu Resmi...
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        Menanamkan koordinat satelit dan tanggal permanen pada foto
+                      </p>
+                    </div>
+                  ) : cameraPhotoUrl ? (
+                    /* Pratinjau Foto Kamera Berstempel */
+                    <div className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-950 relative shadow-sm">
+                      <div className="relative aspect-video max-h-52 w-full flex items-center justify-center overflow-hidden">
+                        <img
+                          src={cameraPhotoUrl}
+                          alt="Bukti Kamera Berstempel"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <div className="p-3 bg-white border-t border-slate-200 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Foto Kamera Berstempel GPS Valid</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRetakePhoto}
+                          className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Ulangi Foto
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Tombol Ambil Foto Kamera */
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="w-full p-5 rounded-2xl border-2 border-dashed border-orange-300 hover:border-orange-500 bg-orange-50/50 hover:bg-orange-50/80 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
+                        <Camera className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">
+                          Ambil Foto Bukti Langsung dari Kamera
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Kamera akan langsung mencap stempel lokasi GPS dan waktu riil secara otomatis
+                        </p>
+                      </div>
+                    </button>
+                  )}
+
+                  {photoError && (
+                    <p className="text-[11px] text-red-600 font-semibold mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      <span>{photoError}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Tombol Aksi Kirim SOS */}
+                <div className="mt-5 space-y-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={handleSubmitSos}
+                    disabled={!isFormValid}
+                    className={`w-full h-12 rounded-2xl font-black text-sm tracking-wide flex items-center justify-center gap-2 shadow-lg transition-all ${
+                      isFormValid
+                        ? "bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white shadow-red-600/30 cursor-pointer animate-pulse"
+                        : "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed"
+                    }`}
+                  >
+                    <Radio className="w-4 h-4 text-white" />
+                    <span>PANCARKAN SINYAL DARURAT SOS</span>
+                  </button>
+
+                  {!isFormValid && (
+                    <p className="text-[11px] text-center text-slate-500 font-medium">
+                      {!isPhoneValid && !cameraPhotoUrl
+                        ? "⚠️ Wajib isi nomor telepon dan ambil foto kamera untuk mengaktifkan tombol."
+                        : !isPhoneValid
+                        ? "⚠️ Masukkan nomor telepon yang valid (minimal 10 digit)."
+                        : "⚠️ Harap ambil foto bukti kejadian dari kamera."}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOpen(false);
+                      setCountdown(null);
+                    }}
+                    className="w-full py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                  >
+                    Batal
                   </button>
                 </div>
               </div>

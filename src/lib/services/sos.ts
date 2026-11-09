@@ -15,6 +15,7 @@ export interface LiveSosItem {
   battery_level?: string;
   status: "aktif" | "ditangani" | "selesai" | "palsu";
   phone_number?: string;
+  photo_url?: string;
   dispatched_team?: string;
   note?: string;
   created_at: string;
@@ -122,6 +123,7 @@ export async function sendSosAlert(params: {
   note?: string;
   senderName?: string;
   phoneNumber?: string;
+  photoUrl?: string;
 }): Promise<{ success: boolean; id: string; trackingCode: string; error?: string }> {
   const generatedId = generateUUID();
   const nowIso = new Date().toISOString();
@@ -143,6 +145,7 @@ export async function sendSosAlert(params: {
     battery_level: "100%",
     status: "aktif",
     phone_number: params.phoneNumber,
+    photo_url: params.photoUrl,
     note: formattedNote,
     created_at: nowIso,
   };
@@ -217,6 +220,8 @@ export async function sendSosAlert(params: {
         status: "diterima",
         priority: "tinggi",
         confirmation_count: 1,
+        image_url: params.photoUrl,
+        phone_number: params.phoneNumber,
         created_at: "Baru saja",
         is_demo: false,
       });
@@ -430,6 +435,7 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
           battery_level: "85%",
           status: (row.status as "aktif" | "ditangani" | "selesai" | "palsu") || "aktif",
           phone_number: extractedPhone,
+          photo_url: row.photo_url || undefined,
           dispatched_team: row.acknowledged_by || undefined,
           note: row.note || undefined,
           created_at: row.created_at,
@@ -477,6 +483,7 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
           battery_level: "95%",
           status: row.status === "selesai" ? "selesai" : row.status === "ditindaklanjuti" ? "ditangani" : "aktif",
           phone_number: extractedPhone,
+          photo_url: row.image_url || undefined,
           note: row.description || undefined,
           created_at: row.created_at,
         });
