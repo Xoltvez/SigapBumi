@@ -26,8 +26,10 @@ import { generateTrackingCode } from "@/lib/tracking";
 import {
   saveLocalReport,
   inferAgencyFromDisaster,
+  registerMyReportTrackingCode,
   type LiveReportItem,
 } from "@/lib/services/reports";
+import { getCurrentUser } from "@/lib/auth";
 import type { DisasterType } from "@/types";
 
 interface FormData {
@@ -197,6 +199,12 @@ function LaporForm() {
     const trackingCode = generateTrackingCode();
 
     // 1. Selalu simpan di penyimpanan lokal perangkat (Zero-loss offline resilience)
+    const currentUser = getCurrentUser();
+    const isUuid = Boolean(
+      currentUser?.id &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id)
+    );
+
     const localReportItem: LiveReportItem = {
       id: `rep-user-${Date.now()}`,
       tracking_code: trackingCode,
@@ -214,6 +222,8 @@ function LaporForm() {
       confirmation_count: 0,
       created_at: "Baru saja",
       is_demo: false,
+      reporter_id: currentUser?.id,
+      user_email: currentUser?.email,
       timeline: [
         {
           status: "diterima",
@@ -225,12 +235,13 @@ function LaporForm() {
     };
 
     saveLocalReport(localReportItem);
+    registerMyReportTrackingCode(trackingCode, currentUser?.email);
 
     // 2. Coba simpan ke Supabase jika database/jaringan tersedia
     let isSavedRemote = false;
     try {
       const supabase = createClient();
-      const { error } = await supabase.from("reports").insert({
+      const insertPayload: Record<string, unknown> = {
         tracking_code: trackingCode,
         disaster_type: formData.disaster_type,
         title: formData.title,
@@ -242,7 +253,13 @@ function LaporForm() {
         status: "diterima",
         confirmation_count: 0,
         priority_score: formData.urgent_needs.length > 0 ? 25 : 10,
-      });
+      };
+
+      if (isUuid && currentUser) {
+        insertPayload.reporter_id = currentUser.id;
+      }
+
+      const { error } = await supabase.from("reports").insert(insertPayload);
 
       if (!error) {
         isSavedRemote = true;

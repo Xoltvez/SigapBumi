@@ -22,6 +22,7 @@ import {
   UserSession,
 } from "@/lib/auth";
 import { supabase } from "@/lib/supabase/client";
+import { syncLocalReportsToUser } from "@/lib/services/reports";
 
 export default function MasukPage() {
   const router = useRouter();
@@ -102,6 +103,9 @@ export default function MasukPage() {
       };
 
       setCurrentUser(userSession);
+      try {
+        await syncLocalReportsToUser(userSession);
+      } catch {}
       router.push("/laporan-saya");
     } catch (err) {
       console.error("Login error:", err);
@@ -116,6 +120,9 @@ export default function MasukPage() {
         loginAt: new Date().toISOString(),
       };
       setCurrentUser(userSession);
+      try {
+        await syncLocalReportsToUser(userSession);
+      } catch {}
       router.push("/laporan-saya");
     } finally {
       setLoading(false);

@@ -25,6 +25,8 @@ export interface LiveReportItem {
   phone_number?: string;
   timeline?: TimelineStep[];
   is_demo?: boolean;
+  reporter_id?: string;
+  user_email?: string;
 }
 
 export interface LiveSosAlertItem {
@@ -114,6 +116,222 @@ export function markReportAsDeleted(idOrCode: string): void {
   } catch {
     // Ignore quota error
   }
+}
+
+export const LOCAL_STORAGE_MY_CODES_KEY = "sigapbumi_my_submitted_codes";
+export const LOCAL_STORAGE_USER_REPORTS_PREFIX = "sigapbumi_user_reports_";
+
+/**
+ * Mengambil daftar kode tracking yang pernah dibuat oleh browser/perangkat ini
+ */
+export function getMySubmittedCodes(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_MY_CODES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Mendaftarkan kode tracking baru yang dibuat dari perangkat ini (baik saat login maupun sebelum login)
+ */
+export function registerMyReportTrackingCode(trackingCode: string, userEmail?: string): void {
+  if (typeof window === "undefined" || !trackingCode) return;
+  try {
+    const clean = trackingCode.trim().toUpperCase();
+    const current = getMySubmittedCodes();
+    if (!current.includes(clean)) {
+      const updated = [clean, ...current];
+      localStorage.setItem(LOCAL_STORAGE_MY_CODES_KEY, JSON.stringify(updated));
+    }
+
+    // Jika pengguna sedang login, langsung tautkan juga ke memori profil user
+    if (userEmail) {
+      const userKey = `${LOCAL_STORAGE_USER_REPORTS_PREFIX}${userEmail.trim().toLowerCase()}`;
+      const rawUserCodes = localStorage.getItem(userKey);
+      const userCodes: string[] = rawUserCodes ? JSON.parse(rawUserCodes) : [];
+      if (!userCodes.includes(clean)) {
+        localStorage.setItem(userKey, JSON.stringify([clean, ...userCodes]));
+      }
+    }
+  } catch {
+    // Ignore quota error
+  }
+}
+
+/**
+ * Menghubungkan seluruh laporan lokal/anonim yang dibuat di perangkat sebelum login ke akun warga yang baru login
+ */
+export async function syncLocalReportsToUser(user: { id: string; email: string; phone_number?: string }): Promise<void> {
+  if (typeof window === "undefined" || !user?.email) return;
+
+  try {
+    const userEmailKey = `${LOCAL_STORAGE_USER_REPORTS_PREFIX}${user.email.trim().toLowerCase()}`;
+    const myDeviceCodes = getMySubmittedCodes();
+    const localReports = getLocalReports();
+
+    // Gabungkan kode tracking dari device dan localReports
+    const allCodesToSync = new Set<string>(myDeviceCodes);
+    localReports.forEach((r) => {
+      if (r.tracking_code) allCodesToSync.add(r.tracking_code.toUpperCase());
+    });
+
+    // Simpan ke key profil user
+    const rawUserCodes = localStorage.getItem(userEmailKey);
+    const existingUserCodes: string[] = rawUserCodes ? JSON.parse(rawUserCodes) : [];
+    existingUserCodes.forEach((c) => allCodesToSync.add(c.toUpperCase()));
+    const finalCodes = Array.from(allCodesToSync);
+
+    localStorage.setItem(userEmailKey, JSON.stringify(finalCodes));
+
+    // Update field reporter_id & user_email di localReports agar tercatat sebagai milik user
+    const updatedLocalReports = localReports.map((r) => {
+      if (finalCodes.includes(r.tracking_code.toUpperCase())) {
+        return {
+          ...r,
+          reporter_id: user.id,
+          user_email: user.email,
+        };
+      }
+      return r;
+    });
+    localStorage.setItem(LOCAL_STORAGE_REPORTS_KEY, JSON.stringify(updatedLocalReports));
+
+    // Sinkronisasi ke Supabase database jika ID berupa UUID yang valid
+    const isUuid = Boolean(user.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id));
+    if (isUuid && finalCodes.length > 0) {
+      try {
+        await supabase
+          .from("reports")
+          .update({ reporter_id: user.id })
+          .in("tracking_code", finalCodes);
+      } catch (dbErr) {
+        console.warn("syncLocalReportsToUser Supabase update notice:", dbErr);
+      }
+    }
+  } catch (err) {
+    console.warn("Gagal sinkronisasi laporan ke profil user:", err);
+  }
+}
+
+/**
+ * Mengambil seluruh riwayat laporan milik pengguna yang sedang login (termasuk SOS yang dikirim sebelum login)
+ */
+export async function fetchUserReports(user: { id: string; email: string; phone_number?: string } | null): Promise<LiveReportItem[]> {
+  const result: LiveReportItem[] = [];
+  const seenCodes = new Set<string>();
+
+  // 1. Ambil kode tracking yang terafiliasi dengan user atau perangkat ini
+  const relevantCodes = new Set<string>(getMySubmittedCodes());
+  if (user?.email) {
+    try {
+      const userKey = `${LOCAL_STORAGE_USER_REPORTS_PREFIX}${user.email.trim().toLowerCase()}`;
+      const rawUserCodes = localStorage.getItem(userKey);
+      if (rawUserCodes) {
+        const parsed: string[] = JSON.parse(rawUserCodes);
+        parsed.forEach((c) => relevantCodes.add(c.toUpperCase()));
+      }
+    } catch {}
+  }
+
+  // 2. Ambil dari Supabase (berdasarkan reporter_id atau tracking_code)
+  try {
+    const isUuid = Boolean(user?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id));
+    const codesArray = Array.from(relevantCodes);
+
+    let query = supabase.from("reports").select("*, report_status_logs(*), report_media(*)");
+
+    if (isUuid && codesArray.length > 0) {
+      query = query.or(`reporter_id.eq.${user!.id},tracking_code.in.(${codesArray.join(",")})`);
+    } else if (isUuid) {
+      query = query.eq("reporter_id", user!.id);
+    } else if (codesArray.length > 0) {
+      query = query.in("tracking_code", codesArray);
+    } else {
+      query = query.eq("id", "00000000-0000-0000-0000-000000000000"); // No items
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      for (const row of data) {
+        const code = (row.tracking_code || "").toUpperCase();
+        if (!code || seenCodes.has(code)) continue;
+        seenCodes.add(code);
+
+        const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
+        const disaster = row.disaster_type as DisasterType;
+        let agency = inferAgencyFromDisaster(disaster);
+
+        const isSos = Boolean(code.startsWith("SOS-") || row.title?.toUpperCase().includes("SOS"));
+        if (isSos) {
+          const t = (row.title || "").toUpperCase();
+          if (t.includes("BNPB") || t.includes("BPBD")) agency = "bnpb_bpbd";
+          else if (t.includes("DAMKAR") || t.includes("KEBAKARAN")) agency = "damkar";
+          else if (t.includes("MEDIS") || t.includes("AMBULANS")) agency = "medis";
+          else if (t.includes("POLISI") || t.includes("KEAMANAN")) agency = "polisi";
+        }
+
+        const mediaPhoto = Array.isArray(row.report_media) && row.report_media.length > 0
+          ? row.report_media[0].media_url
+          : undefined;
+        const photoMatch = row.description ? (row.description as string).match(/\[Foto:\s*([^\]]+)\]/) : null;
+        const imageUrl = mediaPhoto || (photoMatch ? photoMatch[1].trim() : undefined) || row.image_url || undefined;
+
+        let cleanDescription = removeEmojis(row.description || "");
+        cleanDescription = cleanDescription.replace(/\[Foto:\s*[^\]]+\]/g, "").trim();
+
+        result.push({
+          id: row.id,
+          tracking_code: row.tracking_code,
+          disaster_type: disaster,
+          target_agency: agency,
+          title: removeEmojis(row.title),
+          description: cleanDescription,
+          address: removeEmojis(row.address) || "Lokasi Koordinat GPS",
+          lat: coords.lat,
+          lng: coords.lng,
+          status: row.status as ReportStatus,
+          priority: row.priority_score >= 80 ? "tinggi" : "sedang",
+          confirmation_count: row.confirmation_count || 0,
+          created_at: formatReportTime(row.created_at),
+          image_url: imageUrl,
+          reporter_id: row.reporter_id || undefined,
+          is_demo: false,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("fetchUserReports Supabase warning:", err);
+  }
+
+  // 3. Gabungkan dengan laporan dari cache lokal perangkat (jika belum masuk dari Supabase)
+  const localReports = getLocalReports();
+  for (const local of localReports) {
+    const code = (local.tracking_code || "").toUpperCase();
+    if (!code || seenCodes.has(code)) continue;
+
+    // Sertakan jika kode ada di relevantCodes atau milik user ini
+    const isMatch = relevantCodes.has(code) || (user?.id && local.reporter_id === user.id) || (user?.email && local.user_email === user.email);
+    if (isMatch) {
+      seenCodes.add(code);
+      const photoMatch = local.description ? local.description.match(/\[Foto:\s*([^\]]+)\]/) : null;
+      const imageUrl = local.image_url || (photoMatch ? photoMatch[1].trim() : undefined);
+      const cleanDesc = (local.description || "").replace(/\[Foto:\s*[^\]]+\]/g, "").trim();
+
+      result.push({
+        ...local,
+        description: cleanDesc,
+        image_url: imageUrl,
+      });
+    }
+  }
+
+  return result;
 }
 
 // Dataset awal terstruktur 90 kejadian bencana di seluruh Indonesia

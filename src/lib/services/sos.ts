@@ -1,7 +1,8 @@
 import { supabase } from "@/lib/supabase/client";
 import { parsePostGISPoint } from "@/lib/geo";
 import type { SosAssistanceType } from "@/types";
-import { removeEmojis, saveLocalReport, getLocalReports } from "@/lib/services/reports";
+import { removeEmojis, saveLocalReport, getLocalReports, registerMyReportTrackingCode } from "@/lib/services/reports";
+import { getCurrentUser } from "@/lib/auth";
 
 export interface LiveSosItem {
   id: string;
@@ -199,6 +200,12 @@ export async function sendSosAlert(params: {
 
   // 4. SELALU kirim ke tabel reports Supabase (agar realtime langsung muncul di antrean laporan & dashboard admin)
   try {
+    const currentUser = typeof window !== "undefined" ? getCurrentUser() : null;
+    const isUuid = Boolean(
+      currentUser?.id &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id)
+    );
+
     const disasterType =
       params.assistanceType === "damkar"
         ? "kebakaran"
@@ -208,7 +215,7 @@ export async function sendSosAlert(params: {
         ? "lainnya"
         : "banjir";
 
-    const { error: repError } = await supabase.from("reports").insert({
+    const reportInsertPayload: Record<string, unknown> = {
       id: generatedId,
       tracking_code: trackingCode,
       disaster_type: disasterType,
@@ -221,10 +228,19 @@ export async function sendSosAlert(params: {
       priority_score: 99,
       created_at: nowIso,
       updated_at: nowIso,
-    });
+    };
+
+    if (isUuid && currentUser) {
+      reportInsertPayload.reporter_id = currentUser.id;
+    }
+
+    const { error: repError } = await supabase.from("reports").insert(reportInsertPayload);
     if (repError) {
       console.warn("sendSosAlert reports insert info:", repError.message);
     }
+
+    // Daftarkan kode tracking ini sebagai laporan yang diajukan oleh browser/user ini
+    registerMyReportTrackingCode(trackingCode, currentUser?.email);
 
     try {
       saveLocalReport({
@@ -244,6 +260,8 @@ export async function sendSosAlert(params: {
         phone_number: params.phoneNumber,
         created_at: "Baru saja",
         is_demo: false,
+        reporter_id: currentUser?.id,
+        user_email: currentUser?.email,
       });
     } catch {}
   } catch (err) {
