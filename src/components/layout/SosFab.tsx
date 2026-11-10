@@ -685,16 +685,12 @@ export function SosFab() {
               /* FASE 2: POPUP SOS BERHASIL DIKIRIM */
               <div>
                 {/* Header SOS Dikirim */}
-                <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+                <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2.5">
                     <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
                       <CheckCircle2 className="w-6 h-6" />
                     </div>
                     <div>
-                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                        <span>Sinyal Darurat Terpancar</span>
-                      </div>
                       <h2
                         id="sos-modal-title"
                         className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight"
@@ -716,13 +712,9 @@ export function SosFab() {
 
                 {/* Card Status Pelaporan dengan Button untuk Memunculkan Popup Pelacakan */}
                 <div className="mt-4 p-4 rounded-2xl bg-linear-to-r from-orange-50 via-amber-50 to-orange-50 border border-orange-200">
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="mb-1.5">
                     <span className="text-[11px] font-extrabold text-orange-800 uppercase tracking-wider">
                       Kode Pelaporan Darurat
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                      Aktif di Radar Posko
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-2 mb-3">
