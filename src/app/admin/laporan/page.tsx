@@ -682,11 +682,11 @@ function LaporanContent() {
         </div>
       </div>
 
-      {/* Search & Filter Bar (Tata Letak Sejajar, Terstruktur, dan Rapi) */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4">
+      {/* Search & Filter Bar (Tata Letak Rapi, Modern, dan Terstruktur) */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
         {/* Baris 1: Kolom Pencarian & Ringkasan Hasil */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="relative flex-1 max-w-lg">
+        <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+          <div className="relative flex-1 max-w-xl">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
@@ -696,7 +696,7 @@ function LaporanContent() {
                 setCurrentPage(1);
               }}
               placeholder="Cari kode tracking (contoh: SOS-1399), judul bencana, atau lokasi..."
-              className="w-full h-10 pl-10 pr-9 rounded-xl bg-slate-50/90 hover:bg-slate-100/70 focus:bg-white border border-slate-200 text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
+              className="w-full h-10 pl-10 pr-9 rounded-xl bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200/90 text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:border-orange-500 focus:ring-3 focus:ring-orange-500/15 transition-all"
             />
             {searchCode && (
               <button
@@ -705,7 +705,7 @@ function LaporanContent() {
                   setSearchCode("");
                   setCurrentPage(1);
                 }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-200/60 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200/70 transition-colors cursor-pointer"
                 title="Hapus kata kunci"
               >
                 <X className="w-3.5 h-3.5" />
@@ -713,10 +713,13 @@ function LaporanContent() {
             )}
           </div>
 
-          <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
-            <span className="text-xs text-slate-500 font-medium">
-              Menampilkan <span className="font-bold text-slate-900">{filteredReports.length}</span> dari {totalCount} laporan
-            </span>
+          <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-500">
+              <span>Menampilkan</span>
+              <span className="font-bold text-slate-900">{filteredReports.length}</span>
+              <span>dari {totalCount} laporan</span>
+            </div>
+
             {(selectedStatus !== "semua" || selectedPriority !== "semua" || searchCode) && (
               <button
                 type="button"
@@ -726,34 +729,35 @@ function LaporanContent() {
                   setSearchCode("");
                   setCurrentPage(1);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 transition-all cursor-pointer shadow-2xs"
+                title="Reset semua filter ke kondisi awal"
               >
-                <X className="w-3.5 h-3.5" />
-                <span>Reset Filter</span>
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Baris 2: Tombol Filter Status & Prioritas Sejajar */}
-        <div className="border-t border-slate-100 pt-3.5 flex flex-col gap-2.5">
-          {/* Baris Status */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <div className="w-24 shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] uppercase tracking-wider border border-blue-100/80 justify-center">
-              <Clock className="w-3 h-3 text-blue-600" />
+        {/* Baris Filter: Status & Prioritas di dalam kontainer terstruktur */}
+        <div className="bg-slate-50/60 border-t border-slate-100 px-4 sm:px-5 py-3.5 flex flex-col gap-3">
+          {/* Filter Status */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <div className="w-24 shrink-0 flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <Clock className="w-3.5 h-3.5 text-blue-500" />
               <span>Status</span>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               {(
                 [
-                  ["semua", "Semua"],
-                  ["diterima", "Diterima"],
-                  ["diverifikasi", "Diverifikasi"],
-                  ["ditindaklanjuti", "Ditindaklanjuti"],
-                  ["selesai", "Selesai"],
-                  ["ditolak", "Ditolak"],
+                  { val: "semua", label: "Semua" },
+                  { val: "diterima", label: "Diterima" },
+                  { val: "diverifikasi", label: "Diverifikasi" },
+                  { val: "ditindaklanjuti", label: "Ditindaklanjuti" },
+                  { val: "selesai", label: "Selesai" },
+                  { val: "ditolak", label: "Ditolak" },
                 ] as const
-              ).map(([val, label]) => {
+              ).map(({ val, label }) => {
                 const active = selectedStatus === val;
                 return (
                   <button
@@ -763,10 +767,10 @@ function LaporanContent() {
                       setSelectedStatus(val);
                       setCurrentPage(1);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                    className={`h-7.5 px-3 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer inline-flex items-center justify-center ${
                       active
-                        ? "bg-blue-600 text-white shadow-2xs font-bold"
-                        : "bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/80"
+                        ? "bg-slate-900 text-white shadow-2xs font-semibold ring-1 ring-slate-900"
+                        : "bg-white hover:bg-slate-100/80 text-slate-600 hover:text-slate-900 border border-slate-200/90 shadow-2xs"
                     }`}
                   >
                     {label}
@@ -776,22 +780,22 @@ function LaporanContent() {
             </div>
           </div>
 
-          {/* Baris Prioritas */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <div className="w-24 shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-bold text-[11px] uppercase tracking-wider border border-rose-100/80 justify-center">
-              <AlertTriangle className="w-3 h-3 text-rose-600" />
+          {/* Filter Prioritas */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <div className="w-24 shrink-0 flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
               <span>Prioritas</span>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               {(
                 [
-                  { val: "semua", label: "Semua", dot: null, activeClass: "bg-slate-900 text-white shadow-2xs font-bold" },
-                  { val: "Kritis", label: "Kritis", dot: "bg-rose-500", activeClass: "bg-rose-600 text-white shadow-2xs font-bold" },
-                  { val: "Tinggi", label: "Tinggi", dot: "bg-amber-500", activeClass: "bg-amber-600 text-white shadow-2xs font-bold" },
-                  { val: "Sedang", label: "Sedang", dot: "bg-blue-500", activeClass: "bg-blue-600 text-white shadow-2xs font-bold" },
-                  { val: "Rendah", label: "Rendah", dot: "bg-emerald-500", activeClass: "bg-emerald-600 text-white shadow-2xs font-bold" },
+                  { val: "semua", label: "Semua", dot: null },
+                  { val: "Kritis", label: "Kritis", dot: "bg-rose-500" },
+                  { val: "Tinggi", label: "Tinggi", dot: "bg-amber-500" },
+                  { val: "Sedang", label: "Sedang", dot: "bg-blue-500" },
+                  { val: "Rendah", label: "Rendah", dot: "bg-emerald-500" },
                 ] as const
-              ).map(({ val, label, dot, activeClass }) => {
+              ).map(({ val, label, dot }) => {
                 const active = selectedPriority === val;
                 return (
                   <button
@@ -801,10 +805,10 @@ function LaporanContent() {
                       setSelectedPriority(val);
                       setCurrentPage(1);
                     }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                    className={`h-7.5 px-3 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                       active
-                        ? activeClass
-                        : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80"
+                        ? "bg-slate-900 text-white shadow-2xs font-semibold ring-1 ring-slate-900"
+                        : "bg-white hover:bg-slate-100/80 text-slate-700 hover:text-slate-900 border border-slate-200/90 shadow-2xs"
                     }`}
                   >
                     {dot && (
