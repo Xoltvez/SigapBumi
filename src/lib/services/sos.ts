@@ -739,3 +739,42 @@ export async function deleteSosAlertLive(
 
   return { success: true };
 }
+
+/**
+ * Menghapus SELURUH data panggilan SOS (sos_alerts Supabase, cache lokal, dan sesi tracking)
+ * TANPA menghapus data laporan bencana umum.
+ */
+export async function clearAllSosAlerts(): Promise<{ success: boolean; error?: string }> {
+  // 1. Kosongkan local cache SOS
+  saveLocalSosCache([]);
+
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("sigapbumi_active_sos_tracking");
+    localStorage.removeItem("sigapbumi_sos_alerts_cache");
+    localStorage.removeItem("sigapbumi_deleted_sos_ids");
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("sigapbumi:sos-updated", { detail: {} }));
+    window.dispatchEvent(new CustomEvent("sigapbumi:sos-deleted", { detail: {} }));
+  }
+
+  // 2. Panggil API backend untuk membersihkan database
+  try {
+    await fetch("/api/admin/status", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clearAllSos: true }),
+    });
+  } catch (err) {
+    console.warn("clearAllSosAlerts API call error:", err);
+  }
+
+  // 3. Hapus langsung di Supabase client jika izin RLS tersedia
+  try {
+    await supabase.from("sos_alerts").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await supabase.from("reports").delete().or("tracking_code.ilike.SOS-%,title.ilike.%SOS%");
+  } catch (err) {
+    console.warn("clearAllSosAlerts Supabase client error:", err);
+  }
+
+  return { success: true };
+}

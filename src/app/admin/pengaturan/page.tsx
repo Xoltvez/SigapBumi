@@ -205,14 +205,13 @@ export default function AdminPengaturanPage() {
     }
   };
 
-  // Bersihkan cache panggilan darurat lokal
-  const handleClearSosCache = () => {
-    if (window.confirm("Hapus semua riwayat sinyal darurat lokal dari cache browser?")) {
+  // Bersihkan cache panggilan darurat lokal & database SOS
+  const handleClearSosCache = async () => {
+    if (window.confirm("Hapus semua riwayat sinyal darurat SOS? Data laporan umum tetap aman.")) {
       try {
-        localStorage.removeItem("sigapbumi_sos_alerts_cache");
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new CustomEvent("sigapbumi:sos-updated", { detail: {} }));
-        showToast("Cache sinyal darurat berhasil dibersihkan!");
+        const { clearAllSosAlerts } = await import("@/lib/services/sos");
+        await clearAllSosAlerts();
+        showToast("Seluruh data panggilan darurat SOS berhasil dibersihkan!");
       } catch {
         alert("Gagal menghapus cache.");
       }

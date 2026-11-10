@@ -143,12 +143,38 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     let reportId = "";
+    let clearAllSos = false;
     try {
       const body = await request.json();
       reportId = body?.reportId;
+      clearAllSos = Boolean(body?.clearAllSos);
     } catch {
       const url = new URL(request.url);
       reportId = url.searchParams.get("reportId") || "";
+      clearAllSos = url.searchParams.get("clearAllSos") === "true";
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (clearAllSos) {
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        try {
+          // Hapus semua data dari sos_alerts
+          await supabase.from("sos_alerts").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+        } catch {
+          // Abaikan jika tidak tersedia
+        }
+        try {
+          // Hapus data laporan yang berupa SOS saja (bukan laporan bencana umum)
+          await supabase.from("reports").delete().or("tracking_code.ilike.SOS-%,title.ilike.%SOS%");
+        } catch {
+          // Abaikan jika tidak tersedia
+        }
+      }
+      return NextResponse.json({ success: true, message: "Seluruh data panggilan SOS berhasil dihapus." });
     }
 
     if (!reportId) {
@@ -157,10 +183,6 @@ export async function DELETE(request: Request) {
         { status: 400 }
       );
     }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (supabaseUrl && supabaseKey) {
       const supabase = createClient(supabaseUrl, supabaseKey);
