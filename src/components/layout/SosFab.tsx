@@ -64,6 +64,7 @@ export function SosFab() {
   // Foto kamera riil berstempel GPS & Waktu
   const [cameraPhotoUrl, setCameraPhotoUrl] = useState<string | null>(null);
   const [isProcessingPhoto, setIsProcessingPhoto] = useState<boolean>(false);
+  const [isPhotoFullscreen, setIsPhotoFullscreen] = useState<boolean>(false);
   const [photoError, setPhotoError] = useState<string>("");
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -283,6 +284,18 @@ export function SosFab() {
       }
     };
   }, [isOpen]);
+
+  // Dukungan tombol Escape untuk menutup foto layar penuh
+  useEffect(() => {
+    if (!isPhotoFullscreen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsPhotoFullscreen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPhotoFullscreen]);
 
   // Cleanup watch saat unmount
   useEffect(() => {
@@ -1140,19 +1153,40 @@ export function SosFab() {
                     </div>
                   ) : cameraPhotoUrl ? (
                     /* Pratinjau Foto Kamera Berstempel */
-                    <div className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-950 relative shadow-sm">
-                      <div className="relative aspect-video max-h-52 w-full flex items-center justify-center overflow-hidden">
+                    <div className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-950 relative shadow-sm group">
+                      <div
+                        onClick={() => setIsPhotoFullscreen(true)}
+                        className="relative aspect-video max-h-56 w-full flex items-center justify-center overflow-hidden bg-black cursor-pointer"
+                        title="Klik untuk melihat foto layar penuh"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={cameraPhotoUrl}
                           alt="Bukti Kamera Berstempel"
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                         />
+                        {/* Overlay petunjuk klik fullscreen */}
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                          <span className="bg-black/75 text-white text-xs px-3 py-1.5 rounded-xl font-bold backdrop-blur-xs flex items-center gap-1.5 shadow-lg">
+                            <Eye className="w-4 h-4 text-emerald-400" />
+                            Klik untuk Layar Penuh
+                          </span>
+                        </div>
+                        {/* Badge indikator di pojok */}
+                        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-xs text-white text-[10px] px-2 py-1 rounded-lg font-semibold flex items-center gap-1 pointer-events-none">
+                          <Eye className="w-3 h-3 text-emerald-400" />
+                          <span>Layar Penuh</span>
+                        </div>
                       </div>
                       <div className="p-3 bg-white border-t border-slate-200 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700">
+                        <button
+                          type="button"
+                          onClick={() => setIsPhotoFullscreen(true)}
+                          className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 transition-colors cursor-pointer text-left"
+                        >
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>Foto Kamera Berstempel GPS Valid</span>
-                        </div>
+                          <span>Foto Kamera Valid • Lihat Detail</span>
+                        </button>
                         <button
                           type="button"
                           onClick={handleRetakePhoto}
@@ -1473,6 +1507,71 @@ export function SosFab() {
                 Tutup Pelacakan
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. POPUP KETIGA: LIGHTBOX FULLSCREEN FOTO BUKTI KAMERA */}
+      {isPhotoFullscreen && cameraPhotoUrl && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-100 bg-black/95 backdrop-blur-md flex flex-col justify-between p-3 sm:p-5 select-none animate-in fade-in duration-200"
+          onClick={() => setIsPhotoFullscreen(false)}
+        >
+          {/* Header Lightbox */}
+          <div
+            className="flex items-center justify-between text-white max-w-5xl mx-auto w-full pb-2 shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <Camera className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs sm:text-sm font-bold">
+                Bukti Foto Kamera Riil (Stempel GPS, Kompas & Waktu)
+              </span>
+              <span className="hidden sm:inline-block px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                Otentik
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsPhotoFullscreen(false)}
+              className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold"
+              title="Tutup (Esc)"
+            >
+              <X className="w-5 h-5" />
+              <span className="hidden sm:inline">Tutup</span>
+            </button>
+          </div>
+
+          {/* Area Foto Fullscreen Tengah */}
+          <div
+            className="flex-1 flex items-center justify-center p-1 sm:p-4 overflow-auto max-h-[82vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={cameraPhotoUrl}
+              alt="Bukti Foto Kamera Layar Penuh"
+              className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl border border-white/10"
+            />
+          </div>
+
+          {/* Footer Lightbox */}
+          <div
+            className="flex flex-col sm:flex-row items-center justify-between gap-2 max-w-5xl mx-auto w-full pt-2 text-[11px] text-slate-400 border-t border-white/10 shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-center sm:text-left">
+              🛡️ Stempel kompas dial, mini map, dan koordinat tercetak permanen langsung dari kamera perangkat warga.
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsPhotoFullscreen(false)}
+              className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-colors cursor-pointer shrink-0"
+            >
+              Kembali ke Formulir
+            </button>
           </div>
         </div>
       )}
