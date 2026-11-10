@@ -17,6 +17,7 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   MoreVertical,
   Check,
   Trash2,
@@ -682,44 +683,89 @@ function LaporanContent() {
         </div>
       </div>
 
-      {/* Search & Filter Bar (Tata Letak Rapi, Modern, dan Terstruktur) */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
-        {/* Baris 1: Kolom Pencarian & Ringkasan Hasil */}
-        <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-          <div className="relative flex-1 max-w-xl">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchCode}
-              onChange={(e) => {
-                setSearchCode(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder="Cari kode tracking (contoh: SOS-1399), judul bencana, atau lokasi..."
-              className="w-full h-10 pl-10 pr-9 rounded-xl bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200/90 text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:border-orange-500 focus:ring-3 focus:ring-orange-500/15 transition-all"
-            />
-            {searchCode && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchCode("");
+      {/* Search & Filter Bar (Dropdown Modern, Simpel & Kompak) */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Sisi Kiri: Search Input & Dropdowns */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 flex-1 max-w-4xl">
+            {/* Input Pencarian */}
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchCode}
+                onChange={(e) => {
+                  setSearchCode(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200/70 transition-colors cursor-pointer"
-                title="Hapus kata kunci"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-500">
-              <span>Menampilkan</span>
-              <span className="font-bold text-slate-900">{filteredReports.length}</span>
-              <span>dari {totalCount} laporan</span>
+                placeholder="Cari kode tracking, bencana, atau lokasi..."
+                className="w-full h-10 pl-10 pr-9 rounded-xl bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200/90 text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:border-orange-500 focus:ring-3 focus:ring-orange-500/15 transition-all"
+              />
+              {searchCode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchCode("");
+                    setCurrentPage(1);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200/70 transition-colors cursor-pointer"
+                  title="Hapus kata kunci"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
+            {/* Dropdown Filter Status */}
+            <div className="relative shrink-0">
+              <Clock className="w-3.5 h-3.5 text-blue-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <select
+                value={selectedStatus}
+                onChange={(e) => {
+                  setSelectedStatus(e.target.value as any);
+                  setCurrentPage(1);
+                }}
+                className={`h-10 pl-8.5 pr-8 rounded-xl text-xs font-semibold border transition-all cursor-pointer appearance-none shadow-2xs focus:outline-none focus:ring-3 focus:ring-blue-500/15 ${
+                  selectedStatus !== "semua"
+                    ? "bg-blue-50 border-blue-300 text-blue-900 font-bold"
+                    : "bg-slate-50 hover:bg-slate-100/70 border-slate-200/90 text-slate-700"
+                }`}
+              >
+                <option value="semua">Semua Status</option>
+                <option value="diterima">Diterima</option>
+                <option value="diverifikasi">Diverifikasi</option>
+                <option value="ditindaklanjuti">Ditindaklanjuti</option>
+                <option value="selesai">Selesai</option>
+                <option value="ditolak">Ditolak</option>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            {/* Dropdown Filter Prioritas */}
+            <div className="relative shrink-0">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <select
+                value={selectedPriority}
+                onChange={(e) => {
+                  setSelectedPriority(e.target.value as any);
+                  setCurrentPage(1);
+                }}
+                className={`h-10 pl-8.5 pr-8 rounded-xl text-xs font-semibold border transition-all cursor-pointer appearance-none shadow-2xs focus:outline-none focus:ring-3 focus:ring-rose-500/15 ${
+                  selectedPriority !== "semua"
+                    ? "bg-rose-50 border-rose-300 text-rose-900 font-bold"
+                    : "bg-slate-50 hover:bg-slate-100/70 border-slate-200/90 text-slate-700"
+                }`}
+              >
+                <option value="semua">Semua Prioritas</option>
+                <option value="Kritis">🔴 Kritis</option>
+                <option value="Tinggi">🟠 Tinggi</option>
+                <option value="Sedang">🔵 Sedang</option>
+                <option value="Rendah">🟢 Rendah</option>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            {/* Tombol Reset jika filter aktif */}
             {(selectedStatus !== "semua" || selectedPriority !== "semua" || searchCode) && (
               <button
                 type="button"
@@ -729,99 +775,21 @@ function LaporanContent() {
                   setSearchCode("");
                   setCurrentPage(1);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 transition-all cursor-pointer shadow-2xs"
-                title="Reset semua filter ke kondisi awal"
+                className="h-10 inline-flex items-center gap-1.5 px-3 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 transition-all cursor-pointer shadow-2xs shrink-0"
+                title="Reset semua filter"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset</span>
               </button>
             )}
           </div>
-        </div>
 
-        {/* Baris Filter: Status & Prioritas di dalam kontainer terstruktur */}
-        <div className="bg-slate-50/60 border-t border-slate-100 px-4 sm:px-5 py-3.5 flex flex-col gap-3">
-          {/* Filter Status */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-            <div className="w-24 shrink-0 flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              <Clock className="w-3.5 h-3.5 text-blue-500" />
-              <span>Status</span>
-            </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {(
-                [
-                  { val: "semua", label: "Semua" },
-                  { val: "diterima", label: "Diterima" },
-                  { val: "diverifikasi", label: "Diverifikasi" },
-                  { val: "ditindaklanjuti", label: "Ditindaklanjuti" },
-                  { val: "selesai", label: "Selesai" },
-                  { val: "ditolak", label: "Ditolak" },
-                ] as const
-              ).map(({ val, label }) => {
-                const active = selectedStatus === val;
-                return (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => {
-                      setSelectedStatus(val);
-                      setCurrentPage(1);
-                    }}
-                    className={`h-7.5 px-3 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer inline-flex items-center justify-center ${
-                      active
-                        ? "bg-slate-900 text-white shadow-2xs font-semibold ring-1 ring-slate-900"
-                        : "bg-white hover:bg-slate-100/80 text-slate-600 hover:text-slate-900 border border-slate-200/90 shadow-2xs"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Filter Prioritas */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-            <div className="w-24 shrink-0 flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-              <span>Prioritas</span>
-            </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {(
-                [
-                  { val: "semua", label: "Semua", dot: null },
-                  { val: "Kritis", label: "Kritis", dot: "bg-rose-500" },
-                  { val: "Tinggi", label: "Tinggi", dot: "bg-amber-500" },
-                  { val: "Sedang", label: "Sedang", dot: "bg-blue-500" },
-                  { val: "Rendah", label: "Rendah", dot: "bg-emerald-500" },
-                ] as const
-              ).map(({ val, label, dot }) => {
-                const active = selectedPriority === val;
-                return (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => {
-                      setSelectedPriority(val);
-                      setCurrentPage(1);
-                    }}
-                    className={`h-7.5 px-3 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer inline-flex items-center gap-1.5 ${
-                      active
-                        ? "bg-slate-900 text-white shadow-2xs font-semibold ring-1 ring-slate-900"
-                        : "bg-white hover:bg-slate-100/80 text-slate-700 hover:text-slate-900 border border-slate-200/90 shadow-2xs"
-                    }`}
-                  >
-                    {dot && (
-                      <span
-                        className={`w-2 h-2 rounded-full shrink-0 ${
-                          active ? "bg-white ring-2 ring-white/30" : dot
-                        }`}
-                      />
-                    )}
-                    <span>{label}</span>
-                  </button>
-                );
-              })}
+          {/* Sisi Kanan: Ringkasan Jumlah Data */}
+          <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto">
+            <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-500 shadow-2xs">
+              <span>Menampilkan</span>
+              <span className="font-bold text-slate-900">{filteredReports.length}</span>
+              <span>dari {totalCount} laporan</span>
             </div>
           </div>
         </div>
