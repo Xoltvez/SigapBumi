@@ -46,6 +46,7 @@ export function SosFab() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const [trackingCode, setTrackingCode] = useState<string | null>(null);
   const [activeSosId, setActiveSosId] = useState<string | null>(null);
@@ -350,80 +351,6 @@ export function SosFab() {
     };
   }, [activeSosId]);
 
-  // Hitung mundur timer (delay 3 detik). Saat mencapai 0, langsung kirim SOS & tampilkan pop-up pelacakan
-  useEffect(() => {
-    if (pathname.startsWith("/admin")) return;
-    if (countdown === null) return;
-
-    if (countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown((c) => (c !== null ? c - 1 : null));
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-
-    // Trigger kirim SOS tepat saat countdown mencapai 0 (setelah delay 3 detik)
-    if (countdown === 0 && !hasTriggeredRef.current) {
-      hasTriggeredRef.current = true;
-      setCountdown(null); // Segera reset timer agar tidak pernah membeku di angka 0 dan tidak memicu pengiriman ganda
-
-      const savedPhone =
-        typeof window !== "undefined"
-          ? localStorage.getItem("sigapbumi_user_phone") || undefined
-          : undefined;
-      const phoneToSend = phoneNumber.trim() || savedPhone;
-
-      // Proteksi ketat: HANYA kirim jika benar-benar ada bukti foto dan nomor telepon valid
-      if (!phoneToSend || !cameraPhotoUrl) {
-        setIsSent(false);
-        setIsOpen(true);
-        if (!phoneToSend) setPhoneError("Nomor telepon/WhatsApp wajib diisi minimal 10 digit.");
-        if (!cameraPhotoUrl) setPhotoError("Wajib mengambil foto bukti kejadian langsung dari kamera.");
-        return;
-      }
-
-      setIsSent(true);
-
-      sendSosAlert({
-        lat: currentCoords.lat,
-        lng: currentCoords.lng,
-        assistanceType: selectedAssistance || "damkar",
-        note: `Panggilan Darurat SOS Warga (Realtime)${
-          gpsAccuracy ? ` [Akurasi GPS: ±${Math.round(gpsAccuracy)}m]` : ""
-        }`,
-        phoneNumber: phoneToSend,
-        photoUrl: cameraPhotoUrl,
-      }).then((res) => {
-        if (res.id) {
-          setActiveSosId(res.id);
-          activeSosIdRef.current = res.id;
-          const code = res.trackingCode || `SOS-${res.id.slice(-4).toUpperCase()}`;
-          setTrackingCode(code);
-          setIsMinimized(false);
-          setIsOpen(true);
-
-          try {
-            localStorage.setItem(
-              "sigapbumi_active_sos_tracking",
-              JSON.stringify({
-                id: res.id,
-                code,
-                assistance: selectedAssistance || "damkar",
-                phone: phoneToSend,
-                photo: cameraPhotoUrl,
-                time: Date.now(),
-              })
-            );
-          } catch {}
-
-          if (gpsStatus === "locked") {
-            updateSosLocation(res.id, currentCoords.lat, currentCoords.lng, gpsAccuracy || undefined);
-          }
-        }
-      });
-    }
-  }, [countdown, pathname, currentCoords, selectedAssistance, phoneNumber, cameraPhotoUrl, gpsAccuracy, gpsStatus]);
-
   // Membuka dialog form verifikasi darurat SOS (HANYA membuka form, SAMA SEKALI TIDAK mengirim laporan)
   const handleStartSos = useCallback(() => {
     hasTriggeredRef.current = false;
@@ -434,7 +361,7 @@ export function SosFab() {
     setIsLocationRefined(false);
     setIsOpen(true);
     setIsMinimized(false);
-    setCountdown(null); // Form verifikasi dibuka, timer belum aktif
+    setCountdown(null);
     setIsSent(false);
     setSelectedAssistance((prev) => prev || "damkar");
     setIsPhoneSaved(false);
@@ -497,8 +424,10 @@ export function SosFab() {
   const isPhoneValid = cleanPhoneDigits.length >= 10;
   const isFormValid = isPhoneValid && Boolean(cameraPhotoUrl) && !isProcessingPhoto;
 
-  const handleSubmitSos = (e?: React.FormEvent) => {
+  const handleSubmitSos = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isSubmitting) return;
+
     setPhoneError("");
     setPhotoError("");
 
@@ -511,12 +440,59 @@ export function SosFab() {
       return;
     }
 
+    const cleanPhone = phoneNumber.trim();
     if (typeof window !== "undefined") {
-      localStorage.setItem("sigapbumi_user_phone", phoneNumber.trim());
+      localStorage.setItem("sigapbumi_user_phone", cleanPhone);
     }
 
-    hasTriggeredRef.current = false;
-    setCountdown(3);
+    setIsSubmitting(true);
+    setCountdown(null);
+
+    try {
+      const res = await sendSosAlert({
+        lat: currentCoords.lat,
+        lng: currentCoords.lng,
+        assistanceType: selectedAssistance || "damkar",
+        note: `Panggilan Darurat SOS Warga (Realtime)${
+          gpsAccuracy ? ` [Akurasi GPS: ±${Math.round(gpsAccuracy)}m]` : ""
+        }`,
+        phoneNumber: cleanPhone,
+        photoUrl: cameraPhotoUrl,
+      });
+
+      if (res.id) {
+        setActiveSosId(res.id);
+        activeSosIdRef.current = res.id;
+        const code = res.trackingCode || `SOS-${res.id.slice(-4).toUpperCase()}`;
+        setTrackingCode(code);
+        setIsSent(true);
+        setIsMinimized(false);
+        setIsOpen(true);
+
+        try {
+          localStorage.setItem(
+            "sigapbumi_active_sos_tracking",
+            JSON.stringify({
+              id: res.id,
+              code,
+              assistance: selectedAssistance || "damkar",
+              phone: cleanPhone,
+              photo: cameraPhotoUrl,
+              time: Date.now(),
+            })
+          );
+        } catch {}
+
+        if (gpsStatus === "locked") {
+          updateSosLocation(res.id, currentCoords.lat, currentCoords.lng, gpsAccuracy || undefined);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal memancarkan sinyal darurat SOS instan:", err);
+      alert("Gagal memancarkan sinyal darurat SOS. Silakan periksa koneksi internet Anda.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Listen to open-sos event triggered by Header SOS button or other emergency CTAs
@@ -1244,15 +1220,24 @@ export function SosFab() {
                   <button
                     type="button"
                     onClick={handleSubmitSos}
-                    disabled={!isFormValid}
+                    disabled={!isFormValid || isSubmitting}
                     className={`w-full h-12 rounded-2xl font-black text-sm tracking-wide flex items-center justify-center gap-2 shadow-lg transition-all ${
-                      isFormValid
+                      isFormValid && !isSubmitting
                         ? "bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white shadow-red-600/30 cursor-pointer animate-pulse"
                         : "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed"
                     }`}
                   >
-                    <Radio className="w-4 h-4 text-white" />
-                    <span>KIRIM LAPORAN SOS</span>
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 text-white animate-spin" />
+                        <span>MEMANCARKAN SINYAL SOS...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Radio className="w-4 h-4 text-white" />
+                        <span>KIRIM LAPORAN SOS</span>
+                      </>
+                    )}
                   </button>
 
                   <button
