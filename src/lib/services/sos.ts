@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase/client";
 import { parsePostGISPoint } from "@/lib/geo";
 import type { SosAssistanceType } from "@/types";
-import { removeEmojis, saveLocalReport } from "@/lib/services/reports";
+import { removeEmojis, saveLocalReport, getLocalReports } from "@/lib/services/reports";
 
 export interface LiveSosItem {
   id: string;
@@ -129,9 +129,12 @@ export async function sendSosAlert(params: {
   const nowIso = new Date().toISOString();
   const trackingCode = `SOS-${Date.now().toString().slice(-4)}`;
 
-  const formattedNote = params.phoneNumber
-    ? `${params.note || "Panggilan Darurat SOS Warga"} [Kontak: ${params.phoneNumber}]`
-    : (params.note || "Panggilan Darurat SOS Warga");
+  const noteParts = [
+    params.note || "Panggilan Darurat SOS Warga (Realtime)",
+    params.phoneNumber ? `[Kontak: ${params.phoneNumber}]` : "",
+    params.photoUrl ? `[Foto: ${params.photoUrl}]` : "",
+  ].filter(Boolean);
+  const formattedNote = noteParts.join(" ");
 
   const newItem: LiveSosItem = {
     id: generatedId,
@@ -177,7 +180,24 @@ export async function sendSosAlert(params: {
     console.warn("sendSosAlert sos_alerts network error:", err);
   }
 
-  // 3. SELALU kirim ke tabel reports Supabase (agar realtime langsung muncul di antrean laporan & dashboard admin)
+  // 3. Simpan juga bukti foto ke tabel report_media Supabase
+  if (params.photoUrl) {
+    try {
+      const { error: mediaErr } = await supabase.from("report_media").insert({
+        report_id: generatedId,
+        media_url: params.photoUrl,
+        media_type: "image",
+        created_at: nowIso,
+      });
+      if (mediaErr) {
+        console.warn("sendSosAlert report_media insert error:", mediaErr.message);
+      }
+    } catch (err) {
+      console.warn("sendSosAlert report_media exception:", err);
+    }
+  }
+
+  // 4. SELALU kirim ke tabel reports Supabase (agar realtime langsung muncul di antrean laporan & dashboard admin)
   try {
     const disasterType =
       params.assistanceType === "damkar"
@@ -422,12 +442,14 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
         const coords = parsePostGISPoint(row.location) || { lat: -6.155, lng: 106.723 };
         const phoneMatch = row.note ? (row.note as string).match(/\[Kontak:\s*([^\]]+)\]/) : null;
         const extractedPhone = phoneMatch ? phoneMatch[1].trim() : undefined;
+        const photoMatch = row.note ? (row.note as string).match(/\[Foto:\s*([^\]]+)\]/) : null;
+        const extractedPhoto = photoMatch ? photoMatch[1].trim() : (row.photo_url || undefined);
 
         return {
           id: row.id,
           source: "Ponsel Warga (GPS Sensor)",
           assistance_type: (row.assistance_type as SosAssistanceType) || "damkar",
-          address: row.note ? `${row.note}` : `Lokasi GPS (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`,
+          address: row.note ? `${row.note.replace(/\[(Kontak|Foto):[^\]]+\]/g, "").trim()}` : `Lokasi GPS (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`,
           coordinates: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
           lat: coords.lat,
           lng: coords.lng,
@@ -435,7 +457,7 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
           battery_level: "85%",
           status: (row.status as "aktif" | "ditangani" | "selesai" | "palsu") || "aktif",
           phone_number: extractedPhone,
-          photo_url: row.photo_url || undefined,
+          photo_url: extractedPhoto,
           dispatched_team: row.acknowledged_by || undefined,
           note: row.note || undefined,
           created_at: row.created_at,
@@ -450,7 +472,7 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
   try {
     const { data: repData } = await supabase
       .from("reports")
-      .select("*")
+      .select("*, report_media(*)")
       .or("tracking_code.ilike.SOS-%,title.ilike.%SOS%")
       .order("created_at", { ascending: false });
 
@@ -459,6 +481,11 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
         const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
         const phoneMatch = row.description ? (row.description as string).match(/\[Kontak:\s*([^\]]+)\]/) : null;
         const extractedPhone = phoneMatch ? phoneMatch[1].trim() : undefined;
+
+        const photoMatch = row.description ? (row.description as string).match(/\[Foto:\s*([^\]]+)\]/) : null;
+        const mediaPhoto = Array.isArray(row.report_media) && row.report_media.length > 0 ? row.report_media[0].media_url : undefined;
+        const extractedPhoto = mediaPhoto || (photoMatch ? photoMatch[1].trim() : undefined) || row.image_url || undefined;
+
         let aType: SosAssistanceType = "bnpb_bpbd";
         const titleUpper = (row.title || "").toUpperCase();
         if (titleUpper.includes("DAMKAR") || row.disaster_type === "kebakaran" || row.disaster_type === "karhutla") {
@@ -483,7 +510,7 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
           battery_level: "95%",
           status: row.status === "selesai" ? "selesai" : row.status === "ditindaklanjuti" ? "ditangani" : "aktif",
           phone_number: extractedPhone,
-          photo_url: row.image_url || undefined,
+          photo_url: extractedPhoto,
           note: row.description || undefined,
           created_at: row.created_at,
         });
@@ -493,14 +520,26 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
     console.warn("fetchLiveSosAlerts from reports error:", err);
   }
 
-  // Gabungkan hasil: Supabase live + Local Cache (HANYA DATA RIIL WARGA)
   // Gabungkan hasil: Supabase live + Local Cache
   const mergedMap = new Map<string, LiveSosItem>();
+
+  const localReports = getLocalReports();
+  const reportImageMap = new Map<string, string>();
+  localReports.forEach((r) => {
+    if (r.image_url) {
+      reportImageMap.set(r.id, r.image_url);
+      reportImageMap.set(r.tracking_code, r.image_url);
+    }
+  });
 
   // 1. Masukkan sinyal dari Supabase
   supabaseItems.forEach((item) => {
     if (item && item.id) {
-      mergedMap.set(item.id, item);
+      const fallbackPhoto = reportImageMap.get(item.id);
+      mergedMap.set(item.id, {
+        ...item,
+        photo_url: item.photo_url || fallbackPhoto,
+      });
     }
   });
 
@@ -508,9 +547,12 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
   localItems.forEach((item) => {
     if (item && item.id) {
       const prev = mergedMap.get(item.id);
+      const fallbackPhoto = reportImageMap.get(item.id);
       mergedMap.set(item.id, {
         ...(prev || {}),
         ...item,
+        photo_url: item.photo_url || prev?.photo_url || fallbackPhoto,
+        phone_number: item.phone_number || prev?.phone_number,
       });
     }
   });

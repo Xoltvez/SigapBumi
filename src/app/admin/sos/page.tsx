@@ -63,6 +63,7 @@ const DEFAULT_SOS_ITEMS: DisplaySosItem[] = [
     status: "aktif",
     phoneNumber: "0857-1234-9876",
     source: "Ponsel Warga (GPS Sensor)",
+    photoUrl: "/thumbnails/landslide.jpg",
   },
   {
     id: "sos-101",
@@ -75,6 +76,7 @@ const DEFAULT_SOS_ITEMS: DisplaySosItem[] = [
     status: "ditangani",
     phoneNumber: "0812-8877-6655",
     source: "Ponsel Warga (GPS Sensor)",
+    photoUrl: "/thumbnails/wildfire.jpg",
   },
 ];
 
@@ -807,7 +809,7 @@ export default function AdminSosPage() {
                 </div>
 
                 {/* Stamped Live Camera Photo Preview */}
-                {item.photoUrl && (
+                {item.photoUrl ? (
                   <div className="rounded-xl border border-slate-200/90 overflow-hidden bg-slate-900/5 relative group">
                     <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 text-white text-[11px] font-semibold">
                       <span className="flex items-center gap-1.5">
@@ -838,6 +840,14 @@ export default function AdminSosPage() {
                         </span>
                       </div>
                     </div>
+                  </div>
+                ) : (
+                  <div className="px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-500 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Panggilan darurat lama tanpa lampiran foto kamera</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">Tanpa Bukti</span>
                   </div>
                 )}
 
