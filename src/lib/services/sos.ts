@@ -478,6 +478,11 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
 
     if (repData && repData.length > 0) {
       repData.forEach((row) => {
+        // Cek apakah sinyal SOS ini sudah ada di supabaseItems agar tidak duplikat
+        const existingIdx = supabaseItems.findIndex(
+          (item) => item.id === row.id || (item.note && row.tracking_code && item.note.includes(row.tracking_code))
+        );
+
         const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
         const phoneMatch = row.description ? (row.description as string).match(/\[Kontak:\s*([^\]]+)\]/) : null;
         const extractedPhone = phoneMatch ? phoneMatch[1].trim() : undefined;
@@ -485,6 +490,17 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
         const photoMatch = row.description ? (row.description as string).match(/\[Foto:\s*([^\]]+)\]/) : null;
         const mediaPhoto = Array.isArray(row.report_media) && row.report_media.length > 0 ? row.report_media[0].media_url : undefined;
         const extractedPhoto = mediaPhoto || (photoMatch ? photoMatch[1].trim() : undefined) || row.image_url || undefined;
+
+        if (existingIdx >= 0) {
+          // Gabungkan foto & kontak jika item yang ada belum lengkap
+          if (!supabaseItems[existingIdx].photo_url && extractedPhoto) {
+            supabaseItems[existingIdx].photo_url = extractedPhoto;
+          }
+          if (!supabaseItems[existingIdx].phone_number && extractedPhone) {
+            supabaseItems[existingIdx].phone_number = extractedPhone;
+          }
+          return;
+        }
 
         let aType: SosAssistanceType = "bnpb_bpbd";
         const titleUpper = (row.title || "").toUpperCase();
@@ -563,20 +579,32 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
     return timeB - timeA;
   });
 
-  // Hapus duplikasi sinyal yang berasal dari titik lokasi & kontak yang sama dalam selang waktu dekat (< 15 detik)
+  // Hapus duplikasi sinyal yang berasal dari nomor telepon atau lokasi yang sama dalam waktu berdekatan (< 3 menit)
   const deduplicated: LiveSosItem[] = [];
   for (const item of sorted) {
-    const isDuplicate = deduplicated.some((existing) => {
-      const sameCoords = Math.abs(existing.lat - item.lat) < 0.0001 && Math.abs(existing.lng - item.lng) < 0.0001;
-      const samePhone = Boolean(item.phone_number && existing.phone_number && item.phone_number === existing.phone_number);
+    const cleanItemPhone = item.phone_number ? item.phone_number.replace(/\D/g, "") : "";
+    const duplicateIdx = deduplicated.findIndex((existing) => {
+      const sameId = existing.id === item.id;
+      const cleanExistingPhone = existing.phone_number ? existing.phone_number.replace(/\D/g, "") : "";
+      const samePhone = Boolean(cleanItemPhone && cleanExistingPhone && cleanItemPhone === cleanExistingPhone);
+      const sameCoords = Math.abs(existing.lat - item.lat) < 0.001 && Math.abs(existing.lng - item.lng) < 0.001;
       const timeDiff = Math.abs(
         (new Date(existing.created_at).getTime() || 0) - (new Date(item.created_at).getTime() || 0)
       );
-      return (sameCoords || samePhone) && timeDiff < 15000;
+      return sameId || ((samePhone || sameCoords) && timeDiff < 180000);
     });
 
-    if (!isDuplicate) {
+    if (duplicateIdx === -1) {
       deduplicated.push(item);
+    } else {
+      // Jika salah satu item memiliki foto bukti kamera valid, pertahankan foto dan status terbaik
+      const existing = deduplicated[duplicateIdx];
+      if (!existing.photo_url && item.photo_url) {
+        deduplicated[duplicateIdx] = {
+          ...item,
+          status: existing.status === "aktif" ? item.status : existing.status,
+        };
+      }
     }
   }
 

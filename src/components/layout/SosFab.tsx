@@ -365,13 +365,24 @@ export function SosFab() {
     // Trigger kirim SOS tepat saat countdown mencapai 0 (setelah delay 3 detik)
     if (countdown === 0 && !hasTriggeredRef.current) {
       hasTriggeredRef.current = true;
-      setIsSent(true);
+      setCountdown(null); // Segera reset timer agar tidak pernah membeku di angka 0 dan tidak memicu pengiriman ganda
 
       const savedPhone =
         typeof window !== "undefined"
           ? localStorage.getItem("sigapbumi_user_phone") || undefined
           : undefined;
       const phoneToSend = phoneNumber.trim() || savedPhone;
+
+      // Proteksi ketat: HANYA kirim jika benar-benar ada bukti foto dan nomor telepon valid
+      if (!phoneToSend || !cameraPhotoUrl) {
+        setIsSent(false);
+        setIsOpen(true);
+        if (!phoneToSend) setPhoneError("Nomor telepon/WhatsApp wajib diisi minimal 10 digit.");
+        if (!cameraPhotoUrl) setPhotoError("Wajib mengambil foto bukti kejadian langsung dari kamera.");
+        return;
+      }
+
+      setIsSent(true);
 
       sendSosAlert({
         lat: currentCoords.lat,
@@ -381,7 +392,7 @@ export function SosFab() {
           gpsAccuracy ? ` [Akurasi GPS: ±${Math.round(gpsAccuracy)}m]` : ""
         }`,
         phoneNumber: phoneToSend,
-        photoUrl: cameraPhotoUrl || undefined,
+        photoUrl: cameraPhotoUrl,
       }).then((res) => {
         if (res.id) {
           setActiveSosId(res.id);
@@ -413,7 +424,7 @@ export function SosFab() {
     }
   }, [countdown, pathname, currentCoords, selectedAssistance, phoneNumber, cameraPhotoUrl, gpsAccuracy, gpsStatus]);
 
-  // Membuka dialog form verifikasi darurat SOS
+  // Membuka dialog form verifikasi darurat SOS (HANYA membuka form, SAMA SEKALI TIDAK mengirim laporan)
   const handleStartSos = useCallback(() => {
     hasTriggeredRef.current = false;
     setPhoneError("");
@@ -423,12 +434,15 @@ export function SosFab() {
     setIsLocationRefined(false);
     setIsOpen(true);
     setIsMinimized(false);
-    setCountdown(null); // Tampilkan form verifikasi awal
+    setCountdown(null); // Form verifikasi dibuka, timer belum aktif
     setIsSent(false);
     setSelectedAssistance((prev) => prev || "damkar");
     setIsPhoneSaved(false);
     setSosStatus("aktif");
     setDispatchedTeam(null);
+    try {
+      localStorage.removeItem("sigapbumi_active_sos_tracking");
+    } catch {}
     startGpsTracking();
   }, [startGpsTracking]);
 
