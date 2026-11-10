@@ -270,14 +270,47 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
   try {
     const { data, error } = await supabase
       .from("reports")
-      .select("*, report_status_logs(*)")
+      .select("*, report_status_logs(*), report_media(*)")
       .eq("tracking_code", code)
       .maybeSingle();
 
     if (!error && data) {
       const coords = parsePostGISPoint(data.location) || { lat: -6.2088, lng: 106.8456 };
       const disaster = data.disaster_type as DisasterType;
-      const agency = inferAgencyFromDisaster(disaster);
+      let agency = inferAgencyFromDisaster(disaster);
+
+      // Deteksi bantuan SOS spesifik dari judul atau tracking code
+      const isSos = Boolean(
+        data.tracking_code?.toUpperCase().startsWith("SOS-") ||
+        data.title?.toUpperCase().includes("SOS")
+      );
+      if (isSos) {
+        const titleUpper = (data.title || "").toUpperCase();
+        if (titleUpper.includes("BNPB") || titleUpper.includes("BPBD")) {
+          agency = "bnpb_bpbd";
+        } else if (titleUpper.includes("DAMKAR") || titleUpper.includes("KEBAKARAN")) {
+          agency = "damkar";
+        } else if (titleUpper.includes("MEDIS") || titleUpper.includes("AMBULANS")) {
+          agency = "medis";
+        } else if (titleUpper.includes("POLISI") || titleUpper.includes("KEAMANAN")) {
+          agency = "polisi";
+        }
+      }
+
+      // Ekstraksi foto bukti dari report_media, regex [Foto: ...], atau field bawaan
+      const mediaPhoto = Array.isArray(data.report_media) && data.report_media.length > 0
+        ? data.report_media[0].media_url
+        : undefined;
+      const photoMatch = data.description ? (data.description as string).match(/\[Foto:\s*([^\]]+)\]/) : null;
+      const imageUrl = mediaPhoto || (photoMatch ? photoMatch[1].trim() : undefined) || data.image_url || undefined;
+
+      // Ekstraksi kontak jika ada
+      const phoneMatch = data.description ? (data.description as string).match(/\[Kontak:\s*([^\]]+)\]/) : null;
+      const phoneNumber = data.reporter_phone || (phoneMatch ? phoneMatch[1].trim() : undefined) || data.phone_number || undefined;
+
+      // Bersihkan deskripsi dari string base64 / tag foto agar tampilan bersih
+      let cleanDescription = removeEmojis(data.description || "");
+      cleanDescription = cleanDescription.replace(/\[Foto:\s*[^\]]+\]/g, "").trim();
 
       const logs = (data.report_status_logs || []) as Array<{
         status: ReportStatus;
@@ -320,7 +353,7 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         disaster_type: disaster,
         target_agency: agency,
         title: removeEmojis(data.title),
-        description: removeEmojis(data.description),
+        description: cleanDescription,
         address: removeEmojis(data.address) || "Lokasi Koordinat GPS",
         lat: coords.lat,
         lng: coords.lng,
@@ -329,6 +362,8 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         confirmation_count: data.confirmation_count || 0,
         created_at: formatReportTime(data.created_at),
         timeline,
+        image_url: imageUrl,
+        phone_number: phoneNumber,
         is_demo: false,
       };
     }
@@ -340,7 +375,15 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
   const localItems = getLocalReports();
   const localFound = localItems.find((r) => r.tracking_code === code);
   if (localFound) {
-    return localFound;
+    const photoMatch = localFound.description ? localFound.description.match(/\[Foto:\s*([^\]]+)\]/) : null;
+    const imageUrl = localFound.image_url || (photoMatch ? photoMatch[1].trim() : undefined);
+    const cleanDescription = (localFound.description || "").replace(/\[Foto:\s*[^\]]+\]/g, "").trim();
+
+    return {
+      ...localFound,
+      description: cleanDescription,
+      image_url: imageUrl,
+    };
   }
 
   // 3. Fallback ke DEFAULT_MOCK_REPORTS jika ini laporan sampel demonstrasi

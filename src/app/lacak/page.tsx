@@ -17,15 +17,23 @@ import {
   ExternalLink,
   ThumbsUp,
   Radio,
+  Camera,
+  Maximize2,
+  X,
+  LifeBuoy,
+  HeartPulse,
+  Shield,
+  Phone,
 } from "lucide-react";
 import { TimelineStatus, type TimelineStep } from "@/components/laporan/TimelineStatus";
-import type { DisasterType, ReportStatus } from "@/types";
+import type { DisasterType, ReportStatus, SosAssistanceType } from "@/types";
 import { fetchReportDetail, vouchReportLive } from "@/lib/services/reports";
 
 interface ReportDetail {
   id?: string;
   tracking_code: string;
   disaster_type: DisasterType;
+  target_agency?: SosAssistanceType;
   title: string;
   description: string;
   location: string;
@@ -36,6 +44,8 @@ interface ReportDetail {
   is_demo?: boolean;
   lat?: number;
   lng?: number;
+  image_url?: string;
+  phone_number?: string;
 }
 
 const SAMPLE_REPORTS: Record<string, ReportDetail> = {
@@ -166,6 +176,17 @@ function LacakContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isVouched, setIsVouched] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedImage(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const performSearch = useCallback(async (codeToSearch: string) => {
     const cleanCode = codeToSearch.trim().toUpperCase();
@@ -181,12 +202,17 @@ function LacakContent() {
       // 1. Coba ambil dari Supabase atau local cache via service
       const liveData = await fetchReportDetail(cleanCode);
       if (liveData) {
+        const photoMatch = liveData.description ? liveData.description.match(/\[Foto:\s*([^\]]+)\]/) : null;
+        const imageUrl = liveData.image_url || (photoMatch ? photoMatch[1].trim() : undefined);
+        const cleanDesc = (liveData.description || "").replace(/\[Foto:\s*[^\]]+\]/g, "").trim();
+
         setActiveReport({
           id: liveData.id,
           tracking_code: liveData.tracking_code,
           disaster_type: liveData.disaster_type,
+          target_agency: liveData.target_agency,
           title: liveData.title,
-          description: liveData.description,
+          description: cleanDesc,
           location: liveData.address,
           created_at: liveData.created_at,
           status: liveData.status,
@@ -195,6 +221,8 @@ function LacakContent() {
           is_demo: liveData.is_demo,
           lat: liveData.lat,
           lng: liveData.lng,
+          image_url: imageUrl,
+          phone_number: liveData.phone_number,
         });
         return;
       }
@@ -271,6 +299,43 @@ function LacakContent() {
         return <Flame className="w-5 h-5 text-danger" />;
       default:
         return <AlertTriangle className="w-5 h-5 text-warning" />;
+    }
+  };
+
+  const getSosAssistanceInfo = (agency?: SosAssistanceType, title?: string) => {
+    const t = (title || "").toUpperCase();
+    let type: SosAssistanceType = agency || "bnpb_bpbd";
+    if (t.includes("BNPB") || t.includes("BPBD")) type = "bnpb_bpbd";
+    else if (t.includes("DAMKAR") || t.includes("KEBAKARAN")) type = "damkar";
+    else if (t.includes("MEDIS") || t.includes("AMBULANS")) type = "medis";
+    else if (t.includes("POLISI") || t.includes("KEAMANAN")) type = "polisi";
+
+    switch (type) {
+      case "damkar":
+        return {
+          label: "Pemadam Kebakaran (Damkar)",
+          icon: <Flame className="w-4 h-4 text-orange-500" />,
+          badgeClass: "bg-orange-500/10 text-orange-700 border-orange-300 dark:border-orange-800 dark:text-orange-300",
+        };
+      case "medis":
+        return {
+          label: "Tenaga Medis & Ambulans",
+          icon: <HeartPulse className="w-4 h-4 text-red-500" />,
+          badgeClass: "bg-red-500/10 text-red-700 border-red-300 dark:border-red-800 dark:text-red-300",
+        };
+      case "polisi":
+        return {
+          label: "Keamanan & Kepolisian",
+          icon: <Shield className="w-4 h-4 text-blue-500" />,
+          badgeClass: "bg-blue-500/10 text-blue-700 border-blue-300 dark:border-blue-800 dark:text-blue-300",
+        };
+      case "bnpb_bpbd":
+      default:
+        return {
+          label: "SAR / BNPB & BPBD",
+          icon: <LifeBuoy className="w-4 h-4 text-cyan-600" />,
+          badgeClass: "bg-cyan-500/10 text-cyan-700 border-cyan-300 dark:border-cyan-800 dark:text-cyan-300",
+        };
     }
   };
 
@@ -440,53 +505,131 @@ function LacakContent() {
           </div>
 
           {/* Location & Details Summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-bg p-4 rounded-md border border-line text-sm">
-            <div className="space-y-1">
-              <span className="text-xs font-semibold text-ink-muted">
-                Lokasi Kejadian
-              </span>
-              <p className="font-medium text-ink flex items-start gap-1.5">
-                <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                <span>{activeReport.location}</span>
-              </p>
-            </div>
+          {(() => {
+            const isSosReport = Boolean(
+              activeReport.tracking_code?.toUpperCase().startsWith("SOS-") ||
+              activeReport.title?.toUpperCase().includes("SOS")
+            );
 
-            <div className="space-y-1">
-              <span className="text-xs font-semibold text-ink-muted">
-                Kategori & Konfirmasi Warga
-              </span>
-              <div className="flex items-center gap-3">
-                <span className="capitalize font-medium text-ink flex items-center gap-1">
-                  {getDisasterIcon(activeReport.disaster_type)}
-                  {activeReport.disaster_type}
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-bg p-4 rounded-md border border-line text-sm">
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-ink-muted">
+                    Lokasi Kejadian
+                  </span>
+                  <p className="font-medium text-ink flex items-start gap-1.5">
+                    <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <span>{activeReport.location}</span>
+                  </p>
+                </div>
+
+                {isSosReport ? (
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold text-ink-muted flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5 text-danger animate-pulse" />
+                      Jenis Bantuan
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                      {(() => {
+                        const sosInfo = getSosAssistanceInfo(activeReport.target_agency, activeReport.title);
+                        return (
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold border ${sosInfo.badgeClass}`}>
+                            {sosInfo.icon}
+                            <span>{sosInfo.label}</span>
+                          </span>
+                        );
+                      })()}
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-danger-soft text-danger border border-danger/30">
+                        Sinyal Darurat Prioritas
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold text-ink-muted">
+                      Kategori & Konfirmasi Warga
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="capitalize font-medium text-ink flex items-center gap-1">
+                        {getDisasterIcon(activeReport.disaster_type)}
+                        {activeReport.disaster_type}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleVouch}
+                        disabled={isVouched}
+                        title="Konfirmasi bahwa kejadian ini benar terjadi"
+                        className={`text-xs px-2.5 py-1 rounded border transition-colors flex items-center gap-1 font-semibold min-h-[36px] ${
+                          isVouched
+                            ? "bg-success-soft text-success-text border-success/30"
+                            : "bg-surface border-line text-ink hover:border-primary"
+                        }`}
+                      >
+                        <ThumbsUp className="w-3.5 h-3.5 text-primary" />
+                        <span>{activeReport.confirmation_count} Terkonfirmasi</span>
+                        {isVouched && <span className="text-[10px] text-success font-normal">(Dikonfirmasi Anda)</span>}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Foto Bukti Kejadian dari Kamera (Jika Ada) */}
+          {activeReport.image_url && (
+            <div className="bg-surface rounded-lg border border-line p-4 space-y-2.5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-ink flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-primary" />
+                  Foto Bukti Kejadian (Kamera Warga)
                 </span>
                 <button
                   type="button"
-                  onClick={handleVouch}
-                  disabled={isVouched}
-                  title="Konfirmasi bahwa kejadian ini benar terjadi"
-                  className={`text-xs px-2.5 py-1 rounded border transition-colors flex items-center gap-1 font-semibold min-h-[36px] ${
-                    isVouched
-                      ? "bg-success-soft text-success-text border-success/30"
-                      : "bg-surface border-line text-ink hover:border-primary"
-                  }`}
+                  onClick={() => setSelectedImage(activeReport.image_url || null)}
+                  className="text-xs text-primary hover:text-primary-hover font-semibold inline-flex items-center gap-1 transition-colors"
                 >
-                  <ThumbsUp className="w-3.5 h-3.5 text-primary" />
-                  <span>{activeReport.confirmation_count} Terkonfirmasi</span>
-                  {isVouched && <span className="text-[10px] text-success font-normal">(Dikonfirmasi Anda)</span>}
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  Perbesar Foto
                 </button>
               </div>
+
+              <div
+                onClick={() => setSelectedImage(activeReport.image_url || null)}
+                className="relative group rounded-md overflow-hidden border border-line cursor-zoom-in bg-black/5 max-h-80 flex items-center justify-center transition-all hover:border-primary/50"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={activeReport.image_url}
+                  alt="Foto bukti lapangan kejadian"
+                  className="w-full max-h-80 object-cover rounded transition-transform duration-300 group-hover:scale-[1.02]"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-medium text-xs">
+                  <Maximize2 className="w-4 h-4" />
+                  <span>Klik untuk melihat foto resolusi penuh</span>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Description */}
           <div>
             <h3 className="text-sm font-bold text-ink mb-1.5">
               Deskripsi dari Pelapor
             </h3>
-            <p className="text-sm text-ink-soft leading-relaxed bg-surface p-4 rounded-md border border-line">
-              {activeReport.description}
-            </p>
+            <div className="text-sm text-ink-soft leading-relaxed bg-surface p-4 rounded-md border border-line space-y-2">
+              <p>
+                {activeReport.description
+                  ? activeReport.description.replace(/\[Foto:\s*[^\]]+\]/g, "").trim()
+                  : "Tidak ada rincian catatan tambahan dari pelapor."}
+              </p>
+              {activeReport.phone_number && (
+                <div className="pt-2 border-t border-line/60 flex items-center gap-2 text-xs text-ink font-medium">
+                  <Phone className="w-3.5 h-3.5 text-primary" />
+                  <span>Nomor Kontak Pelapor: <strong>{activeReport.phone_number}</strong></span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Vertical Status Timeline */}
@@ -544,6 +687,42 @@ function LacakContent() {
         </section>
       ) : null}
       </div>
+
+      {/* Lightbox Modal Fullscreen Image Preview */}
+      {selectedImage && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div
+            className="relative max-w-4xl w-full max-h-[92vh] flex flex-col items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between mb-2 text-white px-1">
+              <span className="text-xs sm:text-sm font-semibold flex items-center gap-2">
+                <Camera className="w-4 h-4 text-primary" />
+                Bukti Foto Kamera ({activeReport?.tracking_code || "Laporan"})
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedImage(null)}
+                className="p-1.5 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
+                aria-label="Tutup gambar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={selectedImage}
+              alt="Foto bukti lapangan ukuran penuh"
+              className="max-h-[82vh] w-auto max-w-full object-contain rounded-lg border border-white/20 shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </main>
   );
 }
