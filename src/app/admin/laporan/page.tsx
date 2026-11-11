@@ -689,7 +689,7 @@ function LaporanContent() {
           {/* Sisi Kiri: Search Input & Dropdowns */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 flex-1 max-w-4xl">
             {/* Input Pencarian */}
-            <div className="relative flex-1 min-w-[220px]">
+            <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
@@ -716,53 +716,55 @@ function LaporanContent() {
               )}
             </div>
 
-            {/* Dropdown Filter Status */}
-            <div className="relative shrink-0">
-              <Clock className="w-3.5 h-3.5 text-blue-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <select
-                value={selectedStatus}
-                onChange={(e) => {
-                  setSelectedStatus(e.target.value as any);
-                  setCurrentPage(1);
-                }}
-                className={`h-10 pl-8.5 pr-8 rounded-xl text-xs font-semibold border transition-all cursor-pointer appearance-none shadow-2xs focus:outline-none focus:ring-3 focus:ring-blue-500/15 ${
-                  selectedStatus !== "semua"
-                    ? "bg-blue-50 border-blue-300 text-blue-900 font-bold"
-                    : "bg-slate-50 hover:bg-slate-100/70 border-slate-200/90 text-slate-700"
-                }`}
-              >
-                <option value="semua">Semua Status</option>
-                <option value="diterima">Diterima</option>
-                <option value="diverifikasi">Diverifikasi</option>
-                <option value="ditindaklanjuti">Ditindaklanjuti</option>
-                <option value="selesai">Selesai</option>
-                <option value="ditolak">Ditolak</option>
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5 w-full sm:w-auto">
+              {/* Dropdown Filter Status */}
+              <div className="relative flex-1 sm:flex-none">
+                <Clock className="w-3.5 h-3.5 text-blue-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => {
+                    setSelectedStatus(e.target.value as any);
+                    setCurrentPage(1);
+                  }}
+                  className={`w-full sm:w-auto h-10 pl-8.5 pr-8 rounded-xl text-xs font-semibold border transition-all cursor-pointer appearance-none shadow-2xs focus:outline-none focus:ring-3 focus:ring-blue-500/15 ${
+                    selectedStatus !== "semua"
+                      ? "bg-blue-50 border-blue-300 text-blue-900 font-bold"
+                      : "bg-slate-50 hover:bg-slate-100/70 border-slate-200/90 text-slate-700"
+                  }`}
+                >
+                  <option value="semua">Semua Status</option>
+                  <option value="diterima">Diterima</option>
+                  <option value="diverifikasi">Diverifikasi</option>
+                  <option value="ditindaklanjuti">Ditindaklanjuti</option>
+                  <option value="selesai">Selesai</option>
+                  <option value="ditolak">Ditolak</option>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
 
-            {/* Dropdown Filter Prioritas */}
-            <div className="relative shrink-0">
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <select
-                value={selectedPriority}
-                onChange={(e) => {
-                  setSelectedPriority(e.target.value as any);
-                  setCurrentPage(1);
-                }}
-                className={`h-10 pl-8.5 pr-8 rounded-xl text-xs font-semibold border transition-all cursor-pointer appearance-none shadow-2xs focus:outline-none focus:ring-3 focus:ring-rose-500/15 ${
-                  selectedPriority !== "semua"
-                    ? "bg-rose-50 border-rose-300 text-rose-900 font-bold"
-                    : "bg-slate-50 hover:bg-slate-100/70 border-slate-200/90 text-slate-700"
-                }`}
-              >
-                <option value="semua">Semua Prioritas</option>
-                <option value="Kritis">🔴 Kritis</option>
-                <option value="Tinggi">🟠 Tinggi</option>
-                <option value="Sedang">🔵 Sedang</option>
-                <option value="Rendah">🟢 Rendah</option>
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              {/* Dropdown Filter Prioritas */}
+              <div className="relative flex-1 sm:flex-none">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <select
+                  value={selectedPriority}
+                  onChange={(e) => {
+                    setSelectedPriority(e.target.value as any);
+                    setCurrentPage(1);
+                  }}
+                  className={`w-full sm:w-auto h-10 pl-8.5 pr-8 rounded-xl text-xs font-semibold border transition-all cursor-pointer appearance-none shadow-2xs focus:outline-none focus:ring-3 focus:ring-rose-500/15 ${
+                    selectedPriority !== "semua"
+                      ? "bg-rose-50 border-rose-300 text-rose-900 font-bold"
+                      : "bg-slate-50 hover:bg-slate-100/70 border-slate-200/90 text-slate-700"
+                  }`}
+                >
+                  <option value="semua">Semua Prioritas</option>
+                  <option value="Kritis">🔴 Kritis</option>
+                  <option value="Tinggi">🟠 Tinggi</option>
+                  <option value="Sedang">🔵 Sedang</option>
+                  <option value="Rendah">🟢 Rendah</option>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
 
             {/* Tombol Reset jika filter aktif */}
@@ -775,7 +777,7 @@ function LaporanContent() {
                   setSearchCode("");
                   setCurrentPage(1);
                 }}
-                className="h-10 inline-flex items-center gap-1.5 px-3 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 transition-all cursor-pointer shadow-2xs shrink-0"
+                className="h-10 inline-flex items-center justify-center gap-1.5 px-3 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 transition-all cursor-pointer shadow-2xs shrink-0 w-full sm:w-auto"
                 title="Reset semua filter"
               >
                 <RotateCcw className="w-3.5 h-3.5" />

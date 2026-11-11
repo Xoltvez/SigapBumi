@@ -94,3 +94,4 @@ Berdasarkan kuesioner singkat *System Usability Scale (SUS)* yang diisi oleh par
    Pengujian antarmuka seluler membuktikan bahwa seluruh tombol aksi cepat (*Call to Action*) SigapBumi telah teruji secara empiris dan memenuhi prinsip ergonomi *mobile-first*. Tombol SOS mudah dijangkau, alur pengiriman berlangsung instan tanpa jeda yang berisiko, dan stempel foto otomatis menghilangkan friksi pengetikan manual dalam kondisi genting.
 2. **Kesiapan Lapangan:**  
    Antarmuka terbukti adaptif terhadap berbagai ukuran layar smartphone (Android & iOS), responsif terhadap sentuhan jari jempol, serta memberikan kepastian status pelacakan transparan baik bagi masyarakat awam maupun petugas posko penanggulangan bencana.
+

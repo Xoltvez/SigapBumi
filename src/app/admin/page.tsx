@@ -302,13 +302,13 @@ export default function AdminRingkasanPage() {
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-10">
       {/* Hero Greeting Card dengan Ilustrasi Pegunungan Lembut */}
-      <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-100/80 p-7 md:p-9 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center min-h-[140px]">
+      <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-100/80 p-5 sm:p-7 md:p-9 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-center min-h-[130px] sm:min-h-[140px]">
         {/* Teks Sambutan di Sebelah Kiri */}
         <div className="relative z-10 max-w-xl">
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
             Selamat datang, {adminUser?.name?.split(" ")[0] || "Petugas"}!
           </h1>
-          <p className="text-sm md:text-[15px] text-slate-500 font-normal mt-1.5">
+          <p className="text-xs sm:text-sm md:text-[15px] text-slate-500 font-normal mt-1 sm:mt-1.5 leading-relaxed">
             {activeUnit === "pemerintahan" || activeUnit === "semua"
               ? "Biro Pengendalian Operasi Pemerintahan — Akses Penuh Seluruh Kejadian Bencana & SOS Nasional."
               : activeUnit === "damkar"
@@ -322,7 +322,7 @@ export default function AdminRingkasanPage() {
         </div>
 
         {/* Ilustrasi Siluet Pegunungan & Matahari Pagi di Sebelah Kanan */}
-        <div className="absolute right-0 top-0 bottom-0 w-[320px] md:w-[480px] pointer-events-none z-0 overflow-hidden flex items-end justify-end">
+        <div className="absolute right-0 top-0 bottom-0 w-[220px] sm:w-[320px] md:w-[480px] pointer-events-none z-0 overflow-hidden flex items-end justify-end opacity-25 sm:opacity-85 md:opacity-100 transition-opacity">
           <svg
             viewBox="0 0 480 160"
             fill="none"
@@ -490,13 +490,13 @@ export default function AdminRingkasanPage() {
       </div>
 
       {/* Grid Bawah: Laporan Terbaru (Kiri 60%) & Distribusi Bencana (Kanan 40%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 items-start">
         {/* Kolom Kiri: Laporan Terbaru */}
-        <section className="lg:col-span-7 bg-white rounded-2xl border border-slate-100 p-6 md:p-7 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-5">
+        <section className="lg:col-span-7 bg-white rounded-2xl border border-slate-100 p-4 sm:p-6 md:p-7 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4 sm:space-y-5">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2.5">
               <FileText className="w-5 h-5 text-slate-700" />
-              <h2 className="text-base font-bold text-slate-900">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">
                 Laporan Terbaru ({unitReports.length})
               </h2>
             </div>
@@ -523,11 +523,11 @@ export default function AdminRingkasanPage() {
             ).map((item) => (
               <div
                 key={item.id}
-                className="py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group hover:bg-slate-50/60 -mx-2 px-2 rounded-xl transition-colors"
+                className="py-3 sm:py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 group hover:bg-slate-50/60 -mx-1 sm:-mx-2 px-1 sm:px-2 rounded-xl transition-colors"
               >
-                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                <div className="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
                   {/* Foto Thumbnail Kebencanaan Landscape */}
-                  <div className="w-16 h-11 md:w-20 md:h-14 rounded-xl overflow-hidden bg-slate-100 shrink-0 relative shadow-2xs">
+                  <div className="w-14 h-11 sm:w-16 sm:h-11 md:w-20 md:h-14 rounded-xl overflow-hidden bg-slate-100 shrink-0 relative shadow-2xs">
                     <Image
                       src={item.image}
                       alt={item.title}
@@ -538,14 +538,14 @@ export default function AdminRingkasanPage() {
                   </div>
 
                   {/* Judul & Lokasi Waktu */}
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <Link
                       href={`/admin/laporan/${item.id}`}
-                      className="text-sm font-bold text-slate-900 truncate block hover:text-[#EA580C] transition-colors"
+                      className="text-xs sm:text-sm font-bold text-slate-900 truncate block hover:text-[#EA580C] transition-colors"
                     >
                       {item.title}
                     </Link>
-                    <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-1">
+                    <p className="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1 mt-0.5 sm:mt-1">
                       <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span className="truncate">{item.location}</span>
                     </p>
@@ -553,7 +553,7 @@ export default function AdminRingkasanPage() {
                 </div>
 
                 {/* Status Badge & Action Buttons */}
-                <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 self-end sm:self-auto pl-14 sm:pl-0">
                   {/* Quick Action: Tandai Proses */}
                   {item.status !== "diproses" && item.status !== "selesai" && (
                     <button
@@ -564,7 +564,7 @@ export default function AdminRingkasanPage() {
                       title="Tandai sedang diproses"
                     >
                       <Clock className="w-3 h-3 text-amber-600" />
-                      <span>Tandai Proses</span>
+                      <span>Proses</span>
                     </button>
                   )}
 
@@ -582,7 +582,7 @@ export default function AdminRingkasanPage() {
                       title="Tandai telah selesai"
                     >
                       <CheckCircle2 className="w-3 h-3" />
-                      <span>Tandai Selesai</span>
+                      <span>Selesai</span>
                     </button>
                   ) : (
                     <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#ECFDF5] text-[#059669] border border-emerald-200/80 shadow-2xs inline-flex items-center gap-1">
@@ -604,7 +604,7 @@ export default function AdminRingkasanPage() {
         </section>
 
         {/* Kolom Kanan: Distribusi Tipe Bencana */}
-        <section className="lg:col-span-5 bg-white rounded-2xl border border-slate-100 p-6 md:p-7 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-6">
+        <section className="lg:col-span-5 bg-white rounded-2xl border border-slate-100 p-4 sm:p-6 md:p-7 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-5 sm:space-y-6">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
             <BarChart2 className="w-5 h-5 text-slate-700" />
             <h2 className="text-base font-bold text-slate-900">

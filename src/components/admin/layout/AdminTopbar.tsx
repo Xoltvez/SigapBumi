@@ -9,12 +9,14 @@ import {
   Volume2,
   VolumeX,
   Search,
+  Menu,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 
 interface AdminTopbarProps {
   isSidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
+  onToggleMobileSidebar?: () => void;
   activeUnit: string;
   onSelectUnit?: (unit: string) => void;
   activeSosCount?: number;
@@ -27,6 +29,7 @@ interface AdminTopbarProps {
 export function AdminTopbar({
   activeUnit,
   onSelectUnit,
+  onToggleMobileSidebar,
   isSirenMuted = false,
   onToggleSiren,
 }: AdminTopbarProps) {
@@ -59,13 +62,25 @@ export function AdminTopbar({
   }, []);
 
   return (
-    <header className="h-20 bg-[#FAFBFC] border-b border-slate-200/90 px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.03)] select-none font-sans">
-      {/* Left: Date Pill Dropdown & Search Bar positioned side by side */}
-      <div className="flex items-center gap-3 sm:gap-3.5 flex-1 min-w-0">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 shadow-2xs text-xs font-medium text-slate-700 hover:border-slate-300 transition-colors cursor-default shrink-0">
+    <header className="h-16 sm:h-20 bg-[#FAFBFC] border-b border-slate-200/90 px-3.5 sm:px-6 md:px-8 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.03)] select-none font-sans">
+      {/* Left: Mobile Hamburger, Date Pill Dropdown & Search Bar */}
+      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+        {/* Mobile Hamburger Menu Button */}
+        {onToggleMobileSidebar && (
+          <button
+            type="button"
+            onClick={onToggleMobileSidebar}
+            className="p-2 -ml-1 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 md:hidden transition-colors cursor-pointer shrink-0"
+            aria-label="Buka Menu Navigasi"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
+        <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 shadow-2xs text-[11px] sm:text-xs font-medium text-slate-700 hover:border-slate-300 transition-colors cursor-default shrink-0">
           <Calendar className="w-3.5 h-3.5 text-slate-500" />
           <span>{formattedDate}</span>
-          <ChevronDown className="w-3 h-3 text-slate-400" />
+          <ChevronDown className="w-3 h-3 text-slate-400 hidden xs:inline" />
         </div>
 
         {/* Global Search Pill directly next to date */}
@@ -87,7 +102,7 @@ export function AdminTopbar({
       </div>
 
       {/* Right Controls: Siren Toggle, Unit Selector, Notification Bell, User Avatar */}
-      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-3 md:gap-4 shrink-0">
         {/* Siren Status & Mute/Unmute toggle */}
         {onToggleSiren && (
           <button
@@ -98,7 +113,7 @@ export function AdminTopbar({
                 ? "Sirine Darurat Dibisukan (Klik untuk Mengaktifkan)"
                 : "Sirine Darurat Aktif (Klik untuk Membisukan)"
             }
-            className={`h-9 px-3 rounded-full border text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all ${
+            className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full border text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all ${
               isSirenMuted
                 ? "border-slate-200 bg-white text-slate-400 hover:text-slate-600"
                 : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
@@ -131,12 +146,12 @@ export function AdminTopbar({
               ? "Kepolisian RI / Satgas Polri"
               : "BNPB / BPBD"
           }. Untuk mengganti instansi, silakan logout terlebih dahulu.`}
-          className="h-9 px-3.5 rounded-full border border-slate-200/90 bg-white shadow-2xs flex items-center gap-2 text-xs font-semibold text-slate-800 select-none cursor-default"
+          className="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-full border border-slate-200/90 bg-white shadow-2xs flex items-center gap-1.5 sm:gap-2 text-xs font-semibold text-slate-800 select-none cursor-default"
         >
-          <div className="w-5 h-5 rounded-full bg-linear-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white text-[10px] shadow-2xs shrink-0">
-            <span className="font-extrabold text-[9px] leading-none">▲</span>
+          <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-linear-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white text-[9px] shadow-2xs shrink-0">
+            <span className="font-extrabold text-[8px] sm:text-[9px] leading-none">▲</span>
           </div>
-          <span>
+          <span className="hidden sm:inline">
             {activeUnit === "pemerintahan" || activeUnit === "semua"
               ? "Pemerintahan"
               : activeUnit === "bnpb_bpbd"

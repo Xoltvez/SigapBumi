@@ -888,16 +888,16 @@ export default function AdminSosPage() {
               </div>
 
               {/* Bottom Action Buttons: Navigasi GPS, Hapus, & Process/Resolve */}
-              <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                   <a
                     href={`https://www.google.com/maps?q=${encodeURIComponent(item.coordinates)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="h-9 px-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-2 shadow-2xs transition-colors"
+                    className="h-9 px-3 sm:px-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 sm:gap-2 shadow-2xs transition-colors"
                   >
                     <Navigation className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Navigasi GPS</span>
+                    <span>Navigasi</span>
                   </a>
 
                   <button
@@ -907,7 +907,7 @@ export default function AdminSosPage() {
                     title="Hapus panggilan SOS ini"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Hapus</span>
+                    <span className="hidden xs:inline sm:inline">Hapus</span>
                   </button>
 
                   {item.status !== "palsu" && item.status !== "selesai" && (
@@ -918,20 +918,20 @@ export default function AdminSosPage() {
                       title="Tandai sebagai panggilan palsu / prank"
                     >
                       <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
-                      <span className="hidden sm:inline">Hoaks</span>
+                      <span className="hidden xs:inline sm:inline">Hoaks</span>
                     </button>
                   )}
                 </div>
 
-                <div>
+                <div className="flex items-center gap-2">
                   {isAktif && (
                     <button
                       type="button"
                       onClick={() => handleMarkProcessing(item.id)}
-                      className="h-9 px-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                      className="h-9 px-3 sm:px-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                     >
                       <Pause className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Tandai Diproses</span>
+                      <span>Diproses</span>
                     </button>
                   )}
 
@@ -939,10 +939,10 @@ export default function AdminSosPage() {
                     <button
                       type="button"
                       onClick={() => handleMarkResolved(item.id)}
-                      className="h-9 px-4 rounded-xl bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                      className="h-9 px-3.5 sm:px-4 rounded-xl bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                      <span>Tandai Selesai / Aman</span>
+                      <span>Selesai</span>
                     </button>
                   )}
 

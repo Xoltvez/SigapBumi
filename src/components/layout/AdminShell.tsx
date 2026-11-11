@@ -64,6 +64,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const [activeUnit, setActiveUnit] = useState<string>("bnpb_bpbd");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [activeSosCount, setActiveSosCount] = useState<number>(0);
   const [isLiveConnected, setIsLiveConnected] = useState<boolean>(true);
   const [isSirenMuted, setIsSirenMuted] = useState<boolean>(false);
@@ -76,6 +77,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const [isVerifyingAuth, setIsVerifyingAuth] = useState<boolean>(!isLoginPage);
   const [idleWarningSeconds, setIdleWarningSeconds] = useState<number | null>(null);
   const lastThrottleRef = useRef<number>(0);
+
+  // Otomatis tutup sidebar mobile saat navigasi rute berubah
+  useEffect(() => {
+    setIsMobileSidebarOpen(false);
+  }, [pathname]);
 
   const logout = useCallback(
     (reason: "manual" | "idle" | "left" | "unauthorized" = "manual") => {
@@ -411,7 +417,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
         {/* Banner Darurat Mengambang Saat Ada Panggilan SOS Baru */}
         {emergencyNotice && (
-          <div className="fixed top-4 right-4 z-50 max-w-md w-full bg-[#EF4444] text-white p-4 rounded-xl shadow-2xl border-2 border-white/30 animate-pulse flex items-start justify-between gap-3">
+          <div className="fixed top-3 left-3 right-3 sm:left-auto sm:right-4 z-50 max-w-md w-auto bg-[#EF4444] text-white p-3.5 sm:p-4 rounded-xl shadow-2xl border-2 border-white/30 animate-pulse flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="p-2 bg-white/20 rounded-full shrink-0">
                 <Siren className="w-5 h-5 text-white animate-bounce" />
@@ -460,11 +466,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {/* Collapsible Left Light Sidebar */}
-        <React.Suspense fallback={<div className="w-64 bg-white min-h-screen shrink-0 border-r border-slate-200/80" />}>
+        {/* Collapsible Left Light Sidebar with Mobile Drawer support */}
+        <React.Suspense fallback={<div className="hidden md:block w-64 bg-white min-h-screen shrink-0 border-r border-slate-200/80" />}>
           <AdminSidebar
             isCollapsed={isSidebarCollapsed}
             onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+            isMobileOpen={isMobileSidebarOpen}
+            onCloseMobile={() => setIsMobileSidebarOpen(false)}
             activeSosCount={activeSosCount}
           />
         </React.Suspense>
@@ -474,6 +482,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <AdminTopbar
             isSidebarCollapsed={isSidebarCollapsed}
             onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+            onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
             activeUnit={activeUnit}
             onSelectUnit={setActiveUnit}
             activeSosCount={activeSosCount}
@@ -482,7 +491,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             onToggleSiren={() => setIsSirenMuted((prev) => !prev)}
             onTestSiren={() => playSosSiren(2, 0.35)}
           />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-[#F8FAFC] text-slate-800">
+          <main className="flex-1 overflow-y-auto p-3.5 sm:p-5 md:p-6 lg:p-8 bg-[#F8FAFC] text-slate-800">
             {children}
           </main>
         </div>

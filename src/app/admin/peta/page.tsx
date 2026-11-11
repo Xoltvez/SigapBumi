@@ -40,7 +40,7 @@ import { useAdmin } from "@/components/layout/AdminShell";
 const DisasterMap = dynamic(() => import("@/components/peta/DisasterMap"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-[550px] lg:h-[660px] rounded-xl bg-slate-100/70 border border-slate-200/80 flex flex-col items-center justify-center text-slate-400 animate-pulse font-sans">
+    <div className="w-full h-[380px] sm:h-[480px] lg:h-[600px] rounded-xl bg-slate-100/70 border border-slate-200/80 flex flex-col items-center justify-center text-slate-400 animate-pulse font-sans">
       <MapPin className="w-8 h-8 mb-2 text-blue-500 animate-bounce" />
       <p className="text-sm font-bold text-slate-700">Memuat Peta Situasi Taktis...</p>
       <p className="text-xs text-slate-400 mt-0.5">Mengunduh layer koordinat geospasial</p>
@@ -513,7 +513,7 @@ export default function AdminPetaPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 items-start">
         {/* Map Container */}
         <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_16px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-          <div className="w-full h-[540px] lg:h-[600px] relative rounded-xl overflow-hidden border border-slate-100">
+          <div className="w-full h-[380px] sm:h-[480px] lg:h-[600px] relative rounded-xl overflow-hidden border border-slate-100">
             <DisasterMap
               className="w-full h-full"
               points={filteredPoints}
