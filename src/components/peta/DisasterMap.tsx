@@ -326,7 +326,7 @@ export default function DisasterMap({
           <div style="padding: 2px; font-family: system-ui, -apple-system, sans-serif;">
             <div style="display:flex;align-items:center;gap:6px;font-weight:800;color:#1e293b;font-size:12px;">
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2563eb;"></span>
-              <span>Lokasi Warga Terkini</span>
+              <span>Lokasi Anda Terkini</span>
             </div>
             <p style="margin:3px 0 0 14px;font-size:10px;color:#64748b;">GPS Aktif &amp; Terdeteksi</p>
           </div>
