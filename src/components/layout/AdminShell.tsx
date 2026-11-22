@@ -479,18 +479,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
         {/* Right Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F8FAFC]">
-          <AdminTopbar
-            isSidebarCollapsed={isSidebarCollapsed}
-            onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
-            onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
-            activeUnit={activeUnit}
-            onSelectUnit={setActiveUnit}
-            activeSosCount={activeSosCount}
-            isLiveConnected={isLiveConnected}
-            isSirenMuted={isSirenMuted}
-            onToggleSiren={() => setIsSirenMuted((prev) => !prev)}
-            onTestSiren={() => playSosSiren(2, 0.35)}
-          />
+          <React.Suspense fallback={<div className="h-16 sm:h-20 bg-[#FAFBFC] border-b border-slate-200/90" />}>
+            <AdminTopbar
+              isSidebarCollapsed={isSidebarCollapsed}
+              onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+              onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
+              activeUnit={activeUnit}
+              onSelectUnit={setActiveUnit}
+              activeSosCount={activeSosCount}
+              isLiveConnected={isLiveConnected}
+              isSirenMuted={isSirenMuted}
+              onToggleSiren={() => setIsSirenMuted((prev) => !prev)}
+              onTestSiren={() => playSosSiren(2, 0.35)}
+            />
+          </React.Suspense>
           <main className="flex-1 overflow-y-auto p-3.5 sm:p-5 md:p-6 lg:p-8 bg-[#F8FAFC] text-slate-800">
             {children}
           </main>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Calendar,
   ChevronDown,
@@ -10,6 +10,7 @@ import {
   VolumeX,
   Search,
   Menu,
+  X,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 
@@ -34,15 +35,41 @@ export function AdminTopbar({
   onToggleSiren,
 }: AdminTopbarProps) {
   const router = useRouter();
-  const [urlCari, setUrlCari] = useState("");
+  const searchParams = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState("");
   const { adminUser, logout } = useAdmin();
 
+  // Sinkronkan searchTerm saat URL query berubah
   useEffect(() => {
+    const q = searchParams ? searchParams.get("cari") || "" : "";
+    setSearchTerm(q);
+  }, [searchParams]);
+
+  // Sinkronkan juga saat menerima event reset / pencarian dari halaman laporan
+  useEffect(() => {
+    const handleGlobalSearch = (e: any) => {
+      const q = e?.detail?.query ?? "";
+      setSearchTerm(q);
+    };
+
     if (typeof window !== "undefined") {
-      const q = new URLSearchParams(window.location.search).get("cari") || "";
-      setUrlCari(q);
+      window.addEventListener("sigapbumi:admin-search", handleGlobalSearch);
+      return () => {
+        window.removeEventListener("sigapbumi:admin-search", handleGlobalSearch);
+      };
     }
   }, []);
+
+  const handleSearchSubmit = (val: string) => {
+    const trimmed = val.trim();
+    // Dispatch event agar langsung bereaksi di halaman laporan seketika
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("sigapbumi:admin-search", { detail: { query: trimmed } })
+      );
+    }
+    router.push(`/admin/laporan?cari=${encodeURIComponent(trimmed)}`);
+  };
 
   const [formattedDate, setFormattedDate] = useState("1 Nov 2026");
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -88,16 +115,29 @@ export function AdminTopbar({
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
-            defaultValue={urlCari}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                const val = (e.target as HTMLInputElement).value;
-                router.push(`/admin/laporan?cari=${encodeURIComponent(val)}`);
+                handleSearchSubmit(searchTerm);
               }
             }}
             placeholder="Cari laporan berdasarkan lokasi, jenis, atau kata kunci..."
-            className="w-full h-9 pl-9 pr-4 rounded-full border border-slate-200/90 bg-white text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-orange-500/30 transition-all"
+            className="w-full h-9 pl-9 pr-8 rounded-full border border-slate-200/90 bg-white text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-orange-500/30 transition-all"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                handleSearchSubmit("");
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Hapus kata kunci"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 

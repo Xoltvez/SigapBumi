@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   RotateCw,
@@ -250,10 +251,28 @@ function LaporanContent() {
     }
   };
 
+  const searchParams = useSearchParams();
+  const cariParam = searchParams ? searchParams.get("cari") || "" : "";
+
+  // Sinkronkan state pencarian setiap kali query param di URL berubah
   useEffect(() => {
+    setSearchCode(cariParam);
+    setCurrentPage(1);
+  }, [cariParam]);
+
+  // Dengarkan juga event pencarian global dari AdminTopbar secara instan
+  useEffect(() => {
+    const handleGlobalSearch = (e: any) => {
+      const q = e?.detail?.query ?? "";
+      setSearchCode(q);
+      setCurrentPage(1);
+    };
+
     if (typeof window !== "undefined") {
-      const q = new URLSearchParams(window.location.search).get("cari");
-      if (q) setSearchCode(q);
+      window.addEventListener("sigapbumi:admin-search", handleGlobalSearch);
+      return () => {
+        window.removeEventListener("sigapbumi:admin-search", handleGlobalSearch);
+      };
     }
   }, []);
 
@@ -535,8 +554,14 @@ function LaporanContent() {
                 type="text"
                 value={searchCode}
                 onChange={(e) => {
-                  setSearchCode(e.target.value);
+                  const val = e.target.value;
+                  setSearchCode(val);
                   setCurrentPage(1);
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(
+                      new CustomEvent("sigapbumi:admin-search", { detail: { query: val } })
+                    );
+                  }
                 }}
                 placeholder="Cari kode tracking, bencana, atau lokasi..."
                 className="w-full h-10 pl-10 pr-9 rounded-xl bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200/90 text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:border-orange-500 focus:ring-3 focus:ring-orange-500/15 transition-all"
@@ -547,6 +572,11 @@ function LaporanContent() {
                   onClick={() => {
                     setSearchCode("");
                     setCurrentPage(1);
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(
+                        new CustomEvent("sigapbumi:admin-search", { detail: { query: "" } })
+                      );
+                    }
                   }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200/70 transition-colors cursor-pointer"
                   title="Hapus kata kunci"
@@ -616,6 +646,11 @@ function LaporanContent() {
                   setSelectedPriority("semua");
                   setSearchCode("");
                   setCurrentPage(1);
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(
+                      new CustomEvent("sigapbumi:admin-search", { detail: { query: "" } })
+                    );
+                  }
                 }}
                 className="h-10 inline-flex items-center justify-center gap-1.5 px-3 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 transition-all cursor-pointer shadow-2xs shrink-0 w-full sm:w-auto"
                 title="Reset semua filter"
