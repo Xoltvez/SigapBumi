@@ -21,7 +21,6 @@ import {
   Mountain,
   Flame,
   AlertTriangle,
-  Compass,
   Crosshair,
   SlidersHorizontal,
   Plus,
@@ -244,55 +243,78 @@ function PetaContent() {
   const [desktopFilterCategory, setDesktopFilterCategory] = useState<"semua" | "posko" | "laporan" | "sos">("semua");
   const [isDesktopPanelOpen, setIsDesktopPanelOpen] = useState<boolean>(false);
   const desktopPanelRef = useRef<HTMLDivElement>(null);
-  const desktopTriggerRef = useRef<HTMLButtonElement>(null);
+  const desktopTriggerContainerRef = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef<boolean>(true);
 
   // Animasi halus Maximize & Minimize panel filter desktop via GSAP
-  const handleMaximizeDesktop = () => {
-    if (desktopTriggerRef.current) {
-      gsap.to(desktopTriggerRef.current, {
-        scale: 0.9,
+  useEffect(() => {
+    const panel = desktopPanelRef.current;
+    const trigger = desktopTriggerContainerRef.current;
+    if (!panel || !trigger) return;
+
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      if (isDesktopPanelOpen) {
+        gsap.set(panel, { x: 0, opacity: 1, pointerEvents: "auto", display: "flex" });
+        gsap.set(trigger, { x: -25, opacity: 0, pointerEvents: "none", display: "none" });
+      } else {
+        gsap.set(panel, { x: -45, opacity: 0, pointerEvents: "none", display: "none" });
+        gsap.set(trigger, { x: 0, opacity: 1, pointerEvents: "auto", display: "block" });
+      }
+      return;
+    }
+
+    if (isDesktopPanelOpen) {
+      // 1. Sembunyikan trigger pill ke arah kiri
+      gsap.to(trigger, {
+        x: -25,
         opacity: 0,
-        x: -20,
-        duration: 0.2,
+        duration: 0.18,
         ease: "power2.in",
         onComplete: () => {
-          setIsDesktopPanelOpen(true);
+          gsap.set(trigger, { display: "none", pointerEvents: "none" });
         },
       });
-    } else {
-      setIsDesktopPanelOpen(true);
-    }
-  };
 
-  const handleMinimizeDesktop = () => {
-    if (desktopPanelRef.current) {
-      gsap.to(desktopPanelRef.current, {
+      // 2. Tampilkan panel meluncur mulus dari kiri ke kanan dengan kurva spring halus
+      gsap.set(panel, { display: "flex", pointerEvents: "auto" });
+      gsap.fromTo(
+        panel,
+        { x: -50, opacity: 0, scale: 0.97 },
+        {
+          x: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.38,
+          ease: "power3.out",
+        }
+      );
+    } else {
+      // 1. Sembunyikan panel meluncur kembali ke arah kiri
+      gsap.to(panel, {
         x: -40,
         opacity: 0,
-        scale: 0.95,
-        duration: 0.25,
+        scale: 0.97,
+        duration: 0.24,
         ease: "power2.in",
         onComplete: () => {
-          setIsDesktopPanelOpen(false);
+          gsap.set(panel, { display: "none", pointerEvents: "none" });
         },
       });
-    } else {
-      setIsDesktopPanelOpen(false);
-    }
-  };
 
-  useEffect(() => {
-    if (isDesktopPanelOpen && desktopPanelRef.current) {
+      // 2. Munculkan kembali tombol trigger pill dengan bouncy halus
+      gsap.set(trigger, { display: "block", pointerEvents: "auto" });
       gsap.fromTo(
-        desktopPanelRef.current,
-        { x: -50, opacity: 0, scale: 0.96 },
-        { x: 0, opacity: 1, scale: 1, duration: 0.35, ease: "power3.out" }
-      );
-    } else if (!isDesktopPanelOpen && desktopTriggerRef.current) {
-      gsap.fromTo(
-        desktopTriggerRef.current,
+        trigger,
         { x: -25, opacity: 0, scale: 0.92 },
-        { x: 0, opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.4)" }
+        {
+          x: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.3,
+          ease: "back.out(1.4)",
+          delay: 0.06,
+        }
       );
     }
   }, [isDesktopPanelOpen]);
@@ -311,11 +333,6 @@ function PetaContent() {
   const triggerLocate = () => {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("sigapbumi:map-locate"));
-    }
-  };
-  const triggerCompass = () => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("sigapbumi:map-reset-view"));
     }
   };
 
@@ -577,18 +594,8 @@ function PetaContent() {
           />
         </div>
 
-        {/* Floating Right Control Stack (Kompas, Lokasi Saya, Filter, Zoom) */}
+        {/* Floating Right Control Stack (Lokasi Saya, Filter, Zoom) */}
         <div className="absolute top-3 right-3 z-30 flex flex-col items-center gap-2 pointer-events-auto">
-          {/* Kompas */}
-          <button
-            type="button"
-            onClick={triggerCompass}
-            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
-            title="Reset Arah Kompas & Tampilan"
-          >
-            <Compass className="w-5 h-5 text-red-500" />
-          </button>
-
           {/* Lokasi Saya */}
           <button
             type="button"
@@ -878,73 +885,76 @@ function PetaContent() {
           />
         </div>
 
-        {/* Kiri Atas: Floating Filter Panel Desktop (Minimized / Maximized dengan Animasi GSAP) */}
-        <div className="absolute top-5 left-6 z-20">
-          {!isDesktopPanelOpen ? (
-            <button
-              ref={desktopTriggerRef}
-              type="button"
-              onClick={handleMaximizeDesktop}
-              className="group bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/90 rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-slate-800 cursor-pointer hover:shadow-2xl select-none"
-              title="Buka / Maksimalkan Filter &amp; Pencarian Peta"
-            >
-              <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+        {/* Kiri Atas: Trigger Pill Minimized */}
+        <div
+          ref={desktopTriggerContainerRef}
+          className="absolute top-5 left-6 z-20"
+        >
+          <button
+            type="button"
+            onClick={() => setIsDesktopPanelOpen(true)}
+            className="group bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/90 rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-slate-800 cursor-pointer hover:shadow-2xl select-none"
+            title="Buka Filter Peta Kejadian"
+          >
+            <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+              <SlidersHorizontal className="w-4 h-4" />
+            </div>
+            <div className="text-left">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-extrabold text-slate-900">
+                  Filter Peta Kejadian
+                </span>
+                <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                  {desktopPoints.length} Titik
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400">Klik untuk membuka filter &amp; cari kejadian</p>
+            </div>
+            <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-orange-50 text-slate-400 group-hover:text-orange-600 flex items-center justify-center transition-colors shrink-0 ml-1">
+              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+            </div>
+          </button>
+        </div>
+
+        {/* Kiri Atas: Panel Filter Lengkap Maximized */}
+        <div
+          ref={desktopPanelRef}
+          className="absolute top-5 left-6 z-20 w-[380px] lg:w-[410px] max-h-[calc(100vh-6.5rem)] flex flex-col bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden select-none"
+        >
+          {/* Header Panel */}
+          <div className="p-3.5 px-4 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 shadow-2xs">
                 <SlidersHorizontal className="w-4 h-4" />
               </div>
-              <div className="text-left">
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-extrabold text-slate-900">
+                  <h3 className="text-xs font-extrabold text-slate-900 truncate">
                     Filter Peta Kejadian
-                  </span>
-                  <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                  </h3>
+                  <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full shrink-0">
                     {desktopPoints.length} Titik
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400">Klik untuk membuka filter &amp; cari kejadian</p>
+                <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                  Saring sebaran laporan bencana &amp; darurat
+                </p>
               </div>
-              <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-orange-50 text-slate-400 group-hover:text-orange-600 flex items-center justify-center transition-colors shrink-0 ml-1">
-                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-              </div>
-            </button>
-          ) : (
-            <div
-              ref={desktopPanelRef}
-              className="w-[380px] lg:w-[410px] max-h-[calc(100vh-6.5rem)] flex flex-col bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden select-none"
+            </div>
+
+            {/* Tombol Minimize (Hanya Icon Chevron Left tanpa teks Minimize) */}
+            <button
+              type="button"
+              onClick={() => setIsDesktopPanelOpen(false)}
+              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95"
+              title="Kecilkan Panel"
             >
-              {/* Header Panel */}
-              <div className="p-3.5 px-4 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 shadow-2xs">
-                    <SlidersHorizontal className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-xs font-extrabold text-slate-900 truncate">
-                        Filter Peta Kejadian
-                      </h3>
-                      <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full shrink-0">
-                        {desktopPoints.length} Titik
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                      Saring sebaran laporan bencana &amp; darurat
-                    </p>
-                  </div>
-                </div>
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          </div>
 
-                {/* Tombol Minimize (Hanya Icon Chevron Left tanpa teks Minimize) */}
-                <button
-                  type="button"
-                  onClick={handleMinimizeDesktop}
-                  className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95"
-                  title="Kecilkan Panel"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Body Konten Filter Desktop */}
-              <div className="overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-11rem)] scrollbar-thin">
+          {/* Body Konten Filter Desktop */}
+          <div className="overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-11rem)] scrollbar-thin">
                 {/* Search Bar Terintegrasi Langsung dalam Filter */}
                 <div className="relative">
                   <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center gap-2 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-200/60 transition-all shadow-2xs">
@@ -1151,21 +1161,9 @@ function PetaContent() {
               )}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Kanan Bawah: Stack Floating Action Controls (Kompas, Lokasi Saya, Layers, Zoom) - dinaikkan agar tidak menabrak SOS */}
+      {/* Kanan Bawah: Stack Floating Action Controls (Lokasi Saya, Filter, Zoom) - dinaikkan agar tidak menabrak SOS */}
       <div className="absolute bottom-28 right-6 z-20 flex flex-col items-center gap-2">
-        {/* Kompas */}
-        <button
-          type="button"
-          onClick={triggerCompass}
-          className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer hover:bg-slate-50"
-          title="Reset Arah Kompas &amp; Tampilan"
-        >
-          <Compass className="w-5 h-5 text-red-500" />
-        </button>
-
         {/* Lokasi Saya */}
         <button
           type="button"
@@ -1176,36 +1174,16 @@ function PetaContent() {
           <Crosshair className="w-5 h-5 text-blue-600" />
         </button>
 
-        {/* Pin Marker Toggle */}
-        <button
-          type="button"
-          onClick={() => {
-            if (desktopPoints.length > 0) {
-              setSelectedPoint(desktopPoints[0]);
-            }
-          }}
-          className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer hover:bg-slate-50"
-          title="Fokus Titik Terdekat"
-        >
-          <MapPin className="w-5 h-5 text-emerald-600" />
-        </button>
-
         {/* Toggle Panel Kiri (Buka / Tutup Filter) */}
         <button
           type="button"
-          onClick={() => {
-            if (isDesktopPanelOpen) {
-              handleMinimizeDesktop();
-            } else {
-              handleMaximizeDesktop();
-            }
-          }}
+          onClick={() => setIsDesktopPanelOpen((prev) => !prev)}
           className={`w-10 h-10 rounded-full backdrop-blur-xs shadow-md border flex items-center justify-center active:scale-95 transition-transform cursor-pointer ${
             isDesktopPanelOpen
               ? "bg-orange-600 text-white border-orange-500 shadow-orange-500/20"
               : "bg-white/95 text-slate-700 border-slate-200/90 hover:bg-slate-50"
           }`}
-          title={isDesktopPanelOpen ? "Tutup / Minimize Filter" : "Buka / Maximize Filter"}
+          title={isDesktopPanelOpen ? "Tutup Filter" : "Buka Filter"}
         >
           <SlidersHorizontal className="w-4.5 h-4.5" />
         </button>

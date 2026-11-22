@@ -76,6 +76,7 @@ export default function DisasterMap({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
+  const userLocationMarkerRef = useRef<L.Marker | null>(null);
 
   // Injeksi style animasi ping jika belum ada di document
   useEffect(() => {
@@ -123,35 +124,116 @@ export default function DisasterMap({
       maxZoom: 19,
     }).addTo(map);
 
-    // Add Locate Button Control
-    const LocateControl = L.Control.extend({
-      options: { position: "topright" },
-      onAdd: function () {
-        const btn = L.DomUtil.create("button", "leaflet-bar");
-        btn.innerHTML = `<span style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;background:#fff;border-radius:4px;cursor:pointer;font-size:16px;" title="Pusatkan ke lokasi saya">⌖</span>`;
-        btn.onclick = function (e) {
-          e.stopPropagation();
-          map.locate({ setView: true, maxZoom: 13 });
-        };
-        return btn;
-      },
-    });
-    map.addControl(new LocateControl());
-
     const markersGroup = L.layerGroup().addTo(map);
     markersLayerRef.current = markersGroup;
     mapInstanceRef.current = map;
 
+    // Helper merender titik marker GPS Lokasi Saya (titik biru berdenyut khas Google Maps)
+    const renderUserLocation = (lat: number, lng: number, openPopup: boolean = true) => {
+      if (!mapInstanceRef.current) return;
+      mapInstanceRef.current.flyTo([lat, lng], 15, { duration: 1.2, easeLinearity: 0.25 });
+
+      if (userLocationMarkerRef.current) {
+        userLocationMarkerRef.current.setLatLng([lat, lng]);
+      } else {
+        const userIcon = L.divIcon({
+          className: "custom-user-gps-pin",
+          html: `
+            <div style="position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+              <div style="position: absolute; width: 100%; height: 100%; border-radius: 9999px; background-color: rgba(37, 99, 235, 0.35); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+              <div style="width: 16px; height: 16px; border-radius: 9999px; background-color: #2563EB; border: 3px solid #FFFFFF; box-shadow: 0 2px 10px rgba(37,99,235,0.6); display: flex; align-items: center; justify-content: center;">
+                <div style="width: 4px; height: 4px; border-radius: 9999px; background-color: #FFFFFF;"></div>
+              </div>
+            </div>
+          `,
+          iconSize: [34, 34],
+          iconAnchor: [17, 17],
+          popupAnchor: [0, -17],
+        });
+
+        const marker = L.marker([lat, lng], {
+          icon: userIcon,
+          zIndexOffset: 1200,
+        }).addTo(mapInstanceRef.current);
+
+        marker.bindPopup(`
+          <div style="padding: 2px; font-family: system-ui, -apple-system, sans-serif;">
+            <div style="display:flex;align-items:center;gap:6px;font-weight:800;color:#1e293b;font-size:12px;">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2563eb;"></span>
+              <span>Lokasi Anda Saat Ini</span>
+            </div>
+            <p style="margin:3px 0 0 14px;font-size:10px;color:#64748b;">GPS Aktif &amp; Terpusat</p>
+          </div>
+        `);
+        userLocationMarkerRef.current = marker;
+      }
+
+      if (openPopup && userLocationMarkerRef.current) {
+        setTimeout(() => {
+          userLocationMarkerRef.current?.openPopup();
+        }, 400);
+      }
+    };
+
+    // Pusatkan ke lokasi saya dengan akurasi GPS tinggi
+    const handleLocate = (e?: Event) => {
+      const customEvt = e as CustomEvent<{ lat?: number; lng?: number }>;
+      if (customEvt?.detail?.lat && customEvt?.detail?.lng) {
+        renderUserLocation(customEvt.detail.lat, customEvt.detail.lng, true);
+        return;
+      }
+
+      // 1. Coba baca posisi terakhir yang pernah tersimpan
+      try {
+        const cached = localStorage.getItem("sigapbumi_user_last_coords");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && typeof parsed.lat === "number" && typeof parsed.lng === "number") {
+            renderUserLocation(parsed.lat, parsed.lng, false);
+          }
+        }
+      } catch {}
+
+      // 2. Ambil koordinat presisi langsung dari browser geolocation
+      if (typeof window !== "undefined" && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const { latitude, longitude, accuracy } = pos.coords;
+            try {
+              localStorage.setItem(
+                "sigapbumi_user_last_coords",
+                JSON.stringify({ lat: latitude, lng: longitude, accuracy })
+              );
+            } catch {}
+            renderUserLocation(latitude, longitude, true);
+          },
+          (err) => {
+            console.warn("GPS error, mencoba Leaflet locate fallback:", err);
+            map.locate({ setView: true, maxZoom: 15 });
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          }
+        );
+      } else {
+        map.locate({ setView: true, maxZoom: 15 });
+      }
+    };
+
+    // Event listener Leaflet saat lokasi berhasil/gagal ditemukan
+    map.on("locationfound", (e: L.LocationEvent) => {
+      renderUserLocation(e.latlng.lat, e.latlng.lng, true);
+    });
+
     const handleZoomIn = () => map.zoomIn();
     const handleZoomOut = () => map.zoomOut();
-    const handleLocate = () => map.locate({ setView: true, maxZoom: 13 });
-    const handleReset = () => map.setView([-2.5, 118.0], 5);
 
     if (typeof window !== "undefined") {
       window.addEventListener("sigapbumi:map-zoom-in", handleZoomIn);
       window.addEventListener("sigapbumi:map-zoom-out", handleZoomOut);
       window.addEventListener("sigapbumi:map-locate", handleLocate);
-      window.addEventListener("sigapbumi:map-reset-view", handleReset);
     }
 
     setTimeout(() => {
@@ -163,7 +245,6 @@ export default function DisasterMap({
         window.removeEventListener("sigapbumi:map-zoom-in", handleZoomIn);
         window.removeEventListener("sigapbumi:map-zoom-out", handleZoomOut);
         window.removeEventListener("sigapbumi:map-locate", handleLocate);
-        window.removeEventListener("sigapbumi:map-reset-view", handleReset);
       }
       map.remove();
       mapInstanceRef.current = null;
