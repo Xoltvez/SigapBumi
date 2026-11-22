@@ -49,6 +49,59 @@ function isValidCoord(lat: unknown, lng: unknown): boolean {
   );
 }
 
+// Navigasi aman ke koordinat tanpa risiko exception Invalid LatLng (NaN, NaN) pada Leaflet
+function safeNavigateMap(
+  map: L.Map | null | undefined,
+  lat: number,
+  lng: number,
+  zoom: number = 15,
+  useFly: boolean = true
+): void {
+  if (!map || !isValidCoord(lat, lng)) return;
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+
+  try {
+    try {
+      map.invalidateSize();
+    } catch {}
+
+    let canFly = false;
+    if (useFly) {
+      try {
+        const c = map.getCenter();
+        const s = map.getSize();
+        canFly = Boolean(
+          c &&
+          isValidCoord(c.lat, c.lng) &&
+          s &&
+          s.x > 0 &&
+          s.y > 0 &&
+          !isNaN(s.x) &&
+          !isNaN(s.y)
+        );
+      } catch {
+        canFly = false;
+      }
+    }
+
+    if (canFly) {
+      map.flyTo([latNum, lngNum], zoom, {
+        duration: 1.2,
+        easeLinearity: 0.25,
+      });
+    } else {
+      map.setView([latNum, lngNum], zoom);
+    }
+  } catch (err) {
+    try {
+      map.setView([latNum, lngNum], zoom);
+    } catch {
+      // Abaikan jika map sedang unmounting
+    }
+  }
+}
+
 // Generate custom DivIcon based on status and emergency SOS
 function createPinIcon(status: ReportStatus, isSos: boolean = false) {
   if (isSos) {
@@ -155,7 +208,7 @@ export default function DisasterMap({
       const lngNum = Number(lng);
 
       if (flyTo) {
-        mapInstanceRef.current.flyTo([latNum, lngNum], 15, { duration: 1.2, easeLinearity: 0.25 });
+        safeNavigateMap(mapInstanceRef.current, latNum, lngNum, 15, true);
       }
 
       if (userLocationMarkerRef.current) {
@@ -325,17 +378,24 @@ export default function DisasterMap({
     if (pt && isValidCoord(pt.lat, pt.lng)) {
       const latNum = Number(pt.lat);
       const lngNum = Number(pt.lng);
-      mapInstanceRef.current.flyTo([latNum, lngNum], 15, {
-        duration: 1.2,
-        easeLinearity: 0.25,
-      });
-      // Buka popup titik kejadian secara otomatis
-      const marker = markersMapRef.current.get(pt.id);
-      if (marker) {
-        setTimeout(() => {
-          marker.openPopup();
-        }, 400);
-      }
+
+      // Beri sedikit jeda agar DOM Leaflet stabil jika baru di-mount
+      const timer = setTimeout(() => {
+        if (!mapInstanceRef.current) return;
+        safeNavigateMap(mapInstanceRef.current, latNum, lngNum, 15, true);
+
+        // Buka popup titik kejadian secara otomatis
+        const marker = markersMapRef.current.get(pt.id);
+        if (marker) {
+          setTimeout(() => {
+            try {
+              marker.openPopup();
+            } catch {}
+          }, 350);
+        }
+      }, 50);
+
+      return () => clearTimeout(timer);
     }
   }, [selectedPointId, points]);
 
@@ -391,10 +451,7 @@ export default function DisasterMap({
 
       marker.on("click", () => {
         if (mapInstanceRef.current && isValidCoord(latNum, lngNum)) {
-          mapInstanceRef.current.flyTo([latNum, lngNum], 15, {
-            duration: 1.2,
-            easeLinearity: 0.25,
-          });
+          safeNavigateMap(mapInstanceRef.current, latNum, lngNum, 15, true);
         }
         if (onSelectPoint) {
           onSelectPoint(pt);
@@ -406,11 +463,18 @@ export default function DisasterMap({
     });
 
     // Auto-fit bounds jika ada titik dan tidak sedang fokus pada titik tertentu
-    if (!selectedPointId && validPoints.length > 0) {
-      const bounds = L.latLngBounds(validPoints.map((p) => [Number(p.lat), Number(p.lng)]));
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [35, 35], maxZoom: 12 });
+    try {
+      if (!selectedPointId && validPoints.length > 0) {
+        const coords = validPoints.map((p) => [Number(p.lat), Number(p.lng)] as [number, number]);
+        if (coords.length > 0) {
+          const bounds = L.latLngBounds(coords);
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [35, 35], maxZoom: 12 });
+          }
+        }
       }
+    } catch (err) {
+      console.warn("fitBounds warning:", err);
     }
   }, [points, onSelectPoint, selectedPointId]);
 
