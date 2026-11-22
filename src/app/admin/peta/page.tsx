@@ -160,7 +160,13 @@ export default function AdminPetaPage() {
         }
       }
 
-      const res = await calculateRoute(startLat, startLng, destPoint.lat, destPoint.lng);
+      const res = await calculateRoute(
+        startLat,
+        startLng,
+        destPoint.lat,
+        destPoint.lng,
+        destPoint.location_name
+      );
       setActiveRoute(res);
     } catch (err) {
       console.warn("Gagal menghitung rute navigasi:", err);
@@ -476,27 +482,26 @@ export default function AdminPetaPage() {
           <>
             {/* Top Tactical HUD Panel */}
             <div className="absolute top-3 left-3 right-3 z-40 bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-blue-500/30 shadow-[0_12px_36px_rgba(15,23,42,0.45)] p-3 text-white animate-in slide-in-from-top-3 duration-300 pointer-events-auto">
-              {/* Header Status Operasi */}
+              {/* Header Navigasi Bersih */}
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-400">
-                    Disposisi Tanggap Darurat
-                  </span>
+                <div className="flex items-center gap-2 min-w-0">
                   {selectedPoint && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded font-bold">
+                    <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-800 text-cyan-400 border border-slate-700 rounded font-bold">
                       {selectedPoint.tracking_code}
                     </span>
                   )}
+                  <span className="text-[11px] text-slate-300 font-medium truncate">
+                    {selectedPoint?.location_name || "Menuju Titik Lokasi"}
+                  </span>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleExitLiveNavigation}
-                  className="px-2.5 py-0.5 rounded-full bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                  className="px-2.5 py-0.5 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <X className="w-3 h-3" />
-                  <span>Akhiri</span>
+                  <span>Tutup</span>
                 </button>
               </div>
 
@@ -511,11 +516,11 @@ export default function AdminPetaPage() {
                       {activeRoute.steps?.[0]?.distanceFormatted || activeRoute.distanceFormatted}
                     </span>
                     <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">
-                      Belokan Berikutnya
+                      Manuver Berikutnya
                     </span>
                   </div>
                   <p className="text-xs font-semibold text-slate-200 truncate mt-1">
-                    {activeRoute.steps?.[0]?.instruction || `Menuju ${selectedPoint?.location_name || "Lokasi Kejadian"}`}
+                    {activeRoute.steps?.[0]?.instruction || `Menuju ${selectedPoint?.location_name || "Titik Kejadian"}`}
                   </p>
                 </div>
               </div>
@@ -525,9 +530,11 @@ export default function AdminPetaPage() {
             <div className="absolute bottom-4 left-3 right-3 z-40 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_12px_36px_rgba(0,0,0,0.18)] p-3 text-slate-900 select-none animate-in slide-in-from-bottom-3 duration-300 pointer-events-auto">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl px-2.5 py-1.5 flex flex-col items-center justify-center min-w-[68px]">
-                    <span className="text-[9px] font-extrabold text-emerald-600 uppercase tracking-wider leading-none">Sisa</span>
-                    <span className="text-base font-black text-emerald-700 leading-tight">{activeRoute.durationFormattedShort} mnt</span>
+                  <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl px-2.5 py-1.5 flex flex-col items-center justify-center min-w-[70px]">
+                    <span className="text-[9px] font-extrabold text-emerald-600 uppercase tracking-wider leading-none">Estimasi</span>
+                    <span className="text-xs font-black text-emerald-700 leading-tight mt-0.5 text-center">
+                      {activeRoute.durationFormattedShort}
+                    </span>
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
@@ -1210,19 +1217,27 @@ export default function AdminPetaPage() {
               <>
                 {/* Top Left: Tactical Emergency Command HUD */}
                 <div className="absolute top-4 left-4 z-[550] bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-blue-500/30 shadow-[0_16px_40px_rgba(15,23,42,0.45)] p-4 text-white max-w-[420px] animate-in slide-in-from-top-4 duration-300 pointer-events-auto select-none">
-                  {/* Operation Status Bar */}
+                  {/* Operation Status Bar Bersih */}
                   <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-800">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-400">
-                        Disposisi Tanggap Darurat Posko
+                    <div className="flex items-center gap-2 min-w-0">
+                      {selectedPoint && (
+                        <span className="text-[11px] font-mono px-2 py-0.5 bg-slate-800 text-cyan-400 border border-slate-700 rounded font-bold">
+                          {selectedPoint.tracking_code}
+                        </span>
+                      )}
+                      <span className="text-xs text-slate-300 font-medium truncate">
+                        {selectedPoint?.location_name || "Menuju Titik Sasaran"}
                       </span>
                     </div>
-                    {selectedPoint && (
-                      <span className="text-[11px] font-mono px-2 py-0.5 bg-slate-800 text-cyan-400 border border-slate-700 rounded font-bold">
-                        {selectedPoint.tracking_code}
-                      </span>
-                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleExitLiveNavigation}
+                      className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+                      title="Tutup Navigasi"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
 
                   {/* Turn-by-Turn Instruction */}
@@ -1262,7 +1277,7 @@ export default function AdminPetaPage() {
                       </span>
                       <div className="flex items-baseline gap-1.5 mt-0.5">
                         <span className="text-lg font-black text-emerald-600 leading-none">
-                          {activeRoute.durationFormattedShort} Menit
+                          {activeRoute.durationFormattedShort}
                         </span>
                         <span className="text-xs font-semibold text-slate-500">
                           ({activeRoute.arrivalTimeFormatted})
@@ -1284,7 +1299,7 @@ export default function AdminPetaPage() {
                         {activeRoute.distanceKm} km
                       </span>
                       <span className="text-[10px] text-slate-400 font-medium block">
-                        Jalur Jalan Arteri (OSRM)
+                        Jalur Jalan Arteri
                       </span>
                     </div>
                   </div>
