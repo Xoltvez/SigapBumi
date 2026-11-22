@@ -116,7 +116,7 @@ function LaporForm() {
   });
 
   const categories: { key: DisasterType; label: string; icon?: React.ElementType; iconUrl?: string; color: string }[] = [
-    { key: "banjir", label: "Banjir", iconUrl: "/icon%20bencana/banjir.png", icon: Waves, color: "text-info" },
+    { key: "banjir", label: "Tsunami & Banjir", iconUrl: "/icon%20bencana/banjir.png", icon: Waves, color: "text-info" },
     { key: "gempa", label: "Gempa Bumi", iconUrl: "/icon%20bencana/gempa%20bumi.png", icon: Activity, color: "text-warning" },
     { key: "kebakaran", label: "Kebakaran", iconUrl: "/icon%20bencana/house-fire.png", icon: Flame, color: "text-danger" },
     { key: "longsor", label: "Tanah Longsor", iconUrl: "/icon%20bencana/avalanche.png", icon: Mountain, color: "text-ink" },

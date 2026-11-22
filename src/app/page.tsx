@@ -131,8 +131,8 @@ export default function HomePage() {
   }[] = [
     {
       type: "banjir",
-      label: "Banjir & Genangan",
-      desc: "Luapan sungai, rob pantai, dan genangan air pemukiman",
+      label: "Tsunami & Banjir",
+      desc: "Gelombang tsunami, luapan sungai, rob pantai, dan genangan air",
       iconUrl: "/icon%20bencana/banjir.png",
       badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
       borderColor: "hover:border-blue-400 hover:shadow-blue-500/10",
@@ -141,8 +141,8 @@ export default function HomePage() {
     },
     {
       type: "gempa",
-      label: "Gempa Bumi & Tsunami",
-      desc: "Guncangan tektonik, retakan tanah, dan peringatan gelombang",
+      label: "Gempa Bumi",
+      desc: "Guncangan tektonik, retakan tanah, dan dampak seismik",
       iconUrl: "/icon%20bencana/gempa%20bumi.png",
       badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
       borderColor: "hover:border-amber-400 hover:shadow-amber-500/10",

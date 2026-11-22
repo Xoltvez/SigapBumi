@@ -716,7 +716,7 @@ export default function AdminRingkasanPage() {
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB] shrink-0" />
-                  <span className="text-slate-700 font-medium">Banjir & Genangan Air</span>
+                  <span className="text-slate-700 font-medium">Tsunami & Banjir</span>
                 </div>
                 <span className="font-bold text-slate-900 ml-2">{banjirPct}%</span>
               </div>
