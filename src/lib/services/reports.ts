@@ -334,10 +334,27 @@ export async function fetchUserReports(user: { id: string; email: string; phone_
   return result;
 }
 
-// Dataset awal terstruktur 90 kejadian bencana di seluruh Indonesia
-export const DEFAULT_MOCK_REPORTS: LiveReportItem[] = MASTER_MOCK_REPORTS;
+// Dataset awal: kosong secara default agar murni membaca Supabase live
+export const DEFAULT_MOCK_REPORTS: LiveReportItem[] = [];
 
 export const DEFAULT_MOCK_SOS: LiveSosAlertItem[] = [];
+
+/**
+ * Menghapus seluruh cache laporan & SOS lokal di browser pengguna
+ */
+export function clearAllLocalReportsAndCaches(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(LOCAL_STORAGE_REPORTS_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_DELETED_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_MY_CODES_KEY);
+    localStorage.removeItem("sigapbumi_sos_alerts_cache");
+    localStorage.removeItem("sigapbumi_deleted_sos");
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("sigapbumi:sos-updated", { detail: {} }));
+    window.dispatchEvent(new CustomEvent("sigapbumi:report-deleted", { detail: {} }));
+  } catch {}
+}
 
 /**
  * Menentukan instansi terkait berdasarkan tipe bencana

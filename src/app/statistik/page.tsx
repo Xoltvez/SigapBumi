@@ -24,21 +24,20 @@ import {
   Info,
   Layers,
 } from "lucide-react";
-import { DEFAULT_MOCK_REPORTS, fetchLiveReports, type LiveReportItem } from "@/lib/services/reports";
+import { fetchLiveReports, type LiveReportItem } from "@/lib/services/reports";
 
 export default function StatistikPage() {
-  const [reports, setReports] = useState<LiveReportItem[]>(DEFAULT_MOCK_REPORTS);
+  const [reports, setReports] = useState<LiveReportItem[]>([]);
   const [period, setPeriod] = useState<string>("2026");
 
   useEffect(() => {
     async function loadLiveData() {
       try {
         const live = await fetchLiveReports();
-        if (live && live.length > 0) {
-          setReports(live);
-        }
+        setReports(live || []);
       } catch (err) {
         console.warn("Gagal memuat data live statistik:", err);
+        setReports([]);
       }
     }
     loadLiveData();

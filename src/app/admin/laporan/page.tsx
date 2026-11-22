@@ -30,6 +30,7 @@ import {
   updateReportStatusLive,
   deleteReportLive,
   removeEmojis,
+  clearAllLocalReportsAndCaches,
 } from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 
@@ -64,172 +65,8 @@ function formatReportTime(dateStr?: string) {
   }
 }
 
-// Dataset laporan default dengan pemisahan yurisdiksi ketat per role instansi
-const DEFAULT_REPORTS: AdminReportRow[] = [
-  // --- ROLE DAMKAR (Kebakaran & Karhutla) ---
-  {
-    id: "rep-sos-1399",
-    tracking_code: "SOS-1399",
-    disaster_type: "kebakaran",
-    title: "PANGGILAN DARURAT SOS (DAMKAR)",
-    location: "Titik Darurat Warga (-7.4552, 109.2427)",
-    time: "2 Nov 2026, 09.12 WIB",
-    status: "diterima",
-    priority: "Kritis",
-    confirmation_count: 1,
-    target_agency: "damkar",
-  },
-  {
-    id: "rep-sos-4862",
-    tracking_code: "SOS-4862",
-    disaster_type: "kebakaran",
-    title: "PANGGILAN DARURAT SOS (DAMKAR)",
-    location: "Titik Darurat Warga (-7.4552, 109.2428)",
-    time: "2 Nov 2026, 01.41 WIB",
-    status: "diterima",
-    priority: "Kritis",
-    confirmation_count: 1,
-    target_agency: "damkar",
-  },
-  {
-    id: "rep-dmk-1",
-    tracking_code: "SB-2026-DMK1",
-    disaster_type: "kebakaran",
-    title: "Kebakaran Permukiman Padat Penduduk",
-    location: "Tambora, Jakarta Barat",
-    time: "2 Nov 2026, 08.30 WIB",
-    status: "ditindaklanjuti",
-    priority: "Kritis",
-    confirmation_count: 14,
-    target_agency: "damkar",
-  },
-  {
-    id: "rep-dmk-2",
-    tracking_code: "SB-2026-DMK2",
-    disaster_type: "karhutla",
-    title: "Kebakaran Hutan & Lahan Gambut Meluas 3 Ha",
-    location: "Cikarang Timur, Bekasi",
-    time: "1 Nov 2026, 16.20 WIB",
-    status: "selesai",
-    priority: "Sedang",
-    confirmation_count: 8,
-    target_agency: "damkar",
-  },
-
-  // --- ROLE MEDIS / KESEHATAN (Kejadian Medis & Ambulans) ---
-  {
-    id: "rep-sos-9214",
-    tracking_code: "SOS-9214",
-    disaster_type: "lainnya",
-    title: "PANGGILAN DARURAT SOS (MEDIS)",
-    location: "Titik Darurat Warga (-6.2140, 106.8450)",
-    time: "2 Nov 2026, 08.45 WIB",
-    status: "diterima",
-    priority: "Kritis",
-    confirmation_count: 1,
-    target_agency: "medis",
-  },
-  {
-    id: "rep-sos-7821",
-    tracking_code: "SOS-7821",
-    disaster_type: "lainnya",
-    title: "PANGGILAN DARURAT SOS (MEDIS)",
-    location: "Titik Darurat Warga (-6.2280, 106.8520)",
-    time: "2 Nov 2026, 07.10 WIB",
-    status: "ditindaklanjuti",
-    priority: "Tinggi",
-    confirmation_count: 1,
-    target_agency: "medis",
-  },
-  {
-    id: "rep-med-1",
-    tracking_code: "SB-2026-MED1",
-    disaster_type: "gempa",
-    title: "Evakuasi Medis Korban Tertimpa Reruntuhan Bangunan",
-    location: "Kecamatan Cugenang, Cianjur",
-    time: "2 Nov 2026, 06.50 WIB",
-    status: "ditindaklanjuti",
-    priority: "Kritis",
-    confirmation_count: 22,
-    target_agency: "medis",
-  },
-  {
-    id: "rep-med-2",
-    tracking_code: "SB-2026-MED2",
-    disaster_type: "lainnya",
-    title: "Kebutuhan Ambulans & Nakes Darurat Pasien Lansia",
-    location: "Posko Kesehatan Kampung Melayu, Jatinegara",
-    time: "1 Nov 2026, 21.15 WIB",
-    status: "selesai",
-    priority: "Sedang",
-    confirmation_count: 9,
-    target_agency: "medis",
-  },
-
-  // --- ROLE BNPB / BPBD (Bencana Alam Hidrometeorologi & Geologi) ---
-  {
-    id: "rep-sos-4888",
-    tracking_code: "SOS-4888",
-    disaster_type: "banjir",
-    title: "PANGGILAN DARURAT SOS (BNPB_BPBD)",
-    location: "Titik Darurat Warga (-6.1747, 106.8323)",
-    time: "2 Nov 2026, 01.42 WIB",
-    status: "diterima",
-    priority: "Kritis",
-    confirmation_count: 1,
-    target_agency: "bnpb_bpbd",
-  },
-  {
-    id: "rep-bpb-1",
-    tracking_code: "SB-2026-BPB1",
-    disaster_type: "banjir",
-    title: "Banjir Luapan Kali Semanan 60 cm",
-    location: "Kelurahan Semanan, Kalideres, Jakarta Barat",
-    time: "2 Nov 2026, 05.30 WIB",
-    status: "ditindaklanjuti",
-    priority: "Tinggi",
-    confirmation_count: 28,
-    target_agency: "bnpb_bpbd",
-  },
-  {
-    id: "rep-bpb-2",
-    tracking_code: "SB-2026-BPB2",
-    disaster_type: "longsor",
-    title: "Tanah Longsor Tebing Menutup Akses Jalan Utama",
-    location: "Desa Sukamaju, Wonosobo",
-    time: "1 Nov 2026, 18.00 WIB",
-    status: "ditindaklanjuti",
-    priority: "Kritis",
-    confirmation_count: 19,
-    target_agency: "bnpb_bpbd",
-  },
-
-  // --- ROLE POLISI (Kamtibmas & Pengamanan Jalur) ---
-  {
-    id: "rep-sos-2085",
-    tracking_code: "SOS-2085",
-    disaster_type: "lainnya",
-    title: "PANGGILAN DARURAT SOS (POLISI)",
-    location: "Titik Darurat Warga (-7.4052, 109.2450)",
-    time: "1 Nov 2026, 22.15 WIB",
-    status: "diverifikasi",
-    priority: "Sedang",
-    confirmation_count: 1,
-    target_agency: "polisi",
-  },
-  {
-    id: "rep-pol-1",
-    tracking_code: "SB-2026-POL1",
-    disaster_type: "lainnya",
-    title: "Penyekatan & Pengamanan Jalur Evakuasi Rawan Bencana",
-    location: "Pertigaan Akses Jalur Puncak, Bogor",
-    time: "2 Nov 2026, 06.15 WIB",
-    status: "ditindaklanjuti",
-    priority: "Tinggi",
-    confirmation_count: 12,
-    target_agency: "polisi",
-  },
-];
+// Dataset laporan default: dikosongkan agar murni membaca live database
+const DEFAULT_REPORTS: AdminReportRow[] = [];
 
 // Helper penyaring kewenangan laporan strictly per instansi / role
 export function checkReportBelongsToUnit(r: AdminReportRow, unit: string): boolean {
@@ -422,54 +259,45 @@ function LaporanContent() {
     setIsLoading(true);
     try {
       const live = await fetchLiveReports();
-      if (live && live.length > 0) {
-        const formatted: AdminReportRow[] = live.map((r) => {
-          let pLabel: PriorityLabel = "Sedang";
-          if (r.priority === "tinggi" || r.confirmation_count >= 20) pLabel = "Kritis";
-          else if (r.confirmation_count >= 10) pLabel = "Tinggi";
-          else if (r.status === "selesai") pLabel = "Rendah";
+      const formatted: AdminReportRow[] = (live || []).map((r) => {
+        let pLabel: PriorityLabel = "Sedang";
+        if (r.priority === "tinggi" || r.confirmation_count >= 20) pLabel = "Kritis";
+        else if (r.confirmation_count >= 10) pLabel = "Tinggi";
+        else if (r.status === "selesai") pLabel = "Rendah";
 
-          return {
-            id: r.id,
-            tracking_code: r.tracking_code,
-            disaster_type: r.disaster_type,
-            title: r.title,
-            location: r.address,
-            time: formatReportTime(r.created_at),
-            status: r.status,
-            priority: pLabel,
-            confirmation_count: r.confirmation_count,
-            target_agency: r.target_agency,
-          };
-        });
-
-        // Gabungkan live dengan default agar selalu terisi lengkap dan tidak duplikat
-        const combined = [...formatted];
-        for (const def of DEFAULT_REPORTS) {
-          if (!combined.some((item) => item.tracking_code === def.tracking_code || item.id === def.id)) {
-            combined.push(def);
-          }
-        }
-
-        // Urutkan default: SOS paling atas -> Kritis -> Tinggi -> Sedang -> Rendah
-        const priorityOrder: Record<PriorityLabel, number> = {
-          Kritis: 4,
-          Tinggi: 3,
-          Sedang: 2,
-          Rendah: 1,
+        return {
+          id: r.id,
+          tracking_code: r.tracking_code,
+          disaster_type: r.disaster_type,
+          title: r.title,
+          location: r.address,
+          time: formatReportTime(r.created_at),
+          status: r.status,
+          priority: pLabel,
+          confirmation_count: r.confirmation_count,
+          target_agency: r.target_agency,
         };
-        combined.sort((a, b) => {
-          const aIsSos = a.tracking_code.startsWith("SOS") || a.title.includes("SOS");
-          const bIsSos = b.tracking_code.startsWith("SOS") || b.title.includes("SOS");
-          if (aIsSos && !bIsSos) return -1;
-          if (!aIsSos && bIsSos) return 1;
-          return priorityOrder[b.priority] - priorityOrder[a.priority];
-        });
+      });
 
-        setReports(combined);
-      }
+      // Urutkan default: SOS paling atas -> Kritis -> Tinggi -> Sedang -> Rendah
+      const priorityOrder: Record<PriorityLabel, number> = {
+        Kritis: 4,
+        Tinggi: 3,
+        Sedang: 2,
+        Rendah: 1,
+      };
+      formatted.sort((a, b) => {
+        const aIsSos = a.tracking_code.startsWith("SOS") || a.title.includes("SOS");
+        const bIsSos = b.tracking_code.startsWith("SOS") || b.title.includes("SOS");
+        if (aIsSos && !bIsSos) return -1;
+        if (!aIsSos && bIsSos) return 1;
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+      });
+
+      setReports(formatted);
     } catch (err) {
       console.warn("Gagal memuat daftar laporan admin:", err);
+      setReports([]);
     } finally {
       setIsLoading(false);
     }
@@ -604,15 +432,32 @@ function LaporanContent() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={loadData}
-          disabled={isLoading}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors shrink-0"
-        >
-          <RotateCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-orange-500" : "text-slate-500"}`} />
-          <span>Segarkan Data</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              clearAllLocalReportsAndCaches();
+              loadData();
+              setToastMessage("Cache browser dan data lokal berhasil dibersihkan.");
+              setTimeout(() => setToastMessage(null), 3500);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-700 shadow-2xs transition-colors shrink-0"
+            title="Bersihkan data laporan sementara/mock di peramban ini"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+            <span>Reset Cache Lokal</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={loadData}
+            disabled={isLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors shrink-0"
+          >
+            <RotateCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-orange-500" : "text-slate-500"}`} />
+            <span>Segarkan Data</span>
+          </button>
+        </div>
       </div>
 
       {/* 4 Kartu Metrik KPI (Row 1) */}

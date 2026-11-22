@@ -126,8 +126,8 @@ export default function AdminRingkasanPage() {
     async function loadData() {
       try {
         const live = await fetchLiveReports();
-        if (isMounted && live && live.length > 0) {
-          const formatted: AdminReportItem[] = live.map((r) => {
+        if (isMounted) {
+          const formatted: AdminReportItem[] = (live || []).map((r) => {
             let pLabel: PriorityLabel = "Sedang";
             if (r.priority === "tinggi" || r.confirmation_count >= 20) pLabel = "Kritis";
             else if (r.confirmation_count >= 10) pLabel = "Tinggi";

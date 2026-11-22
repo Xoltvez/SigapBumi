@@ -21,9 +21,14 @@ import {
   HeartPulse,
   Siren,
   Radio,
+  Trash2,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
-import { fetchLiveReports, type LiveReportItem, DEFAULT_MOCK_REPORTS } from "@/lib/services/reports";
+import {
+  fetchLiveReports,
+  type LiveReportItem,
+  clearAllLocalReportsAndCaches,
+} from "@/lib/services/reports";
 import { fetchLiveSosAlerts, type LiveSosItem } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
 import type { DisasterType, ReportStatus } from "@/types";
@@ -144,7 +149,7 @@ function detectProvinceFromAddress(address: string, province?: string): string {
 export default function AdminStatistikPage() {
   const { activeUnit, activeUnitName } = useAdmin();
   const [isLoading, setIsLoading] = useState(false);
-  const [reports, setReports] = useState<LiveReportItem[]>(DEFAULT_MOCK_REPORTS);
+  const [reports, setReports] = useState<LiveReportItem[]>([]);
   const [sosAlerts, setSosAlerts] = useState<LiveSosItem[]>([]);
   const [lastRefreshedTime, setLastRefreshedTime] = useState<string>("");
 
@@ -155,12 +160,8 @@ export default function AdminStatistikPage() {
         fetchLiveReports(),
         fetchLiveSosAlerts(),
       ]);
-      if (liveRep && liveRep.length > 0) {
-        setReports(liveRep);
-      }
-      if (liveSos) {
-        setSosAlerts(liveSos);
-      }
+      setReports(liveRep || []);
+      setSosAlerts(liveSos || []);
       const now = new Date();
       setLastRefreshedTime(
         `${String(now.getHours()).padStart(2, "0")}:${String(
@@ -901,7 +902,21 @@ export default function AdminStatistikPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+          {/* Reset Cache Button */}
+          <button
+            type="button"
+            onClick={() => {
+              clearAllLocalReportsAndCaches();
+              loadData();
+            }}
+            className="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-700 shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            title="Bersihkan cache lokal peramban"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+            <span>Reset Cache</span>
+          </button>
+
           {/* Segarkan Button */}
           <button
             type="button"

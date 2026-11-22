@@ -33,7 +33,7 @@ import {
   Layers,
   Compass,
 } from "lucide-react";
-import { DEFAULT_MOCK_REPORTS } from "@/lib/services/reports";
+import { fetchLiveReports, type LiveReportItem } from "@/lib/services/reports";
 import type { DisasterType } from "@/types";
 import { Interactive3DBag } from "@/components/home/Interactive3DBag";
 
@@ -97,16 +97,25 @@ export default function HomePage() {
     }
   };
 
+  // Live reports from database
+  const [liveReports, setLiveReports] = useState<LiveReportItem[]>([]);
+
+  useEffect(() => {
+    fetchLiveReports().then((data) => {
+      if (data) setLiveReports(data);
+    });
+  }, []);
+
   // Metrics for hero status
-  const totalCount = DEFAULT_MOCK_REPORTS.length;
-  const resolvedCount = DEFAULT_MOCK_REPORTS.filter((r) => r.status === "selesai").length;
-  const resolvedRate = ((resolvedCount / totalCount) * 100).toFixed(1);
+  const totalCount = liveReports.length;
+  const resolvedCount = liveReports.filter((r) => r.status === "selesai").length;
+  const resolvedRate = totalCount > 0 ? ((resolvedCount / totalCount) * 100).toFixed(1) : "0";
 
   // Filtered reports
   const filteredReports =
     selectedDisasterFilter === "semua"
-      ? DEFAULT_MOCK_REPORTS.slice(0, 4)
-      : DEFAULT_MOCK_REPORTS.filter((r) => r.disaster_type === selectedDisasterFilter).slice(0, 4);
+      ? liveReports.slice(0, 4)
+      : liveReports.filter((r) => r.disaster_type === selectedDisasterFilter).slice(0, 4);
 
   // Categories list with distinct thematic styling
   const categories: {
