@@ -16,6 +16,8 @@ import {
   EyeOff,
   AlertCircle,
   Loader2,
+  Check,
+  Circle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { setCurrentUser } from "@/lib/auth";
@@ -37,6 +39,17 @@ export default function DaftarPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Kriteria Validasi Kata Sandi
+  const hasMinLen = password.length >= 8;
+  const hasUpperLower = /[a-z]/.test(password) && /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  const isPasswordValid = hasMinLen && hasUpperLower && hasNumber && hasSpecial;
+
+  // Logic Ulangi Kata Sandi
+  const isConfirmMatching = confirmPassword.length > 0 && confirmPassword === password;
+  const isConfirmMismatch = confirmPassword.length > 0 && confirmPassword !== password;
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -54,8 +67,8 @@ export default function DaftarPage() {
       setErrorMsg("Mohon masukkan alamat email yang valid.");
       return;
     }
-    if (password.length < 6) {
-      setErrorMsg("Kata sandi minimal harus terdiri dari 6 karakter.");
+    if (!isPasswordValid) {
+      setErrorMsg("Kata sandi belum memenuhi kriteria keamanan (minimal 8 karakter, huruf besar & kecil, angka, dan simbol).");
       return;
     }
     if (password !== confirmPassword) {
@@ -253,8 +266,14 @@ export default function DaftarPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimal 6 karakter"
-                    className="w-full h-11 pl-9 pr-9 rounded-xl border border-line bg-surface text-xs text-ink placeholder:text-ink-muted focus:border-primary focus:outline-none"
+                    placeholder="Minimal 8 karakter"
+                    className={`w-full h-11 pl-9 pr-9 rounded-xl border bg-surface text-xs text-ink placeholder:text-ink-muted focus:outline-none transition-all ${
+                      password
+                        ? isPasswordValid
+                          ? "border-emerald-500 focus:border-emerald-500 ring-1 ring-emerald-500/20"
+                          : "border-line focus:border-primary"
+                        : "border-line focus:border-primary"
+                    }`}
                   />
                   <Lock className="w-3.5 h-3.5 text-ink-muted absolute left-3 top-3.5" />
                   <button
@@ -278,7 +297,13 @@ export default function DaftarPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Ketik ulang kata sandi"
-                    className="w-full h-11 pl-9 pr-9 rounded-xl border border-line bg-surface text-xs text-ink placeholder:text-ink-muted focus:border-primary focus:outline-none"
+                    className={`w-full h-11 pl-9 pr-9 rounded-xl border bg-surface text-xs text-ink placeholder:text-ink-muted focus:outline-none transition-all ${
+                      confirmPassword
+                        ? isConfirmMatching
+                          ? "border-emerald-500 focus:border-emerald-500 ring-1 ring-emerald-500/20"
+                          : "border-rose-400 focus:border-rose-500 ring-1 ring-rose-400/20"
+                        : "border-line focus:border-primary"
+                    }`}
                   />
                   <Lock className="w-3.5 h-3.5 text-ink-muted absolute left-3 top-3.5" />
                   <button
@@ -289,6 +314,86 @@ export default function DaftarPage() {
                   >
                     {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
+                </div>
+
+                {/* Feedback Real-time Validasi Ulangi Kata Sandi */}
+                {confirmPassword.length > 0 && (
+                  <p
+                    className={`text-[11px] font-medium flex items-center gap-1 mt-1.5 transition-all ${
+                      isConfirmMatching
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-rose-500"
+                    }`}
+                  >
+                    {isConfirmMatching ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>Kata sandi cocok</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                        <span>Kata sandi belum cocok</span>
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Checklist Kriteria Keamanan Kata Sandi */}
+            <div className="p-3 rounded-xl bg-bg border border-line text-xs space-y-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div
+                  className={`flex items-center gap-1.5 transition-colors ${
+                    hasMinLen ? "text-emerald-600 font-semibold" : "text-ink-muted"
+                  }`}
+                >
+                  {hasMinLen ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  ) : (
+                    <Circle className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  )}
+                  <span>Minimal 8 karakter</span>
+                </div>
+
+                <div
+                  className={`flex items-center gap-1.5 transition-colors ${
+                    hasUpperLower ? "text-emerald-600 font-semibold" : "text-ink-muted"
+                  }`}
+                >
+                  {hasUpperLower ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  ) : (
+                    <Circle className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  )}
+                  <span>Huruf Besar & Kecil</span>
+                </div>
+
+                <div
+                  className={`flex items-center gap-1.5 transition-colors ${
+                    hasNumber ? "text-emerald-600 font-semibold" : "text-ink-muted"
+                  }`}
+                >
+                  {hasNumber ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  ) : (
+                    <Circle className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  )}
+                  <span>Angka</span>
+                </div>
+
+                <div
+                  className={`flex items-center gap-1.5 transition-colors ${
+                    hasSpecial ? "text-emerald-600 font-semibold" : "text-ink-muted"
+                  }`}
+                >
+                  {hasSpecial ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  ) : (
+                    <Circle className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  )}
+                  <span>Simbol (@, #, !)</span>
                 </div>
               </div>
             </div>
