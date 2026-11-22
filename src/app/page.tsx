@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   MapPin,
   Search,
@@ -36,6 +37,10 @@ import { DEFAULT_MOCK_REPORTS } from "@/lib/services/reports";
 import type { DisasterType } from "@/types";
 import { Interactive3DBag } from "@/components/home/Interactive3DBag";
 
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
 export default function HomePage() {
   const router = useRouter();
   const mainRef = useRef<HTMLElement>(null);
@@ -43,7 +48,12 @@ export default function HomePage() {
   const heroCardRef = useRef<HTMLDivElement>(null);
   const heroGlow1Ref = useRef<HTMLDivElement>(null);
   const heroGlow2Ref = useRef<HTMLDivElement>(null);
-  const categoriesRef = useRef<HTMLDivElement>(null);
+
+  // Refs untuk Scroll-Triggered Reveal Sections
+  const warningSectionRef = useRef<HTMLElement>(null);
+  const categoriesSectionRef = useRef<HTMLElement>(null);
+  const reportsSectionRef = useRef<HTMLElement>(null);
+  const mitigasiSectionRef = useRef<HTMLElement>(null);
 
   // Search tracking state
   const [trackingInput, setTrackingInput] = useState("");
@@ -171,7 +181,7 @@ export default function HomePage() {
     },
   ];
 
-  // GSAP Eye-catching Animations
+  // GSAP Eye-catching & Scroll-Triggered Reveal Animations
   useEffect(() => {
     const ctx = gsap.context(() => {
       // 1. Ambient Background Glows Breathing Animation
@@ -200,8 +210,9 @@ export default function HomePage() {
         });
       }
 
-      // 2. Hero Left Headline & Action Elements Stagger Entrance
+      // 2. Hero Left Headline & Action Elements Stagger Entrance (Dimuat di Awal Saat Buka Web)
       if (heroLeftRef.current) {
+        const badge = heroLeftRef.current.querySelector(".gsap-hero-badge");
         const headline = heroLeftRef.current.querySelector(".gsap-hero-title");
         const desc = heroLeftRef.current.querySelector(".gsap-hero-desc");
         const searchBar = heroLeftRef.current.querySelector(".gsap-hero-search");
@@ -210,10 +221,16 @@ export default function HomePage() {
         const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
         tl.fromTo(
-          headline,
-          { opacity: 0, y: 35 },
-          { opacity: 1, y: 0, duration: 0.85, delay: 0.1 }
+          badge,
+          { opacity: 0, y: -15, scale: 0.9 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.6 }
         )
+          .fromTo(
+            headline,
+            { opacity: 0, y: 35 },
+            { opacity: 1, y: 0, duration: 0.85 },
+            "-=0.4"
+          )
           .fromTo(
             desc,
             { opacity: 0, y: 25 },
@@ -275,30 +292,226 @@ export default function HomePage() {
         }
       }
 
-      // 4. Staggered Categories Cards Reveal
-      if (categoriesRef.current) {
-        const catCards = categoriesRef.current.querySelectorAll(".gsap-cat-card");
+      // =========================================================================
+      // SCROLL-TRIGGERED SECTIONS: HANYA DIMUAT SETELAH USER MENSKROLL KE BAWAH
+      // =========================================================================
+
+      // SECTION 2: Early Warning BMKG Broadcast Strip
+      if (warningSectionRef.current) {
+        gsap.fromTo(
+          warningSectionRef.current,
+          { opacity: 0, y: 40, scale: 0.97 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.75,
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: warningSectionRef.current,
+              start: "top 88%",
+              toggleActions: "play none none none",
+            },
+          }
+        );
+      }
+
+      // SECTION 3: Kategori Kejadian Bencana (Header + 6 Bento Cards)
+      if (categoriesSectionRef.current) {
+        const catHeader = categoriesSectionRef.current.querySelector(".gsap-cat-header");
+        const catCards = categoriesSectionRef.current.querySelectorAll(".gsap-cat-card");
+
+        if (catHeader) {
+          gsap.fromTo(
+            catHeader,
+            { opacity: 0, y: 30 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.7,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: categoriesSectionRef.current,
+                start: "top 85%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
+
         if (catCards && catCards.length > 0) {
           gsap.fromTo(
             catCards,
-            { opacity: 0, y: 30 },
-            { opacity: 1, y: 0, duration: 0.65, stagger: 0.08, delay: 0.4, ease: "power2.out" }
+            { opacity: 0, y: 45, scale: 0.95 },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.75,
+              stagger: 0.09,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: categoriesSectionRef.current,
+                start: "top 80%",
+                toggleActions: "play none none none",
+              },
+            }
           );
         }
       }
 
-      // 5. Early Warning Broadcast Pulse Animation
-      const warningBanner = document.querySelector(".gsap-warning-banner");
-      if (warningBanner) {
-        gsap.fromTo(
-          warningBanner,
-          { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, duration: 0.7, delay: 0.35, ease: "power2.out" }
-        );
+      // SECTION 4: Live Reports Feed & Filterable Incident Reports
+      if (reportsSectionRef.current) {
+        const repHeader = reportsSectionRef.current.querySelector(".gsap-rep-header");
+        const filterTabs = reportsSectionRef.current.querySelector(".gsap-rep-filters");
+        const repCards = reportsSectionRef.current.querySelectorAll(".gsap-report-card");
+
+        if (repHeader) {
+          gsap.fromTo(
+            repHeader,
+            { opacity: 0, y: 30 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.7,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: reportsSectionRef.current,
+                start: "top 85%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
+
+        if (filterTabs) {
+          gsap.fromTo(
+            filterTabs,
+            { opacity: 0, y: 20 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.6,
+              delay: 0.1,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: reportsSectionRef.current,
+                start: "top 82%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
+
+        if (repCards && repCards.length > 0) {
+          gsap.fromTo(
+            repCards,
+            { opacity: 0, y: 40 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.7,
+              stagger: 0.12,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: reportsSectionRef.current,
+                start: "top 78%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
+      }
+
+      // SECTION 5: Citizen Preparedness Bento Grid (Checklist TSB & 3D Bag)
+      if (mitigasiSectionRef.current) {
+        const mitHeader = mitigasiSectionRef.current.querySelector(".gsap-mit-header");
+        const tsbBox = mitigasiSectionRef.current.querySelector(".gsap-tsb-box");
+        const bagBox = mitigasiSectionRef.current.querySelector(".gsap-bag-box");
+        const tsbItemsList = mitigasiSectionRef.current.querySelectorAll(".gsap-tsb-item");
+
+        if (mitHeader) {
+          gsap.fromTo(
+            mitHeader,
+            { opacity: 0, y: 30 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.7,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: mitigasiSectionRef.current,
+                start: "top 85%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
+
+        if (tsbBox) {
+          gsap.fromTo(
+            tsbBox,
+            { opacity: 0, x: -35 },
+            {
+              opacity: 1,
+              x: 0,
+              duration: 0.85,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: mitigasiSectionRef.current,
+                start: "top 80%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
+
+        if (bagBox) {
+          gsap.fromTo(
+            bagBox,
+            { opacity: 0, x: 35, scale: 0.92 },
+            {
+              opacity: 1,
+              x: 0,
+              scale: 1,
+              duration: 0.85,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: mitigasiSectionRef.current,
+                start: "top 80%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
+
+        if (tsbItemsList && tsbItemsList.length > 0) {
+          gsap.fromTo(
+            tsbItemsList,
+            { opacity: 0, y: 15 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.5,
+              stagger: 0.08,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: tsbBox,
+                start: "top 75%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
       }
     }, mainRef);
 
-    return () => ctx.revert();
+    return () => {
+      ctx.revert();
+      if (typeof window !== "undefined") {
+        ScrollTrigger.getAll().forEach((st) => st.kill());
+      }
+    };
   }, []);
 
   return (
@@ -306,7 +519,7 @@ export default function HomePage() {
       ref={mainRef}
       className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-8 pb-28 md:pb-16 space-y-8 md:space-y-12"
     >
-      {/* 1. Hero Section: High Impact, Clean, Human-Centered, Action-Oriented */}
+      {/* 1. Hero Section: High Impact, Clean, Human-Centered, Action-Oriented (Dimuat Langsung) */}
       <section className="relative overflow-hidden rounded-2xl border border-line bg-gradient-to-b from-white via-orange-50/20 to-white p-6 sm:p-8 lg:p-10 shadow-sm">
         {/* Soft Background Radial Glow Accents (with GSAP Floating) */}
         <div
@@ -325,7 +538,7 @@ export default function HomePage() {
           <div ref={heroLeftRef} className="lg:col-span-7 flex flex-col items-start space-y-6">
             {/* Main Headline */}
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100/80 border border-orange-200/80 text-orange-700 text-xs font-bold mb-3 shadow-2xs">
+              <div className="gsap-hero-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100/80 border border-orange-200/80 text-orange-700 text-xs font-bold mb-3 shadow-2xs">
                 <Sparkles className="w-3.5 h-3.5 text-orange-600 animate-pulse" />
                 <span>Platform Tanggap Bencana &amp; Komando Warga 24/7</span>
               </div>
@@ -581,10 +794,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. Official Weather & Early Warning Live Broadcast Strip */}
+      {/* 2. Official Weather & Early Warning Live Broadcast Strip (Dimuat Saat Scroll) */}
       <section
+        ref={warningSectionRef}
         aria-label="Peringatan Dini Cuaca & Gempa BMKG"
-        className="gsap-warning-banner relative overflow-hidden bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-300/60 rounded-xl p-3.5 sm:p-4 shadow-sm backdrop-blur-sm"
+        className="opacity-0 relative overflow-hidden bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-300/60 rounded-xl p-3.5 sm:p-4 shadow-sm backdrop-blur-sm"
       >
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-start sm:items-center gap-3">
@@ -621,9 +835,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. Kategori Kejadian Bencana Cepat (Modern Bento-Grid Cards) */}
-      <section aria-labelledby="kategori-title" className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+      {/* 3. Kategori Kejadian Bencana Cepat (Dimuat Saat Scroll) */}
+      <section
+        ref={categoriesSectionRef}
+        aria-labelledby="kategori-title"
+        className="space-y-4"
+      >
+        <div className="gsap-cat-header opacity-0 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
             <h2 id="kategori-title" className="text-xl md:text-2xl font-bold text-ink">
               Kategori Kejadian Bencana
@@ -642,14 +860,14 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div ref={categoriesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
           {categories.map((cat) => {
             const IconComponent = cat.icon;
             return (
               <Link
                 key={cat.type}
                 href={`/lapor?tipe=${cat.type}`}
-                className={`gsap-cat-card group relative p-5 bg-surface border border-line rounded-2xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-card flex flex-col justify-between ${cat.borderColor}`}
+                className={`gsap-cat-card opacity-0 group relative p-5 bg-surface border border-line rounded-2xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-card flex flex-col justify-between ${cat.borderColor}`}
               >
                 <div>
                   <div className="mb-3.5">
@@ -676,9 +894,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4. Live Situation Feed & Filterable Incident Reports */}
-      <section aria-labelledby="laporan-terkini-title" className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+      {/* 4. Live Situation Feed & Filterable Incident Reports (Dimuat Saat Scroll) */}
+      <section
+        ref={reportsSectionRef}
+        aria-labelledby="laporan-terkini-title"
+        className="space-y-4"
+      >
+        <div className="gsap-rep-header opacity-0 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
           <div>
             <h2 id="laporan-terkini-title" className="text-xl md:text-2xl font-bold text-ink">
               Laporan Kejadian Terkini
@@ -699,7 +921,7 @@ export default function HomePage() {
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
+        <div className="gsap-rep-filters opacity-0 flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
           {[
             { id: "semua", label: "Semua Kategori", icon: null },
             { id: "banjir", label: "Banjir", icon: Waves },
@@ -732,7 +954,7 @@ export default function HomePage() {
           {filteredReports.map((report) => (
             <div
               key={report.id}
-              className="bg-surface border border-line rounded-2xl p-5 shadow-xs hover:border-primary/40 hover:shadow-card transition-all flex flex-col justify-between space-y-4"
+              className="gsap-report-card opacity-0 bg-surface border border-line rounded-2xl p-5 shadow-xs hover:border-primary/40 hover:shadow-card transition-all flex flex-col justify-between space-y-4"
             >
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -783,9 +1005,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. Citizen Preparedness Bento Grid: Interactive TSB & Steps */}
-      <section aria-labelledby="edukasi-title" className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+      {/* 5. Citizen Preparedness Bento Grid: Interactive TSB & Steps (Dimuat Saat Scroll) */}
+      <section
+        ref={mitigasiSectionRef}
+        aria-labelledby="edukasi-title"
+        className="space-y-4"
+      >
+        <div className="gsap-mit-header opacity-0 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
             <h2 id="edukasi-title" className="text-xl md:text-2xl font-bold text-ink">
               Kesiapsiagaan &amp; Mitigasi Mandiri
@@ -806,7 +1032,7 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Bento 1: Checklist Tas Siaga Bencana (TSB) Standar BPBD (7 cols) */}
-          <div className="lg:col-span-7 bg-surface border border-line rounded-2xl p-6 shadow-card space-y-4">
+          <div className="gsap-tsb-box opacity-0 lg:col-span-7 bg-surface border border-line rounded-2xl p-6 shadow-card space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-primary uppercase tracking-wider">
@@ -831,7 +1057,7 @@ export default function HomePage() {
               {tsbItems.map((item) => (
                 <div
                   key={item.id}
-                  className="w-full p-3 rounded-xl border border-line/80 bg-slate-50/70 flex items-start gap-3 hover:border-emerald-300 transition-colors"
+                  className="gsap-tsb-item opacity-0 w-full p-3 rounded-xl border border-line/80 bg-slate-50/70 flex items-start gap-3 hover:border-emerald-300 transition-colors"
                 >
                   <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -853,7 +1079,7 @@ export default function HomePage() {
           </div>
 
           {/* Bento 2: Objek 3D Interaktif Tas Siaga Bencana (TSB) */}
-          <div className="lg:col-span-5 flex flex-col items-center justify-center">
+          <div className="gsap-bag-box opacity-0 lg:col-span-5 flex flex-col items-center justify-center">
             <Interactive3DBag />
           </div>
         </div>
