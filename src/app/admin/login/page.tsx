@@ -258,10 +258,9 @@ function AdminLoginContent() {
 
           {/* Login Form */}
           <form
-            key={shakeKey}
             noValidate
             onSubmit={handleLoginSubmit}
-            className={`space-y-4 ${shakeKey > 0 ? "animate-shake" : ""}`}
+            className="space-y-4"
           >
             {/* Instansi / Unit Dropdown (Pilihan Role Akses) */}
             <div>
@@ -295,7 +294,7 @@ function AdminLoginContent() {
             </div>
 
             {/* NIP / ID Input */}
-            <div>
+            <div key={fieldErrors.nip ? `nip-${shakeKey}` : "nip-field"} className={fieldErrors.nip ? "animate-shake" : ""}>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 NIP / ID Petugas <span className="text-red-500">*</span>
               </label>
@@ -328,7 +327,7 @@ function AdminLoginContent() {
             </div>
 
             {/* Password Input */}
-            <div>
+            <div key={fieldErrors.password ? `pass-${shakeKey}` : "pass-field"} className={fieldErrors.password ? "animate-shake" : ""}>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-semibold text-slate-700">
                   Kata Sandi <span className="text-red-500">*</span>

@@ -222,12 +222,11 @@ export default function MasukPage() {
         ) : (
           /* Form Login jika belum masuk */
           <form
-            key={shakeKey}
             noValidate
             onSubmit={handleSubmit}
-            className={`space-y-4 text-left ${shakeKey > 0 ? "animate-shake" : ""}`}
+            className="space-y-4 text-left"
           >
-            <div>
+            <div key={fieldErrors.email ? `email-${shakeKey}` : "email-field"} className={fieldErrors.email ? "animate-shake" : ""}>
               <label className="block text-xs font-semibold text-ink mb-1.5">
                 Alamat Email <span className="text-danger">*</span>
               </label>
@@ -253,7 +252,7 @@ export default function MasukPage() {
               )}
             </div>
 
-            <div>
+            <div key={fieldErrors.password ? `pass-${shakeKey}` : "pass-field"} className={fieldErrors.password ? "animate-shake" : ""}>
               <label className="block text-xs font-semibold text-ink mb-1.5">
                 Kata Sandi <span className="text-danger">*</span>
               </label>

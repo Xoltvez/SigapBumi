@@ -211,10 +211,9 @@ export default function DaftarPage() {
         ) : (
           /* Form Pendaftaran */
           <form
-            key={shakeKey}
             noValidate
             onSubmit={handleRegister}
-            className={`space-y-4 text-left ${shakeKey > 0 ? "animate-shake" : ""}`}
+            className="space-y-4 text-left"
           >
             {errorMsg && (
               <div className="p-3.5 rounded-xl bg-danger-soft border border-danger/30 flex items-start gap-2.5 text-xs text-danger-text animate-in fade-in">
@@ -224,7 +223,7 @@ export default function DaftarPage() {
             )}
 
             {/* Nama Lengkap */}
-            <div>
+            <div key={fieldErrors.fullName ? `name-${shakeKey}` : "name-field"} className={fieldErrors.fullName ? "animate-shake" : ""}>
               <label className="block text-xs font-bold text-ink mb-1.5">
                 Nama Lengkap Sesuai KTP / Identitas <span className="text-danger">*</span>
               </label>
@@ -254,7 +253,7 @@ export default function DaftarPage() {
             </div>
 
             {/* Nomor HP / WhatsApp */}
-            <div>
+            <div key={fieldErrors.phoneNumber ? `phone-${shakeKey}` : "phone-field"} className={fieldErrors.phoneNumber ? "animate-shake" : ""}>
               <label className="block text-xs font-bold text-ink mb-1.5">
                 Nomor WhatsApp Aktif <span className="text-danger">*</span>
               </label>
@@ -288,7 +287,7 @@ export default function DaftarPage() {
             </div>
 
             {/* Email */}
-            <div>
+            <div key={fieldErrors.email ? `email-${shakeKey}` : "email-field"} className={fieldErrors.email ? "animate-shake" : ""}>
               <label className="block text-xs font-bold text-ink mb-1.5">
                 Alamat Email <span className="text-danger">*</span>
               </label>
@@ -319,7 +318,7 @@ export default function DaftarPage() {
 
             {/* Kata Sandi & Konfirmasi */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
+              <div key={fieldErrors.password ? `pass-${shakeKey}` : "pass-field"} className={fieldErrors.password ? "animate-shake" : ""}>
                 <label className="block text-xs font-bold text-ink mb-1.5">
                   Kata Sandi <span className="text-danger">*</span>
                 </label>
@@ -359,7 +358,7 @@ export default function DaftarPage() {
                 )}
               </div>
 
-              <div>
+              <div key={fieldErrors.confirmPassword ? `cpass-${shakeKey}` : "cpass-field"} className={fieldErrors.confirmPassword ? "animate-shake" : ""}>
                 <label className="block text-xs font-bold text-ink mb-1.5">
                   Ulangi Kata Sandi <span className="text-danger">*</span>
                 </label>
@@ -481,7 +480,7 @@ export default function DaftarPage() {
             </div>
 
             {/* Syarat & Ketentuan */}
-            <div className="pt-1">
+            <div key={fieldErrors.agreeTerms ? `agree-${shakeKey}` : "agree-field"} className={`pt-1 ${fieldErrors.agreeTerms ? "animate-shake" : ""}`}>
               <label className="flex items-start gap-2.5 text-xs text-ink-soft cursor-pointer">
                 <input
                   type="checkbox"
