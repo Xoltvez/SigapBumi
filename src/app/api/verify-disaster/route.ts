@@ -190,7 +190,8 @@ export async function POST(request: Request) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const configuredModel = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+    const fallbackModels = [configuredModel, "gemini-3.1-flash-lite"];
 
     const promptText = `Anda adalah sistem verifikasi visual darurat kebencanaan untuk platform SIGAP-BUMI.
 Tugas Anda adalah menilai bukti visual dari foto yang diunggah warga secara objektif dan independen.
@@ -222,25 +223,40 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
   "penjelasan": "Deskripsi singkat 1 kalimat dalam bahasa Indonesia mengenai apa yang terlihat di foto"
 }`;
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: [
-        promptText,
-        {
-          inlineData: {
-            data: bytes.toString("base64"),
-            mimeType: detected.mime,
-          },
-        },
-      ],
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
+    let outputText: string | undefined;
+    let lastError: unknown;
 
-    const outputText = response.text;
+    // Coba model yang dikonfigurasi, dan auto-fallback ke gemini-3.1-flash-lite jika terjadi 503 high demand
+    for (const modelToTry of fallbackModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelToTry,
+          contents: [
+            promptText,
+            {
+              inlineData: {
+                data: bytes.toString("base64"),
+                mimeType: detected.mime,
+              },
+            },
+          ],
+          config: {
+            responseMimeType: "application/json",
+          },
+        });
+
+        if (response.text) {
+          outputText = response.text;
+          break;
+        }
+      } catch (err: unknown) {
+        lastError = err;
+        console.warn(`Model ${modelToTry} gagal/sibuk, mencoba fallback berikutnya:`, (err as Error)?.message || err);
+      }
+    }
+
     if (!outputText) {
-      throw new Error("Model Gemini tidak mengembalikan output teks.");
+      throw lastError || new Error("Model Gemini tidak mengembalikan output teks.");
     }
 
     // Bersihkan karakter markdown jika ada (misal ```json ... ```)
