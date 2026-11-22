@@ -84,6 +84,11 @@ export function Footer() {
                   Edukasi
                 </Link>
               </li>
+              <li>
+                <Link href="/tentang" className="hover:text-white hover:underline transition-colors">
+                  Tentang Kami
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -160,13 +165,13 @@ export function Footer() {
           </p>
 
           <div className="flex items-center gap-4 text-center">
-            <span className="hover:text-slate-300 cursor-pointer transition-colors">
+            <Link href="/syarat-ketentuan" className="hover:text-slate-300 transition-colors">
               Terms &amp; Conditions
-            </span>
+            </Link>
             <span>&bull;</span>
-            <span className="hover:text-slate-300 cursor-pointer transition-colors">
+            <Link href="/kebijakan-privasi" className="hover:text-slate-300 transition-colors">
               Privacy Policy
-            </span>
+            </Link>
             <span>&bull;</span>
             <Link
               href="/admin/login"
