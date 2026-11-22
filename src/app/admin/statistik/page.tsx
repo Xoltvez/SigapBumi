@@ -369,12 +369,11 @@ export default function AdminStatistikPage() {
       }
     });
 
-    const total = Math.max(1, totalReportsCount);
     return Array.from(provCountMap.entries())
       .map(([name, count]) => ({
         name,
         count,
-        pct: Math.round((count / total) * 100),
+        pct: totalReportsCount > 0 ? Math.round((count / totalReportsCount) * 100) : 0,
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
@@ -465,7 +464,7 @@ export default function AdminStatistikPage() {
           type,
           label: conf.label,
           count,
-          pct: Math.round((count / total) * 100),
+          pct: totalReportsCount > 0 ? Math.round((count / totalReportsCount) * 100) : 0,
           icon: conf.icon,
           color: conf.color,
           barColor: conf.barColor,
@@ -531,16 +530,18 @@ export default function AdminStatistikPage() {
         polriSos.filter((s) => s.status === "selesai" || s.status === "palsu")
           .length;
 
-      const basarnasTotal = Math.max(1, basarnasSos.length + 8);
+      const basarnasTotal = basarnasSos.length;
       const basarnasResolved =
-        basarnasSos.filter((s) => s.status === "selesai").length + 6;
+        basarnasSos.filter((s) => s.status === "selesai").length;
+
+      const totalAll = totalReportsCount;
 
       return [
         {
           name: "BPBD / Penanggulangan Bencana",
           count: bpbdTotal,
           resolved: bpbdResolved,
-          pct: Math.round((bpbdTotal / total) * 100),
+          pct: totalAll > 0 ? Math.round((bpbdTotal / totalAll) * 100) : 0,
           resolvePct:
             bpbdTotal > 0 ? Math.round((bpbdResolved / bpbdTotal) * 100) : 0,
           gradient: "from-blue-500 to-indigo-600",
@@ -550,7 +551,7 @@ export default function AdminStatistikPage() {
           name: "Dinas Pemadam Kebakaran",
           count: damkarTotal,
           resolved: damkarResolved,
-          pct: Math.round((damkarTotal / total) * 100),
+          pct: totalAll > 0 ? Math.round((damkarTotal / totalAll) * 100) : 0,
           resolvePct:
             damkarTotal > 0
               ? Math.round((damkarResolved / damkarTotal) * 100)
@@ -562,7 +563,7 @@ export default function AdminStatistikPage() {
           name: "Dinkes & Relawan Medis",
           count: medisTotal,
           resolved: medisResolved,
-          pct: Math.round((medisTotal / total) * 100),
+          pct: totalAll > 0 ? Math.round((medisTotal / totalAll) * 100) : 0,
           resolvePct:
             medisTotal > 0 ? Math.round((medisResolved / medisTotal) * 100) : 0,
           gradient: "from-rose-500 to-red-600",
@@ -572,7 +573,7 @@ export default function AdminStatistikPage() {
           name: "Polri & Pengamanan Wilayah",
           count: polriTotal,
           resolved: polriResolved,
-          pct: Math.round((polriTotal / total) * 100),
+          pct: totalAll > 0 ? Math.round((polriTotal / totalAll) * 100) : 0,
           resolvePct:
             polriTotal > 0 ? Math.round((polriResolved / polriTotal) * 100) : 0,
           gradient: "from-sky-500 to-blue-700",
@@ -582,7 +583,7 @@ export default function AdminStatistikPage() {
           name: "Basarnas (SAR & Evakuasi)",
           count: basarnasTotal,
           resolved: basarnasResolved,
-          pct: Math.round((basarnasTotal / total) * 100),
+          pct: totalAll > 0 ? Math.round((basarnasTotal / totalAll) * 100) : 0,
           resolvePct:
             basarnasTotal > 0
               ? Math.round((basarnasResolved / basarnasTotal) * 100)
@@ -594,6 +595,14 @@ export default function AdminStatistikPage() {
     }
 
     if (activeUnit === "damkar") {
+      if (totalReportsCount === 0) {
+        return [
+          { name: "Sektor Pusat & Gedung Bertingkat", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-amber-500 to-orange-600", badge: "Pusat Kota" },
+          { name: "Sektor Permukiman Padat & Gang Sempit", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-orange-500 to-red-600", badge: "Regu Cepat" },
+          { name: "Armada Penyelamatan (Animal & Rescue Khusus)", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-rose-500 to-pink-600", badge: "Rescue 113" },
+          { name: "Satgas Pengendalian Karhutla (Manggala Agni)", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-red-600 to-orange-700", badge: "Karhutla" },
+        ];
+      }
       const s1 = Math.round(totalReportsCount * 0.35);
       const s2 = Math.round(totalReportsCount * 0.3);
       const s3 = Math.round(totalReportsCount * 0.2);
@@ -641,6 +650,14 @@ export default function AdminStatistikPage() {
     }
 
     if (activeUnit === "medis") {
+      if (totalReportsCount === 0) {
+        return [
+          { name: "PSC 119 Ambulans Reaksi Cepat", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-rose-500 to-red-600", badge: "Ambulans 119" },
+          { name: "Instalasi Gawat Darurat & RS Rujukan Bencana", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-red-500 to-rose-700", badge: "RS Rujukan" },
+          { name: "Posko Kesehatan Pengungsian & Lapangan", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-emerald-500 to-teal-600", badge: "Posko Tenda" },
+          { name: "Tim Relawan Medis & Trauma Healing", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-sky-500 to-blue-600", badge: "Psikososial" },
+        ];
+      }
       const s1 = Math.round(totalReportsCount * 0.4);
       const s2 = Math.round(totalReportsCount * 0.32);
       const s3 = Math.round(totalReportsCount * 0.18);
@@ -688,6 +705,14 @@ export default function AdminStatistikPage() {
     }
 
     if (activeUnit === "polisi") {
+      if (totalReportsCount === 0) {
+        return [
+          { name: "Satlantas (Rekayasa Jalur Evakuasi)", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-blue-600 to-indigo-700", badge: "Lantas" },
+          { name: "Sabhara (Patroli Pemukiman Ditinggal Mengungsi)", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-sky-500 to-blue-700", badge: "Patroli" },
+          { name: "Brimob SAR & Pengamanan Posko Pengungsian", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-slate-700 to-slate-900", badge: "Brimob SAR" },
+          { name: "Binmas (Penyuluhan & Penertiban Distribusi Logistik)", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-emerald-600 to-teal-700", badge: "Binmas" },
+        ];
+      }
       const s1 = Math.round(totalReportsCount * 0.37);
       const s2 = Math.round(totalReportsCount * 0.32);
       const s3 = Math.round(totalReportsCount * 0.21);
@@ -735,6 +760,14 @@ export default function AdminStatistikPage() {
     }
 
     // Default BNPB / BPBD
+    if (totalReportsCount === 0) {
+      return [
+        { name: "Tim Reaksi Cepat (TRC) Asesmen Lapangan", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-blue-600 to-indigo-700", badge: "TRC BPBD" },
+        { name: "Distribusi Tenda & Logistik Kedaruratan", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-orange-500 to-amber-600", badge: "Logistik" },
+        { name: "Peralatan Evakuasi & Perahu Karet", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-emerald-500 to-teal-600", badge: "Armada Air" },
+        { name: "Pusdalops & Manajemen Informasi Bencana", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-sky-500 to-blue-600", badge: "Pusdalops" },
+      ];
+    }
     const s1 = Math.round(totalReportsCount * 0.35);
     const s2 = Math.round(totalReportsCount * 0.29);
     const s3 = Math.round(totalReportsCount * 0.22);
@@ -796,10 +829,10 @@ export default function AdminStatistikPage() {
           "Analitik respons pemadaman kebakaran permukiman, gedung, karhutla, dan penyelamatan taktis sektor Damkar.",
         jurisdictionBadge: "Sektor Pemadam & Penyelamatan (Damkar)",
         totalReportsLabel: "Total Insiden Kebakaran",
-        responseTime: "5.2",
-        responseComparison: "62% lebih cepat",
+        responseTime: totalReportsCount > 0 ? "5.2" : "-",
+        responseComparison: totalReportsCount > 0 ? "62% lebih cepat" : "Belum ada laporan aktif",
         fourthMetricLabel: "Unit Armada Diterjunkan",
-        fourthMetricValue: `${Math.round(totalReportsCount * 0.65) || 12} Armada`,
+        fourthMetricValue: totalReportsCount > 0 ? `${Math.round(totalReportsCount * 0.65) || 1} Armada` : "0 Armada",
         fourthMetricSub: "Truk damkar & water cannon",
         agencySectionTitle: "Beban Operasi per Sektor Damkar",
         agencySectionSub:
@@ -814,8 +847,8 @@ export default function AdminStatistikPage() {
           "Analitik penanganan gawat darurat, evakuasi medis, ambulans PSC 119, dan rumah sakit lapangan pasca-bencana.",
         jurisdictionBadge: "Dinkes & Pelayanan Medis Darurat (PSC 119)",
         totalReportsLabel: "Total Pasien / Kasus Medis",
-        responseTime: "4.8",
-        responseComparison: "70% lebih cepat",
+        responseTime: totalReportsCount > 0 ? "4.8" : "-",
+        responseComparison: totalReportsCount > 0 ? "70% lebih cepat" : "Belum ada laporan aktif",
         fourthMetricLabel: "Pasien Tertangani Stabil",
         fourthMetricValue: `${totalConfirmationsCount} Jiwa`,
         fourthMetricSub: "Triase darurat & perawatan intensif",
@@ -832,10 +865,10 @@ export default function AdminStatistikPage() {
           "Analitik pengamanan wilayah terdampak, rekayasa jalur evakuasi bencana, dan penanganan ketertiban publik.",
         jurisdictionBadge: "Satgas Kepolisian & Keamanan Bencana (Polri)",
         totalReportsLabel: "Total Titik Penugasan",
-        responseTime: "5.8",
-        responseComparison: "55% lebih cepat",
+        responseTime: totalReportsCount > 0 ? "5.8" : "-",
+        responseComparison: totalReportsCount > 0 ? "55% lebih cepat" : "Belum ada laporan aktif",
         fourthMetricLabel: "Personel Kamtibmas Aktif",
-        fourthMetricValue: `${Math.round(totalReportsCount * 3.5) || 45} Personel`,
+        fourthMetricValue: totalReportsCount > 0 ? `${Math.round(totalReportsCount * 3.5) || 1} Personel` : "0 Personel",
         fourthMetricSub: "Brimob, Sabhara, & Polantas",
         agencySectionTitle: "Beban Operasi per Satuan Fungsi Polri",
         agencySectionSub:
@@ -850,8 +883,8 @@ export default function AdminStatistikPage() {
           "Analitik koordinasi kedaruratan hidrometeorologi dan geologi: banjir, tanah longsor, gempa bumi, dan tsunami.",
         jurisdictionBadge: "Komando Penanggulangan Bencana (BNPB / BPBD)",
         totalReportsLabel: "Total Bencana Alam",
-        responseTime: "6.8",
-        responseComparison: "54% lebih cepat",
+        responseTime: totalReportsCount > 0 ? "6.8" : "-",
+        responseComparison: totalReportsCount > 0 ? "54% lebih cepat" : "Belum ada laporan aktif",
         fourthMetricLabel: "Warga Terbantu Evakuasi",
         fourthMetricValue: `${totalConfirmationsCount} Jiwa`,
         fourthMetricSub: "Tercatat di posko pengungsian",
@@ -868,8 +901,8 @@ export default function AdminStatistikPage() {
         "Analitik terpadu mencakup seluruh laporan bencana, panggilan SOS darurat, dan kinerja multi-instansi se-Indonesia secara real-time.",
       jurisdictionBadge: "Akses Penuh Seluruh Instansi RI (Pemerintahan)",
       totalReportsLabel: "Total Laporan Terpadu",
-      responseTime: "6.4",
-      responseComparison: "57% lebih cepat",
+      responseTime: totalReportsCount > 0 ? "6.4" : "-",
+      responseComparison: totalReportsCount > 0 ? "57% lebih cepat" : "Belum ada laporan aktif",
       fourthMetricLabel: "Partisipasi Warga",
       fourthMetricValue: `${totalConfirmationsCount} Saksi`,
       fourthMetricSub: "Konfirmasi saksi tervalidasi riil",
@@ -950,7 +983,7 @@ export default function AdminStatistikPage() {
               {totalReportsCount}
             </p>
             <p className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 mt-0.5">
-              <span>{provincesData.filter((p) => p.count > 0).length || provincesData.length} Wilayah</span>
+              <span>{provincesData.filter((p) => p.count > 0).length} Wilayah</span>
               <span className="text-slate-400 font-normal">tercakup</span>
             </p>
           </div>
@@ -987,11 +1020,13 @@ export default function AdminStatistikPage() {
               Rata-rata Waktu Tanggap
             </p>
             <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
-              {roleConfig.responseTime}{" "}
-              <span className="text-xs font-normal text-slate-400">menit</span>
+              {roleConfig.responseTime}
+              {roleConfig.responseTime !== "-" && (
+                <span className="text-xs font-normal text-slate-400"> menit</span>
+              )}
             </p>
             <p className="text-[11px] text-amber-600 font-semibold flex items-center gap-1 mt-0.5">
-              <TrendingUp className="w-3 h-3 text-amber-500" />
+              {roleConfig.responseTime !== "-" && <TrendingUp className="w-3 h-3 text-amber-500" />}
               <span>{roleConfig.responseComparison}</span>
             </p>
           </div>
@@ -1057,7 +1092,7 @@ export default function AdminStatistikPage() {
                 <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden flex">
                   <div
                     className={`bg-linear-to-r ${agency.gradient} h-full transition-all duration-500 rounded-full`}
-                    style={{ width: `${Math.min(100, Math.max(agency.pct, 4))}%` }}
+                    style={{ width: `${agency.count > 0 ? Math.min(100, Math.max(agency.pct, 4)) : 0}%` }}
                   />
                 </div>
               </div>
@@ -1226,7 +1261,7 @@ export default function AdminStatistikPage() {
                   <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                     <div
                       className={`${d.barColor} h-full transition-all duration-500 rounded-full`}
-                      style={{ width: `${Math.min(100, Math.max(d.pct, 4))}%` }}
+                      style={{ width: `${d.count > 0 ? Math.min(100, Math.max(d.pct, 4)) : 0}%` }}
                     />
                   </div>
                 </div>
