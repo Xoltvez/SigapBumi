@@ -763,7 +763,7 @@ export default function HomePage() {
                   <div className="flex -space-x-2 overflow-hidden shrink-0">
                     <div className="relative inline-block h-8 w-8 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-sm">
                       <Image
-                        src="/avatars/avatar-1.png"
+                        src="/avatars/avatar1.jpeg"
                         alt="Foto Profil Warga Pelapor 1"
                         width={32}
                         height={32}
@@ -772,7 +772,7 @@ export default function HomePage() {
                     </div>
                     <div className="relative inline-block h-8 w-8 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-sm">
                       <Image
-                        src="/avatars/avatar-2.png"
+                        src="/avatars/avatar2.jpeg"
                         alt="Foto Profil Warga Pelapor 2"
                         width={32}
                         height={32}
@@ -781,7 +781,7 @@ export default function HomePage() {
                     </div>
                     <div className="relative inline-block h-8 w-8 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-sm">
                       <Image
-                        src="/avatars/avatar-3.png"
+                        src="/avatars/avatar3.jpeg"
                         alt="Foto Profil Warga Pelapor 3"
                         width={32}
                         height={32}
@@ -790,7 +790,7 @@ export default function HomePage() {
                     </div>
                     <div className="relative inline-block h-8 w-8 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-sm">
                       <Image
-                        src="/avatars/avatar-4.png"
+                        src="/avatars/avatar4.jpeg"
                         alt="Foto Profil Warga Pelapor 4"
                         width={32}
                         height={32}
