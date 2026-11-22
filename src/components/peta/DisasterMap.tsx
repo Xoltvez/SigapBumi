@@ -128,10 +128,12 @@ export default function DisasterMap({
     markersLayerRef.current = markersGroup;
     mapInstanceRef.current = map;
 
-    // Helper merender titik marker GPS Lokasi Saya (titik biru berdenyut khas Google Maps)
-    const renderUserLocation = (lat: number, lng: number, openPopup: boolean = true) => {
+    // Helper merender titik marker GPS Lokasi Saya (titik biru berdenyut khas Google Maps dengan label Lokasi Anda)
+    const renderUserLocation = (lat: number, lng: number, flyTo: boolean = false, openPopup: boolean = false) => {
       if (!mapInstanceRef.current) return;
-      mapInstanceRef.current.flyTo([lat, lng], 15, { duration: 1.2, easeLinearity: 0.25 });
+      if (flyTo) {
+        mapInstanceRef.current.flyTo([lat, lng], 15, { duration: 1.2, easeLinearity: 0.25 });
+      }
 
       if (userLocationMarkerRef.current) {
         userLocationMarkerRef.current.setLatLng([lat, lng]);
@@ -139,16 +141,22 @@ export default function DisasterMap({
         const userIcon = L.divIcon({
           className: "custom-user-gps-pin",
           html: `
-            <div style="position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-              <div style="position: absolute; width: 100%; height: 100%; border-radius: 9999px; background-color: rgba(37, 99, 235, 0.35); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-              <div style="width: 16px; height: 16px; border-radius: 9999px; background-color: #2563EB; border: 3px solid #FFFFFF; box-shadow: 0 2px 10px rgba(37,99,235,0.6); display: flex; align-items: center; justify-content: center;">
-                <div style="width: 4px; height: 4px; border-radius: 9999px; background-color: #FFFFFF;"></div>
+            <div style="display: flex; flex-direction: column; align-items: center; cursor: pointer; pointer-events: auto;">
+              <div style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(4px); border: 1.5px solid #3b82f6; border-radius: 9999px; padding: 2px 8px; box-shadow: 0 2px 8px rgba(37,99,235,0.25); font-size: 11px; font-weight: 800; color: #1e40af; white-space: nowrap; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: #2563eb; display: inline-block;"></span>
+                <span>Lokasi Anda</span>
+              </div>
+              <div style="position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;">
+                <div style="position: absolute; width: 100%; height: 100%; border-radius: 9999px; background-color: rgba(37, 99, 235, 0.35); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+                <div style="width: 16px; height: 16px; border-radius: 9999px; background-color: #2563EB; border: 3px solid #FFFFFF; box-shadow: 0 2px 10px rgba(37,99,235,0.6); display: flex; align-items: center; justify-content: center;">
+                  <div style="width: 4px; height: 4px; border-radius: 9999px; background-color: #FFFFFF;"></div>
+                </div>
               </div>
             </div>
           `,
-          iconSize: [34, 34],
-          iconAnchor: [17, 17],
-          popupAnchor: [0, -17],
+          iconSize: [80, 58],
+          iconAnchor: [40, 52],
+          popupAnchor: [0, -52],
         });
 
         const marker = L.marker([lat, lng], {
@@ -160,9 +168,9 @@ export default function DisasterMap({
           <div style="padding: 2px; font-family: system-ui, -apple-system, sans-serif;">
             <div style="display:flex;align-items:center;gap:6px;font-weight:800;color:#1e293b;font-size:12px;">
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2563eb;"></span>
-              <span>Lokasi Anda Saat Ini</span>
+              <span>Lokasi Warga Terkini</span>
             </div>
-            <p style="margin:3px 0 0 14px;font-size:10px;color:#64748b;">GPS Aktif &amp; Terpusat</p>
+            <p style="margin:3px 0 0 14px;font-size:10px;color:#64748b;">GPS Aktif &amp; Terdeteksi</p>
           </div>
         `);
         userLocationMarkerRef.current = marker;
@@ -175,11 +183,47 @@ export default function DisasterMap({
       }
     };
 
+    // Inisialisasi otomatis: Tampilkan tanda lokasi warga terkini di peta sejak awal
+    let initialLocationRendered = false;
+    try {
+      const cached = localStorage.getItem("sigapbumi_user_last_coords");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed.lat === "number" && typeof parsed.lng === "number") {
+          renderUserLocation(parsed.lat, parsed.lng, false, false);
+          initialLocationRendered = true;
+        }
+      }
+    } catch {}
+
+    // Default lokasi warga jika GPS belum tersedia (Indramayu / Jawa Barat)
+    if (!initialLocationRendered) {
+      renderUserLocation(-6.3276, 108.3249, false, false);
+    }
+
+    // Deteksi otomatis GPS riil di background saat peta pertama kali dibuka
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude, accuracy } = pos.coords;
+          try {
+            localStorage.setItem(
+              "sigapbumi_user_last_coords",
+              JSON.stringify({ lat: latitude, lng: longitude, accuracy })
+            );
+          } catch {}
+          renderUserLocation(latitude, longitude, false, false);
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+      );
+    }
+
     // Pusatkan ke lokasi saya dengan akurasi GPS tinggi
     const handleLocate = (e?: Event) => {
       const customEvt = e as CustomEvent<{ lat?: number; lng?: number }>;
       if (customEvt?.detail?.lat && customEvt?.detail?.lng) {
-        renderUserLocation(customEvt.detail.lat, customEvt.detail.lng, true);
+        renderUserLocation(customEvt.detail.lat, customEvt.detail.lng, true, true);
         return;
       }
 
@@ -189,7 +233,7 @@ export default function DisasterMap({
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed && typeof parsed.lat === "number" && typeof parsed.lng === "number") {
-            renderUserLocation(parsed.lat, parsed.lng, false);
+            renderUserLocation(parsed.lat, parsed.lng, true, true);
           }
         }
       } catch {}
@@ -205,7 +249,7 @@ export default function DisasterMap({
                 JSON.stringify({ lat: latitude, lng: longitude, accuracy })
               );
             } catch {}
-            renderUserLocation(latitude, longitude, true);
+            renderUserLocation(latitude, longitude, true, true);
           },
           (err) => {
             console.warn("GPS error, mencoba Leaflet locate fallback:", err);
@@ -224,7 +268,7 @@ export default function DisasterMap({
 
     // Event listener Leaflet saat lokasi berhasil/gagal ditemukan
     map.on("locationfound", (e: L.LocationEvent) => {
-      renderUserLocation(e.latlng.lat, e.latlng.lng, true);
+      renderUserLocation(e.latlng.lat, e.latlng.lng, true, true);
     });
 
     const handleZoomIn = () => map.zoomIn();
