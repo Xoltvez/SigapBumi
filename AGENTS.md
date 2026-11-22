@@ -7,3 +7,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Tumpukan Teknologi Proyek (SigapBumi)
+
+- **Framework Frontend:** Next.js (App Router) + TypeScript + Tailwind CSS
+- **Peta Geospasial:** Leaflet + OpenStreetMap (`react-leaflet`)
+- **Backend & Database:** Supabase (PostgreSQL + PostGIS, Realtime, Storage, Auth)
+- **Visualisasi & Grafik:** Recharts
+- **Animasi:** GSAP (GreenSock Animation Platform) untuk animasi unik, interaktif, dan performan
+- **Ikonografi:** Lucide React
+

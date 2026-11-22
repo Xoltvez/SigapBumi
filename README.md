@@ -30,6 +30,7 @@ Dikembangkan untuk kompetisi **Web In Action (WIA), Multimedia In Action 2026** 
 - **Peta Geospasial:** Leaflet 1.9.4 & React-Leaflet 5.0.0 (OpenStreetMap Tiles & PostGIS EWKB Decoder)
 - **Backend & Database:** Supabase (PostgreSQL + PostGIS, Row Level Security, Auth, Storage, Realtime)
 - **Visualisasi Data:** Recharts 3.10.1 (Grafik Tren Bulanan & Donut Distribusi Bencana)
+- **Animasi:** GSAP (GreenSock Animation Platform) untuk animasi mikro interaktif dan visualisasi unik
 - **Ikonografi:** Lucide React (Tanpa emoji di antarmuka, mematuhi standar Anti-Slop R-01)
 
 ---
