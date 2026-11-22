@@ -488,7 +488,14 @@ export default function AdminRingkasanPage() {
             </div>
             <div>
               <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
-                {activeUnit === "damkar" ? "7.2" : activeUnit === "medis" ? "5.8" : activeUnit === "polisi" ? "8.1" : "6.4"} <span className="text-lg md:text-xl font-bold">mnt</span>
+                {unitReports.length > 0 ? (
+                  <>
+                    {activeUnit === "damkar" ? "7.2" : activeUnit === "medis" ? "5.8" : activeUnit === "polisi" ? "8.1" : "6.4"}{" "}
+                    <span className="text-lg md:text-xl font-bold">mnt</span>
+                  </>
+                ) : (
+                  "-"
+                )}
               </p>
               <p className="text-xs text-slate-400 font-medium mt-1">
                 Rata-rata Respons
@@ -501,7 +508,7 @@ export default function AdminRingkasanPage() {
               <path
                 d="M 2 12 Q 14 6, 28 16 T 56 10"
                 fill="none"
-                stroke="#8B5CF6"
+                stroke={unitReports.length > 0 ? "#8B5CF6" : "#E2E8F0"}
                 strokeWidth="2.5"
                 strokeLinecap="round"
               />
@@ -532,7 +539,7 @@ export default function AdminRingkasanPage() {
 
           {/* List Laporan */}
           <div className="divide-y divide-slate-100">
-            {unitReports.length === 0 ? (
+            {isLoading ? (
               <div className="divide-y divide-slate-100/80">
                 {[1, 2, 3, 4].map((i) => (
                   <div
@@ -557,6 +564,16 @@ export default function AdminRingkasanPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            ) : unitReports.length === 0 ? (
+              <div className="py-10 text-center flex flex-col items-center justify-center text-slate-400 space-y-2">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
+                  <FileText className="w-6 h-6 stroke-[1.8]" />
+                </div>
+                <p className="text-sm font-bold text-slate-800">Belum Ada Laporan Kejadian</p>
+                <p className="text-xs text-slate-400 max-w-sm">
+                  Tidak ada laporan bencana aktif. Sistem siaga memantau laporan warga dan sinyal darurat secara real-time.
+                </p>
               </div>
             ) : (
               unitReports.slice(0, 4).map((r, idx) => {
