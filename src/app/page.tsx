@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import gsap from "gsap";
 import {
   MapPin,
   Search,
@@ -37,6 +38,12 @@ import { Interactive3DBag } from "@/components/home/Interactive3DBag";
 
 export default function HomePage() {
   const router = useRouter();
+  const mainRef = useRef<HTMLElement>(null);
+  const heroLeftRef = useRef<HTMLDivElement>(null);
+  const heroCardRef = useRef<HTMLDivElement>(null);
+  const heroGlow1Ref = useRef<HTMLDivElement>(null);
+  const heroGlow2Ref = useRef<HTMLDivElement>(null);
+  const categoriesRef = useRef<HTMLDivElement>(null);
 
   // Search tracking state
   const [trackingInput, setTrackingInput] = useState("");
@@ -164,33 +171,172 @@ export default function HomePage() {
     },
   ];
 
+  // GSAP Eye-catching Animations
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // 1. Ambient Background Glows Breathing Animation
+      if (heroGlow1Ref.current && heroGlow2Ref.current) {
+        gsap.to(heroGlow1Ref.current, {
+          scale: 1.25,
+          x: 20,
+          y: -15,
+          opacity: 0.8,
+          duration: 5,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+        });
+
+        gsap.to(heroGlow2Ref.current, {
+          scale: 1.3,
+          x: -25,
+          y: 20,
+          opacity: 0.7,
+          duration: 6,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          delay: 1,
+        });
+      }
+
+      // 2. Hero Left Headline & Action Elements Stagger Entrance
+      if (heroLeftRef.current) {
+        const headline = heroLeftRef.current.querySelector(".gsap-hero-title");
+        const desc = heroLeftRef.current.querySelector(".gsap-hero-desc");
+        const searchBar = heroLeftRef.current.querySelector(".gsap-hero-search");
+        const ctaButtons = heroLeftRef.current.querySelector(".gsap-hero-cta");
+
+        const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+        tl.fromTo(
+          headline,
+          { opacity: 0, y: 35 },
+          { opacity: 1, y: 0, duration: 0.85, delay: 0.1 }
+        )
+          .fromTo(
+            desc,
+            { opacity: 0, y: 25 },
+            { opacity: 1, y: 0, duration: 0.75 },
+            "-=0.55"
+          )
+          .fromTo(
+            searchBar,
+            { opacity: 0, y: 25, scale: 0.98 },
+            { opacity: 1, y: 0, scale: 1, duration: 0.75 },
+            "-=0.5"
+          )
+          .fromTo(
+            ctaButtons,
+            { opacity: 0, y: 20 },
+            { opacity: 1, y: 0, duration: 0.65 },
+            "-=0.45"
+          );
+      }
+
+      // 3. Right Hero Bento Card Entrance & Floating Ambient
+      if (heroCardRef.current) {
+        const cardBox = heroCardRef.current.querySelector(".gsap-bento-box");
+        const shadowLayer = heroCardRef.current.querySelector(".gsap-offset-shadow");
+        const bentoItems = heroCardRef.current.querySelectorAll(".gsap-bento-item");
+        const avatarGroup = heroCardRef.current.querySelector(".gsap-avatar-stack");
+
+        gsap.fromTo(
+          cardBox,
+          { opacity: 0, scale: 0.92, y: 30 },
+          { opacity: 1, scale: 1, y: 0, duration: 0.9, delay: 0.25, ease: "back.out(1.3)" }
+        );
+
+        if (shadowLayer) {
+          gsap.to(shadowLayer, {
+            y: "-=6",
+            rotation: "+=1.5",
+            repeat: -1,
+            yoyo: true,
+            duration: 4,
+            ease: "sine.inOut",
+          });
+        }
+
+        if (bentoItems && bentoItems.length > 0) {
+          gsap.fromTo(
+            bentoItems,
+            { opacity: 0, x: -15 },
+            { opacity: 1, x: 0, duration: 0.5, stagger: 0.08, delay: 0.65, ease: "power2.out" }
+          );
+        }
+
+        if (avatarGroup) {
+          gsap.fromTo(
+            avatarGroup,
+            { opacity: 0, scale: 0.9 },
+            { opacity: 1, scale: 1, duration: 0.6, delay: 1, ease: "back.out(1.5)" }
+          );
+        }
+      }
+
+      // 4. Staggered Categories Cards Reveal
+      if (categoriesRef.current) {
+        const catCards = categoriesRef.current.querySelectorAll(".gsap-cat-card");
+        if (catCards && catCards.length > 0) {
+          gsap.fromTo(
+            catCards,
+            { opacity: 0, y: 30 },
+            { opacity: 1, y: 0, duration: 0.65, stagger: 0.08, delay: 0.4, ease: "power2.out" }
+          );
+        }
+      }
+
+      // 5. Early Warning Broadcast Pulse Animation
+      const warningBanner = document.querySelector(".gsap-warning-banner");
+      if (warningBanner) {
+        gsap.fromTo(
+          warningBanner,
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.7, delay: 0.35, ease: "power2.out" }
+        );
+      }
+    }, mainRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-8 pb-28 md:pb-16 space-y-8 md:space-y-12">
+    <main
+      ref={mainRef}
+      className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-8 pb-28 md:pb-16 space-y-8 md:space-y-12"
+    >
       {/* 1. Hero Section: High Impact, Clean, Human-Centered, Action-Oriented */}
       <section className="relative overflow-hidden rounded-2xl border border-line bg-gradient-to-b from-white via-orange-50/20 to-white p-6 sm:p-8 lg:p-10 shadow-sm">
-        {/* Soft Background Radial Glow Accents */}
+        {/* Soft Background Radial Glow Accents (with GSAP Floating) */}
         <div
+          ref={heroGlow1Ref}
           aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -right-24 w-96 h-96 rounded-full bg-primary/10 blur-3xl"
+          className="pointer-events-none absolute -top-24 -right-24 w-96 h-96 rounded-full bg-primary/15 blur-3xl"
         />
         <div
+          ref={heroGlow2Ref}
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-amber-400/10 blur-3xl"
+          className="pointer-events-none absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-amber-400/15 blur-3xl"
         />
 
         <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
           {/* Left Column: Headline, Description, Quick Tracking Form & Primary CTAs */}
-          <div className="lg:col-span-7 flex flex-col items-start space-y-6">
+          <div ref={heroLeftRef} className="lg:col-span-7 flex flex-col items-start space-y-6">
             {/* Main Headline */}
             <div>
-              <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-ink leading-[1.18] tracking-tight">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100/80 border border-orange-200/80 text-orange-700 text-xs font-bold mb-3 shadow-2xs">
+                <Sparkles className="w-3.5 h-3.5 text-orange-600 animate-pulse" />
+                <span>Platform Tanggap Bencana &amp; Komando Warga 24/7</span>
+              </div>
+              <h1 className="gsap-hero-title text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-ink leading-[1.18] tracking-tight">
                 Setiap Detik Berarti. <br className="hidden sm:inline" />
                 <span className="bg-gradient-to-r from-primary via-primary-hover to-amber-600 bg-clip-text text-transparent">
                   Laporkan Cepat.
                 </span>{" "}
                 Lindungi Bersama.
               </h1>
-              <p className="text-ink-soft text-base sm:text-lg mt-3 leading-relaxed max-w-xl">
+              <p className="gsap-hero-desc text-ink-soft text-base sm:text-lg mt-3 leading-relaxed max-w-xl">
                 Kirimkan laporan kejadian bencana, pantau status penanganan secara terbuka, dan akses informasi tanggap darurat resmi dalam satu pintu.
               </p>
             </div>
@@ -198,7 +344,7 @@ export default function HomePage() {
             {/* Direct Quick Tracking / Search Bar */}
             <form
               onSubmit={handleTrackingSubmit}
-              className="w-full max-w-xl bg-surface border-2 border-line hover:border-primary/50 focus-within:border-primary rounded-xl p-1.5 shadow-sm transition-all flex flex-col sm:flex-row items-stretch gap-1.5"
+              className="gsap-hero-search w-full max-w-xl bg-surface border-2 border-line hover:border-primary/50 focus-within:border-primary rounded-xl p-1.5 shadow-sm transition-all flex flex-col sm:flex-row items-stretch gap-1.5"
             >
               <div className="flex items-center px-3 gap-2 flex-1 min-h-[44px]">
                 <Search className="w-4 h-4 text-ink-muted shrink-0" />
@@ -213,7 +359,7 @@ export default function HomePage() {
               </div>
               <button
                 type="submit"
-                className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-ink hover:bg-ink-soft text-white text-xs sm:text-sm font-semibold transition-colors shrink-0 shadow-xs"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-ink hover:bg-ink-soft text-white text-xs sm:text-sm font-semibold transition-colors shrink-0 shadow-xs cursor-pointer"
               >
                 <span>Lacak Status</span>
                 <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
@@ -221,7 +367,7 @@ export default function HomePage() {
             </form>
 
             {/* Main Action Buttons */}
-            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto pt-1">
+            <div className="gsap-hero-cta flex flex-wrap items-center gap-3 w-full sm:w-auto pt-1">
               <Link
                 href="/lapor"
                 className="group relative inline-flex items-center justify-center h-12 px-6 rounded-xl bg-gradient-to-r from-primary to-primary-hover hover:from-primary-hover hover:to-primary-active text-white font-bold text-sm sm:text-base transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 min-h-[48px]"
@@ -241,7 +387,7 @@ export default function HomePage() {
           </div>
 
           {/* Right Column: Interactive Quick-Report Bento Card (Compact - hidden on mobile) */}
-          <div className="hidden lg:block lg:col-span-5 relative max-w-[420px] mx-auto lg:max-w-none w-full">
+          <div ref={heroCardRef} className="hidden lg:block lg:col-span-5 relative max-w-[420px] mx-auto lg:max-w-none w-full">
             {/* Background Geometric Red/Orange Blob Accent */}
             <div
               aria-hidden="true"
@@ -253,7 +399,7 @@ export default function HomePage() {
             />
 
             {/* Dark Container Card */}
-            <div className="bg-[#111622] border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl shadow-black/40 space-y-3 text-white">
+            <div className="gsap-bento-box bg-[#111622] border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl shadow-black/40 space-y-3 text-white">
               {/* Header Headline */}
               <div>
                 <span className="text-[9px] font-extrabold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full inline-block mb-1.5">
@@ -269,7 +415,7 @@ export default function HomePage() {
                 {/* Offset Card Layer Behind */}
                 <div
                   aria-hidden="true"
-                  className="absolute inset-0 bg-white/35 rounded-xl rotate-2 translate-x-1.5 -translate-y-1 scale-[0.98] shadow pointer-events-none"
+                  className="gsap-offset-shadow absolute inset-0 bg-white/35 rounded-xl rotate-2 translate-x-1.5 -translate-y-1 scale-[0.98] shadow pointer-events-none"
                 />
 
                 {/* Main Foreground White Card */}
@@ -287,7 +433,7 @@ export default function HomePage() {
                     {/* Item 1: Kebakaran */}
                     <Link
                       href="/lapor?tipe=kebakaran"
-                      className="group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+                      className="gsap-bento-item group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-7 h-7 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -308,7 +454,7 @@ export default function HomePage() {
                     {/* Item 2: Banjir */}
                     <Link
                       href="/lapor?tipe=banjir"
-                      className="group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+                      className="gsap-bento-item group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -329,7 +475,7 @@ export default function HomePage() {
                     {/* Item 3: Gempa Bumi */}
                     <Link
                       href="/lapor?tipe=gempa"
-                      className="group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+                      className="gsap-bento-item group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -350,7 +496,7 @@ export default function HomePage() {
                     {/* Item 4: Tanah Longsor & Cuaca */}
                     <Link
                       href="/lapor?tipe=longsor"
-                      className="group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
+                      className="gsap-bento-item group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -373,7 +519,7 @@ export default function HomePage() {
 
               {/* Bottom Section: Overlapping Avatars + Report Count + Description */}
               <div className="pt-2 border-t border-slate-800/80">
-                <div className="flex items-center gap-2.5">
+                <div className="gsap-avatar-stack flex items-center gap-2.5">
                   {/* Overlapping Citizen Avatars */}
                   <div className="flex -space-x-2 overflow-hidden shrink-0">
                     <div className="relative inline-block h-8 w-8 rounded-full ring-2 ring-[#111622] overflow-hidden bg-slate-800 shadow-sm">
@@ -438,7 +584,7 @@ export default function HomePage() {
       {/* 2. Official Weather & Early Warning Live Broadcast Strip */}
       <section
         aria-label="Peringatan Dini Cuaca & Gempa BMKG"
-        className="relative overflow-hidden bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-300/60 rounded-xl p-3.5 sm:p-4 shadow-sm backdrop-blur-sm"
+        className="gsap-warning-banner relative overflow-hidden bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-300/60 rounded-xl p-3.5 sm:p-4 shadow-sm backdrop-blur-sm"
       >
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-start sm:items-center gap-3">
@@ -454,7 +600,7 @@ export default function HomePage() {
                   Peringatan Dini BMKG
                 </span>
                 <span className="text-xs font-semibold text-amber-900">
-                  Siaga Cuaca Ekstrem & Potensi Bencana Hidrometeorologi
+                  Siaga Cuaca Ekstrem &amp; Potensi Bencana Hidrometeorologi
                 </span>
               </div>
               <p className="text-xs text-ink/80 mt-0.5 leading-relaxed">
@@ -468,7 +614,7 @@ export default function HomePage() {
               href="/cuaca"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface text-amber-900 hover:bg-amber-50 border border-amber-200/80 text-xs font-bold transition-all shadow-xs hover:shadow-sm"
             >
-              <span>Radar Cuaca & InaTEWS</span>
+              <span>Radar Cuaca &amp; InaTEWS</span>
               <ChevronRight className="w-3.5 h-3.5 text-amber-700" />
             </Link>
           </div>
@@ -496,18 +642,18 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+        <div ref={categoriesRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
           {categories.map((cat) => {
             const IconComponent = cat.icon;
             return (
               <Link
                 key={cat.type}
                 href={`/lapor?tipe=${cat.type}`}
-                className={`group relative p-5 bg-surface border border-line rounded-2xl transition-all duration-200 hover:-translate-y-1 hover:shadow-card flex flex-col justify-between ${cat.borderColor}`}
+                className={`gsap-cat-card group relative p-5 bg-surface border border-line rounded-2xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-card flex flex-col justify-between ${cat.borderColor}`}
               >
                 <div>
                   <div className="mb-3.5">
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105 ${cat.iconColor}`}>
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-2 ${cat.iconColor}`}>
                       <IconComponent className="w-6 h-6" />
                     </div>
                   </div>
@@ -568,7 +714,7 @@ export default function HomePage() {
                 key={tab.id}
                 type="button"
                 onClick={() => setSelectedDisasterFilter(tab.id)}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold transition-all shrink-0 ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold transition-all shrink-0 cursor-pointer ${
                   selectedDisasterFilter === tab.id
                     ? "bg-ink text-white shadow-xs"
                     : "bg-surface hover:bg-bg text-ink-soft border border-line"
@@ -642,7 +788,7 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
             <h2 id="edukasi-title" className="text-xl md:text-2xl font-bold text-ink">
-              Kesiapsiagaan & Mitigasi Mandiri
+              Kesiapsiagaan &amp; Mitigasi Mandiri
             </h2>
             <p className="text-xs sm:text-sm text-ink-soft mt-1">
               Bekali diri dan keluarga dengan langkah penyelamatan dan persiapan darurat sebelum bencana terjadi
@@ -680,12 +826,12 @@ export default function HomePage() {
               Pastikan tas siaga berisi kebutuhan pokok bertahan hidup minimal untuk 72 jam pertama pasca bencana:
             </p>
 
-            {/* Checklist Items (Daftar Statis Biasa) */}
+            {/* Checklist Items */}
             <div className="space-y-2.5 pt-1">
               {tsbItems.map((item) => (
                 <div
                   key={item.id}
-                  className="w-full p-3 rounded-xl border border-line/80 bg-slate-50/70 flex items-start gap-3"
+                  className="w-full p-3 rounded-xl border border-line/80 bg-slate-50/70 flex items-start gap-3 hover:border-emerald-300 transition-colors"
                 >
                   <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -706,7 +852,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Bento 2: Objek 3D Interaktif Tas Siaga Bencana (TSB) Murni Tanpa Border/Box */}
+          {/* Bento 2: Objek 3D Interaktif Tas Siaga Bencana (TSB) */}
           <div className="lg:col-span-5 flex flex-col items-center justify-center">
             <Interactive3DBag />
           </div>
