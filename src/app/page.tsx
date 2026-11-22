@@ -99,11 +99,40 @@ export default function HomePage() {
 
   // Live reports from database
   const [liveReports, setLiveReports] = useState<LiveReportItem[]>([]);
+  const [isLoadingReports, setIsLoadingReports] = useState<boolean>(true);
 
   useEffect(() => {
-    fetchLiveReports().then((data) => {
-      if (data) setLiveReports(data);
-    });
+    let isMounted = true;
+    const loadReports = async () => {
+      try {
+        const data = await fetchLiveReports();
+        if (isMounted && data) {
+          setLiveReports(data);
+        }
+      } catch (err) {
+        console.warn("Gagal memuat laporan beranda:", err);
+      } finally {
+        if (isMounted) setIsLoadingReports(false);
+      }
+    };
+
+    loadReports();
+
+    const handleSync = () => {
+      loadReports();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("sigapbumi:sos-created", handleSync);
+      window.addEventListener("storage", handleSync);
+    }
+
+    return () => {
+      isMounted = false;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("sigapbumi:sos-created", handleSync);
+        window.removeEventListener("storage", handleSync);
+      }
+    };
   }, []);
 
   // Metrics for hero status
@@ -116,6 +145,26 @@ export default function HomePage() {
     selectedDisasterFilter === "semua"
       ? liveReports.slice(0, 4)
       : liveReports.filter((r) => r.disaster_type === selectedDisasterFilter).slice(0, 4);
+
+  // Animasi transisi halus setiap kali kartu laporan dimuat atau filter diubah
+  useEffect(() => {
+    if (!isLoadingReports && filteredReports.length > 0 && reportsSectionRef.current) {
+      const repCards = reportsSectionRef.current.querySelectorAll(".gsap-report-card");
+      if (repCards.length > 0) {
+        gsap.fromTo(
+          repCards,
+          { opacity: 0, y: 18 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.45,
+            stagger: 0.08,
+            ease: "power2.out",
+          }
+        );
+      }
+    }
+  }, [filteredReports, isLoadingReports]);
 
   // Categories list with distinct thematic styling
   const categories: {
@@ -407,25 +456,6 @@ export default function HomePage() {
               scrollTrigger: {
                 trigger: reportsSectionRef.current,
                 start: "top 82%",
-                toggleActions: "play none none none",
-              },
-            }
-          );
-        }
-
-        if (repCards && repCards.length > 0) {
-          gsap.fromTo(
-            repCards,
-            { opacity: 0, y: 40 },
-            {
-              opacity: 1,
-              y: 0,
-              duration: 0.7,
-              stagger: 0.12,
-              ease: "power2.out",
-              scrollTrigger: {
-                trigger: reportsSectionRef.current,
-                start: "top 78%",
                 toggleActions: "play none none none",
               },
             }
@@ -972,59 +1002,89 @@ export default function HomePage() {
         </div>
 
         {/* Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredReports.map((report) => (
-            <div
-              key={report.id}
-              className="gsap-report-card opacity-0 bg-surface border border-line rounded-2xl p-5 shadow-xs hover:border-primary/40 hover:shadow-card transition-all flex flex-col justify-between space-y-4"
-            >
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-md bg-bg text-ink-muted border border-line">
-                      {report.province}
+        {isLoadingReports ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2].map((i) => (
+              <div
+                key={i}
+                className="bg-surface border border-line rounded-2xl p-5 shadow-xs animate-pulse space-y-4"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="h-4 w-24 bg-line/80 rounded-md" />
+                    <div className="h-5 w-20 bg-line/80 rounded-full" />
+                  </div>
+                  <div className="h-5 w-3/4 bg-line/90 rounded-md" />
+                  <div className="h-3.5 w-full bg-line/50 rounded-md" />
+                  <div className="h-3.5 w-2/3 bg-line/50 rounded-md" />
+                </div>
+                <div className="pt-3 border-t border-line flex items-center justify-between">
+                  <div className="h-3.5 w-1/3 bg-line/60 rounded-md" />
+                  <div className="h-3.5 w-20 bg-line/60 rounded-md" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredReports.length === 0 ? (
+          <div className="bg-surface border border-line rounded-2xl p-8 text-center text-ink-muted">
+            <p className="font-semibold text-sm text-ink">Belum ada laporan pada kategori ini</p>
+            <p className="text-xs text-ink-soft mt-1">Pilih kategori bencana lain atau ajukan laporan baru.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredReports.map((report) => (
+              <div
+                key={report.id}
+                className="gsap-report-card bg-surface border border-line rounded-2xl p-5 shadow-xs hover:border-primary/40 hover:shadow-card transition-all flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-md bg-bg text-ink-muted border border-line">
+                        {report.province || "Nasional"}
+                      </span>
+                    </div>
+
+                    <span
+                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize ${
+                        report.status === "selesai"
+                          ? "bg-success-soft text-success-text"
+                          : report.status === "ditindaklanjuti"
+                          ? "bg-warning-soft text-warning-text"
+                          : "bg-info-soft text-info-text"
+                      }`}
+                    >
+                      {report.status}
                     </span>
                   </div>
 
-                  <span
-                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize ${
-                      report.status === "selesai"
-                        ? "bg-success-soft text-success-text"
-                        : report.status === "ditindaklanjuti"
-                        ? "bg-warning-soft text-warning-text"
-                        : "bg-info-soft text-info-text"
-                    }`}
+                  <h3 className="text-base font-bold text-ink leading-snug">
+                    {report.title}
+                  </h3>
+
+                  <p className="text-xs text-ink-soft leading-relaxed line-clamp-2">
+                    {report.description}
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-line flex items-center justify-between text-xs text-ink-muted">
+                  <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span className="truncate">{report.address}</span>
+                  </div>
+
+                  <Link
+                    href={`/lacak?kode=${report.tracking_code}`}
+                    className="font-bold text-primary hover:text-primary-hover inline-flex items-center gap-1 shrink-0 group min-h-[32px]"
                   >
-                    {report.status}
-                  </span>
+                    <span>Pantau Alur</span>
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                  </Link>
                 </div>
-
-                <h3 className="text-base font-bold text-ink leading-snug">
-                  {report.title}
-                </h3>
-
-                <p className="text-xs text-ink-soft leading-relaxed line-clamp-2">
-                  {report.description}
-                </p>
               </div>
-
-              <div className="pt-3 border-t border-line flex items-center justify-between text-xs text-ink-muted">
-                <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                  <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span className="truncate">{report.address}</span>
-                </div>
-
-                <Link
-                  href={`/lacak?kode=${report.tracking_code}`}
-                  className="font-bold text-primary hover:text-primary-hover inline-flex items-center gap-1 shrink-0 group min-h-[32px]"
-                >
-                  <span>Pantau Alur</span>
-                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 5. Citizen Preparedness Bento Grid: Interactive TSB & Steps (Dimuat Saat Scroll) */}
