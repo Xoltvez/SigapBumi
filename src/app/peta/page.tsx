@@ -20,6 +20,17 @@ import {
   Mountain,
   Flame,
   AlertTriangle,
+  Compass,
+  Crosshair,
+  SlidersHorizontal,
+  Plus,
+  Minus,
+  Sun,
+  ChevronDown,
+  ChevronUp,
+  X,
+  RotateCw,
+  CheckCircle2,
 } from "lucide-react";
 import { MapFilter } from "@/components/peta/MapFilter";
 import type { MapPoint } from "@/components/peta/DisasterMap";
@@ -60,6 +71,31 @@ function PetaContent() {
   const [selectedRegion, setSelectedRegion] = useState<string>("Semua Wilayah");
   const [showSos, setShowSos] = useState<boolean>(true);
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
+
+  // State khusus drawer & filter mobile
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+
+  // Helper trigger action peta Leaflet di mobile
+  const triggerZoomIn = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sigapbumi:map-zoom-in"));
+    }
+  };
+  const triggerZoomOut = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sigapbumi:map-zoom-out"));
+    }
+  };
+  const triggerLocate = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sigapbumi:map-locate"));
+    }
+  };
+  const triggerCompass = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sigapbumi:map-reset-view"));
+    }
+  };
 
   // State untuk pencarian & pengurutan di Tampilan Daftar
   const [listSearch, setListSearch] = useState<string>("");
@@ -273,7 +309,303 @@ function PetaContent() {
   };
 
   return (
-    <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 pb-28 md:pb-12 flex flex-col space-y-4">
+    <>
+      {/* ========================================================= */}
+      {/* 1. TAMPILAN MOBILE: EDGE-TO-EDGE FULL SCREEN MAP + BOTTOM SHEET */}
+      {/* ========================================================= */}
+      <div className="md:hidden fixed inset-0 bottom-16 z-10 w-full overflow-hidden bg-slate-100 select-none">
+        {/* Peta Layar Penuh */}
+        <div className="absolute inset-0 w-full h-full z-0">
+          <DisasterMap
+            className="w-full h-full"
+            points={filteredPoints}
+            selectedPointId={selectedPoint?.id}
+            onSelectPoint={(pt) => {
+              setSelectedPoint(pt);
+              setIsMobileSheetOpen(true);
+            }}
+            showLegend={false}
+          />
+        </div>
+
+        {/* Floating Right Control Stack (Kompas, Lokasi Saya, Filter, Zoom) */}
+        <div className="absolute top-3 right-3 z-30 flex flex-col items-center gap-2 pointer-events-auto">
+          {/* Kompas */}
+          <button
+            type="button"
+            onClick={triggerCompass}
+            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
+            title="Reset Arah Kompas & Tampilan"
+          >
+            <Compass className="w-5 h-5 text-red-500" />
+          </button>
+
+          {/* Lokasi Saya */}
+          <button
+            type="button"
+            onClick={triggerLocate}
+            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
+            title="Pusatkan ke Lokasi Saya"
+          >
+            <Crosshair className="w-5 h-5 text-blue-600" />
+          </button>
+
+          {/* Toggle Filter Bottom Sheet */}
+          <button
+            type="button"
+            onClick={() => setIsMobileSheetOpen((prev) => !prev)}
+            className={`w-10 h-10 rounded-full shadow-md border flex items-center justify-center active:scale-95 transition-transform cursor-pointer ${
+              selectedCategory !== "semua" || selectedStatus !== "semua" || selectedRegion !== "Semua Wilayah"
+                ? "bg-orange-500 text-white border-orange-600"
+                : "bg-white/95 backdrop-blur-xs text-slate-700 border-slate-200/90"
+            }`}
+            title="Buka / Tutup Filter Peta"
+          >
+            <SlidersHorizontal className="w-4.5 h-4.5" />
+          </button>
+
+          {/* Zoom In & Zoom Out Stack */}
+          <div className="flex flex-col rounded-xl overflow-hidden shadow-md border border-slate-200/90 bg-white/95 backdrop-blur-xs">
+            <button
+              type="button"
+              onClick={triggerZoomIn}
+              className="w-10 h-10 flex items-center justify-center text-slate-700 hover:bg-slate-50 border-b border-slate-100 active:scale-95 transition-transform cursor-pointer"
+              title="Perbesar Peta"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={triggerZoomOut}
+              className="w-10 h-10 flex items-center justify-center text-slate-700 hover:bg-slate-50 active:scale-95 transition-transform cursor-pointer"
+              title="Perkecil Peta"
+            >
+              <Minus className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Floating Weather Widget (Kiri Bawah di atas Bottom Sheet) */}
+        <div
+          className={`absolute left-3 z-30 transition-all duration-300 pointer-events-auto ${
+            isMobileSheetOpen ? "bottom-72" : "bottom-24"
+          }`}
+        >
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 px-3.5 shadow-lg border border-slate-200/80 flex flex-col">
+            <div className="flex items-center gap-1.5 text-amber-500 font-extrabold text-sm leading-none">
+              <Sun className="w-4 h-4 text-amber-500 fill-amber-400" />
+              <span className="text-slate-900 font-extrabold">32°C</span>
+            </div>
+            <span className="text-[10px] text-slate-500 font-medium mt-1 leading-none">
+              Cerah Berawan
+            </span>
+          </div>
+        </div>
+
+        {/* Floating Bottom Sheet (Filter & Info Titik di Bawah) */}
+        <div
+          className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 transition-all duration-300 flex flex-col ${
+            isMobileSheetOpen ? "max-h-[68vh]" : "max-h-[76px]"
+          }`}
+        >
+          {/* Handle Bar Drag Pill */}
+          <div
+            onClick={() => setIsMobileSheetOpen((prev) => !prev)}
+            className="pt-2 pb-1 flex flex-col items-center cursor-pointer select-none"
+          >
+            <div className="w-11 h-1.5 bg-slate-300 rounded-full" />
+          </div>
+
+          {/* Header Bottom Sheet */}
+          <div className="px-4 py-2 flex items-center justify-between gap-3 border-b border-slate-100">
+            {selectedPoint ? (
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="text-[10px] font-bold font-mono px-2 py-0.5 bg-slate-100 text-slate-800 rounded">
+                    {selectedPoint.tracking_code}
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      selectedPoint.is_sos
+                        ? "bg-rose-100 text-rose-700"
+                        : selectedPoint.status === "selesai"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {selectedPoint.is_sos ? "SOS DARURAT" : selectedPoint.status}
+                  </span>
+                </div>
+                <h4 className="text-xs font-bold text-slate-900 truncate">
+                  {selectedPoint.title}
+                </h4>
+                <p className="text-[10px] text-slate-500 truncate flex items-center gap-1">
+                  <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
+                  <span>{selectedPoint.location_name}</span>
+                </p>
+              </div>
+            ) : (
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-slate-900">
+                    Filter Peta Kejadian
+                  </h4>
+                  <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                    {filteredPoints.length} Titik
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                  {selectedCategory !== "semua" ? `Bencana: ${selectedCategory}` : "Semua Kategori"} • {selectedRegion}
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-1 shrink-0">
+              {selectedPoint && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPoint(null);
+                  }}
+                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  title="Tutup Titik Terpilih"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsMobileSheetOpen((prev) => !prev)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-600 cursor-pointer"
+                title={isMobileSheetOpen ? "Tutup Sheet" : "Buka Sheet"}
+              >
+                {isMobileSheetOpen ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronUp className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Body Konten Bottom Sheet (Saat Di-expand) */}
+          <div className={`overflow-y-auto p-4 space-y-3.5 ${isMobileSheetOpen ? "block" : "hidden"}`}>
+            {selectedPoint && (
+              <div className="space-y-2 pb-2 border-b border-slate-100">
+                <a
+                  href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-2xs"
+                >
+                  <Navigation className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Buka Navigasi Rute Google Maps</span>
+                </a>
+
+                {!selectedPoint.is_sos && (
+                  <Link
+                    href={`/lacak?kode=${selectedPoint.tracking_code}`}
+                    className="w-full h-8.5 rounded-xl border border-primary/30 bg-primary-soft text-primary text-xs font-semibold inline-flex items-center justify-center gap-1.5"
+                  >
+                    <span>Detail &amp; Lacak Laporan</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {/* Panel Filter Geospasial Mobile */}
+            <div className="space-y-2.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                Saring Kategori &amp; Wilayah
+              </span>
+
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value as DisasterType | "semua")}
+                  className="h-8.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
+                >
+                  <option value="semua">Semua Bencana</option>
+                  <option value="banjir">Banjir</option>
+                  <option value="longsor">Tanah Longsor</option>
+                  <option value="kebakaran">Kebakaran</option>
+                  <option value="gempa">Gempa Bumi</option>
+                  <option value="karhutla">Karhutla</option>
+                  <option value="lainnya">Lainnya</option>
+                </select>
+
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value as ReportStatus | "semua")}
+                  className="h-8.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
+                >
+                  <option value="semua">Semua Status</option>
+                  <option value="diterima">Diterima</option>
+                  <option value="diverifikasi">Diverifikasi</option>
+                  <option value="ditindaklanjuti">Ditindaklanjuti</option>
+                  <option value="selesai">Selesai</option>
+                </select>
+              </div>
+
+              <select
+                value={selectedRegion}
+                onChange={(e) => setSelectedRegion(e.target.value)}
+                className="w-full h-8.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
+              >
+                <option value="Semua Wilayah">Semua Wilayah</option>
+                <option value="DKI Jakarta">DKI Jakarta</option>
+                <option value="Jawa Barat">Jawa Barat</option>
+                <option value="Jawa Tengah">Jawa Tengah</option>
+                <option value="Jawa Timur">Jawa Timur</option>
+                <option value="DI Yogyakarta">DI Yogyakarta</option>
+                <option value="Banten">Banten</option>
+                <option value="Bali">Bali</option>
+                <option value="Sumatera Barat">Sumatera Barat</option>
+                <option value="Sulawesi Selatan">Sulawesi Selatan</option>
+              </select>
+
+              {/* Toggle SOS Darurat */}
+              <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
+                <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
+                  <span>Tampilkan Sinyal SOS Darurat</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={showSos}
+                  onChange={(e) => setShowSos(e.target.checked)}
+                  className="w-4 h-4 accent-rose-600 rounded"
+                />
+              </label>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory("semua");
+                    setSelectedStatus("semua");
+                    setSelectedRegion("Semua Wilayah");
+                    setShowSos(true);
+                  }}
+                  className="text-xs font-bold text-orange-600 hover:underline cursor-pointer"
+                >
+                  Reset Filter
+                </button>
+                <span className="text-xs font-semibold text-slate-500">
+                  {filteredPoints.length} titik aktif
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================= */}
+      {/* 2. TAMPILAN DESKTOP (MD KE ATAS): LAYOUT ASLI LENGKAP      */}
+      {/* ========================================================= */}
+      <main className="hidden md:flex flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 pb-28 md:pb-12 flex-col space-y-4">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-line">
         <div>
@@ -570,6 +902,7 @@ function PetaContent() {
         </div>
       </div>
     </main>
+    </>
   );
 }
 

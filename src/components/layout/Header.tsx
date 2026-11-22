@@ -70,9 +70,14 @@ export function Header() {
 
   const isNotifActive = pathname.startsWith("/notifikasi");
   const isAuthActive = pathname.startsWith("/masuk") || pathname.startsWith("/daftar");
+  const isMapRoute = pathname === "/peta";
 
   return (
-    <header className="sticky top-0 z-30 h-14 md:h-16 bg-surface/95 backdrop-blur-md border-b border-line shadow-xs">
+    <header
+      className={`sticky top-0 z-30 h-14 md:h-16 bg-surface/95 backdrop-blur-md border-b border-line shadow-xs ${
+        isMapRoute ? "hidden md:block" : "block"
+      }`}
+    >
       <div className="max-w-[1240px] h-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         {/* Brand Logo */}
         <Link

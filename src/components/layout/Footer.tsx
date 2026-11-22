@@ -19,8 +19,15 @@ export function Footer() {
     return null;
   }
 
+  // Sembunyikan footer di mobile khusus rute peta agar peta tampil full screen
+  const isMapRoute = pathname === "/peta";
+
   return (
-    <footer className="w-full bg-[#131722] text-white border-t border-slate-800">
+    <footer
+      className={`w-full bg-[#131722] text-white border-t border-slate-800 ${
+        isMapRoute ? "hidden md:block" : "block"
+      }`}
+    >
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8">
         {/* Main Grid: Brand, Menu, Layanan, Kontak */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10">
