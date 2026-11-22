@@ -189,12 +189,11 @@ export async function POST(request: Request) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    // Prioritaskan gemini-3.1-flash-lite untuk latensi ultra-cepat (< 1 detik) dalam situasi darurat
-    const preferredModel = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
+    const preferredModel = process.env.GEMINI_MODEL || "gemini-3.8-flash";
     const modelsToTry = [
       preferredModel,
-      "gemini-3.1-flash-lite",
       "gemini-3.8-flash",
+      "gemini-3.1-flash-lite",
     ].filter((v, i, a) => a.indexOf(v) === i);
 
     const promptText = `Anda adalah sistem verifikasi visual darurat kebencanaan untuk platform SIGAP-BUMI.
