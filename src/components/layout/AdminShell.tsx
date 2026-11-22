@@ -36,6 +36,7 @@ interface AdminContextType {
   adminUser: AdminAuthSession | null;
   updateAdminUser: (updated: Partial<AdminAuthSession>) => void;
   logout: (reason?: "manual" | "idle" | "left" | "unauthorized") => void;
+  toggleMobileSidebar: () => void;
 }
 
 const AdminContext = createContext<AdminContextType>({
@@ -52,6 +53,7 @@ const AdminContext = createContext<AdminContextType>({
   adminUser: null,
   updateAdminUser: () => {},
   logout: () => {},
+  toggleMobileSidebar: () => {},
 });
 
 export const useAdmin = () => useContext(AdminContext);
@@ -376,6 +378,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         adminUser,
         updateAdminUser,
         logout,
+        toggleMobileSidebar: () => setIsMobileSidebarOpen((prev) => !prev),
       }}
     >
       <div className="flex h-screen w-full bg-[#F8FAFC] text-slate-800 overflow-hidden relative font-sans">
@@ -479,21 +482,29 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
         {/* Right Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F8FAFC]">
-          <React.Suspense fallback={<div className="h-16 sm:h-20 bg-[#FAFBFC] border-b border-slate-200/90" />}>
-            <AdminTopbar
-              isSidebarCollapsed={isSidebarCollapsed}
-              onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
-              onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
-              activeUnit={activeUnit}
-              onSelectUnit={setActiveUnit}
-              activeSosCount={activeSosCount}
-              isLiveConnected={isLiveConnected}
-              isSirenMuted={isSirenMuted}
-              onToggleSiren={() => setIsSirenMuted((prev) => !prev)}
-              onTestSiren={() => playSosSiren(2, 0.35)}
-            />
-          </React.Suspense>
-          <main className="flex-1 overflow-y-auto p-3.5 sm:p-5 md:p-6 lg:p-8 bg-[#F8FAFC] text-slate-800">
+          <div className={pathname === "/admin/peta" ? "hidden md:block" : "block"}>
+            <React.Suspense fallback={<div className="h-16 sm:h-20 bg-[#FAFBFC] border-b border-slate-200/90" />}>
+              <AdminTopbar
+                isSidebarCollapsed={isSidebarCollapsed}
+                onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+                onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
+                activeUnit={activeUnit}
+                onSelectUnit={setActiveUnit}
+                activeSosCount={activeSosCount}
+                isLiveConnected={isLiveConnected}
+                isSirenMuted={isSirenMuted}
+                onToggleSiren={() => setIsSirenMuted((prev) => !prev)}
+                onTestSiren={() => playSosSiren(2, 0.35)}
+              />
+            </React.Suspense>
+          </div>
+          <main
+            className={`flex-1 ${
+              pathname === "/admin/peta"
+                ? "p-0 md:p-6 lg:p-8 overflow-hidden relative flex flex-col h-full"
+                : "overflow-y-auto p-3.5 sm:p-5 md:p-6 lg:p-8 bg-[#F8FAFC] text-slate-800"
+            }`}
+          >
             {children}
           </main>
         </div>

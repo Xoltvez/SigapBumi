@@ -139,11 +139,29 @@ export default function DisasterMap({
     markersLayerRef.current = markersGroup;
     mapInstanceRef.current = map;
 
+    const handleZoomIn = () => map.zoomIn();
+    const handleZoomOut = () => map.zoomOut();
+    const handleLocate = () => map.locate({ setView: true, maxZoom: 13 });
+    const handleReset = () => map.setView([-2.5, 118.0], 5);
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("sigapbumi:map-zoom-in", handleZoomIn);
+      window.addEventListener("sigapbumi:map-zoom-out", handleZoomOut);
+      window.addEventListener("sigapbumi:map-locate", handleLocate);
+      window.addEventListener("sigapbumi:map-reset-view", handleReset);
+    }
+
     setTimeout(() => {
       map.invalidateSize();
     }, 250);
 
     return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("sigapbumi:map-zoom-in", handleZoomIn);
+        window.removeEventListener("sigapbumi:map-zoom-out", handleZoomOut);
+        window.removeEventListener("sigapbumi:map-locate", handleLocate);
+        window.removeEventListener("sigapbumi:map-reset-view", handleReset);
+      }
       map.remove();
       mapInstanceRef.current = null;
     };

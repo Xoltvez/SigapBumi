@@ -13,6 +13,7 @@ import {
   Clock,
   Layers,
   ChevronDown,
+  ChevronUp,
   Navigation,
   ExternalLink,
   Siren,
@@ -23,6 +24,19 @@ import {
   Shield,
   Activity,
   ArrowRight,
+  Menu,
+  Compass,
+  Crosshair,
+  Maximize2,
+  Sun,
+  LayoutDashboard,
+  FileText,
+  Home,
+  BarChart2,
+  X,
+  SlidersHorizontal,
+  Plus,
+  Minus,
 } from "lucide-react";
 import type { MapPoint } from "@/components/peta/DisasterMap";
 import type { DisasterType, ReportStatus } from "@/types";
@@ -62,7 +76,7 @@ const PROVINCE_OPTIONS = [
 ];
 
 export default function AdminPetaPage() {
-  const { activeUnit, activeUnitName } = useAdmin();
+  const { activeUnit, activeUnitName, toggleMobileSidebar, activeSosCount } = useAdmin();
   const [points, setPoints] = useState<MapPoint[]>(() => {
     return reportsToMapPoints(DEFAULT_MOCK_REPORTS);
   });
@@ -74,6 +88,31 @@ export default function AdminPetaPage() {
   const [selectedDisaster, setSelectedDisaster] = useState<DisasterType | "semua">("semua");
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | "sos" | "semua">("semua");
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+
+  // State khusus drawer & filter mobile
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+
+  // Helper trigger action peta Leaflet di mobile
+  const triggerZoomIn = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sigapbumi:map-zoom-in"));
+    }
+  };
+  const triggerZoomOut = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sigapbumi:map-zoom-out"));
+    }
+  };
+  const triggerLocate = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sigapbumi:map-locate"));
+    }
+  };
+  const triggerCompass = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sigapbumi:map-reset-view"));
+    }
+  };
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -307,348 +346,214 @@ export default function AdminPetaPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-12 select-none">
-      {/* 1. Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
-              Yurisdiksi: {activeUnitName}
-            </span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            Peta Operasional Taktis
-          </h1>
-          <p className="text-xs md:text-sm text-slate-500 font-normal mt-0.5">
-            Pantau sebaran titik bencana, panggilan darurat SOS, dan armada darurat secara geospasial real-time.
-          </p>
+    <>
+      {/* ============================================================== */}
+      {/* 1. TAMPILAN MOBILE: EDGE-TO-EDGE FULL SCREEN MAP + BOTTOM SHEET */}
+      {/* ============================================================== */}
+      <div className="md:hidden relative w-full h-[100dvh] overflow-hidden bg-slate-900 select-none">
+        {/* Peta Layar Penuh */}
+        <div className="absolute inset-0 w-full h-full z-0">
+          <DisasterMap
+            className="w-full h-full"
+            points={filteredPoints}
+            selectedPointId={selectedPointId}
+            onSelectPoint={(pt) => {
+              setSelectedPointId(pt.id);
+              setIsMobileSheetOpen(true);
+            }}
+            showLegend={false}
+          />
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
-          {/* Segarkan Data Button */}
+        {/* Floating Top Controls: Menu Drawer Hamburger & Badge Yurisdiksi */}
+        <div className="absolute top-3 left-3 z-30 flex items-center gap-2 pointer-events-auto">
           <button
             type="button"
-            onClick={loadData}
-            disabled={isLoading}
-            className="px-4 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors inline-flex items-center gap-2 cursor-pointer"
+            onClick={toggleMobileSidebar}
+            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-800 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
+            title="Buka Navigasi Menu Admin"
           >
-            <RotateCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-orange-500" : "text-slate-500"}`} />
-            <span>Segarkan Data</span>
+            <Menu className="w-5 h-5 text-slate-700" />
           </button>
-        </div>
-      </div>
 
-      {/* 2. 4 Kartu Metrik KPI (Row 1) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-        {/* Card 1: Total Titik */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#2563EB] shrink-0 font-bold">
-            <Layers className="w-6 h-6 stroke-[2.2]" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium">Total Titik Terdata</p>
-            <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
-              {totalTitik}
-            </p>
-            <p className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 mt-0.5">
-              <span>9 Provinsi</span>
-              <span className="text-slate-400 font-normal">tercakup</span>
-            </p>
+          <div className="px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-xs text-slate-800 text-[11px] font-bold shadow-md border border-slate-200/90 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shrink-0" />
+            <span className="max-w-[120px] truncate">{activeUnitName}</span>
           </div>
         </div>
 
-        {/* Card 2: SOS Aktif */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-full bg-[#FEE2E2] flex items-center justify-center text-[#EF4444] shrink-0 font-bold">
-            <AlertCircle className="w-6 h-6 stroke-[2.5]" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium">Sinyal SOS Aktif</p>
-            <p className="text-2xl md:text-3xl font-extrabold text-rose-600 tracking-tight leading-tight mt-0.5">
-              {sosTotal}
-            </p>
-            <p className="text-[11px] text-rose-600 font-semibold mt-0.5">
-              Perlu tanggap cepat
-            </p>
+        {/* Floating Action Controls Stack di Sisi Kanan (Kompas, Lokasi Saya, Filter, Zoom) */}
+        <div className="absolute top-3 right-3 z-30 flex flex-col items-center gap-2 pointer-events-auto">
+          {/* Kompas */}
+          <button
+            type="button"
+            onClick={triggerCompass}
+            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
+            title="Reset Arah Kompas & Tampilan"
+          >
+            <Compass className="w-5 h-5 text-red-500" />
+          </button>
+
+          {/* Lokasi Saya */}
+          <button
+            type="button"
+            onClick={triggerLocate}
+            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
+            title="Pusatkan ke Lokasi Saya"
+          >
+            <Crosshair className="w-5 h-5 text-blue-600" />
+          </button>
+
+          {/* Toggle Filter Bottom Sheet */}
+          <button
+            type="button"
+            onClick={() => setIsMobileSheetOpen((prev) => !prev)}
+            className={`w-10 h-10 rounded-full shadow-md border flex items-center justify-center active:scale-95 transition-transform cursor-pointer ${
+              selectedDisaster !== "semua" || selectedProvince !== "Semua Provinsi" || searchQuery.trim() !== ""
+                ? "bg-orange-500 text-white border-orange-600"
+                : "bg-white/95 backdrop-blur-xs text-slate-700 border-slate-200/90"
+            }`}
+            title="Buka / Tutup Filter Peta"
+          >
+            <SlidersHorizontal className="w-4.5 h-4.5" />
+          </button>
+
+          {/* Zoom In & Zoom Out Stack */}
+          <div className="flex flex-col rounded-xl overflow-hidden shadow-md border border-slate-200/90 bg-white/95 backdrop-blur-xs">
+            <button
+              type="button"
+              onClick={triggerZoomIn}
+              className="w-10 h-10 flex items-center justify-center text-slate-700 hover:bg-slate-50 border-b border-slate-100 active:scale-95 transition-transform cursor-pointer"
+              title="Perbesar Peta"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={triggerZoomOut}
+              className="w-10 h-10 flex items-center justify-center text-slate-700 hover:bg-slate-50 active:scale-95 transition-transform cursor-pointer"
+              title="Perkecil Peta"
+            >
+              <Minus className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
-        {/* Card 3: Dalam Penanganan */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-full bg-[#FEF3C7] flex items-center justify-center text-[#D97706] shrink-0 font-bold">
-            <Clock className="w-6 h-6 stroke-[2.5]" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium">Dalam Penanganan</p>
-            <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
-              {prosesTotal}
-            </p>
-            <p className="text-[11px] text-slate-400 font-normal mt-0.5">
-              Regu di lapangan
-            </p>
-          </div>
-        </div>
-
-        {/* Card 4: Selesai */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-full bg-[#D1FAE5] flex items-center justify-center text-[#059669] shrink-0 font-bold">
-            <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium">Selesai Ditangani</p>
-            <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
-              {selesaiTotal}
-            </p>
-            <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">
-              Telah dievakuasi
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Filter Bar Horizontal */}
-      <div className="pt-1">
-        <div className="flex items-center justify-between gap-3 sm:gap-4 overflow-x-auto pb-1 scrollbar-none w-full">
-          {/* Search Input Box */}
-          <div className="relative w-48 sm:w-60 shrink-0">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari lokasi atau kode..."
-              className="w-full h-8.5 pl-9 pr-3 rounded-full bg-white border border-slate-200/90 text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-orange-500/30 transition-all"
-            />
-          </div>
-
-          {/* Filter Pills Controls */}
-          <div className="flex items-center gap-2.5 sm:gap-3 text-xs shrink-0 whitespace-nowrap">
-            {/* Filter Provinsi */}
-            <div className="relative shrink-0">
-              <select
-                value={selectedProvince}
-                onChange={(e) => setSelectedProvince(e.target.value)}
-                className="h-8.5 pl-3 pr-7 rounded-full border border-slate-200/90 bg-white hover:border-slate-300 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none cursor-pointer appearance-none transition-all"
-              >
-                {PROVINCE_OPTIONS.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                <ChevronDown className="w-3 h-3" />
-              </div>
+        {/* Floating Weather Widget (Kiri Bawah di atas Bottom Sheet) */}
+        <div
+          className={`absolute left-3 z-30 transition-all duration-300 pointer-events-auto ${
+            isMobileSheetOpen ? "bottom-72" : "bottom-20"
+          }`}
+        >
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 px-3.5 shadow-lg border border-slate-200/80 flex flex-col">
+            <div className="flex items-center gap-1.5 text-amber-500 font-extrabold text-sm leading-none">
+              <Sun className="w-4 h-4 text-amber-500 fill-amber-400" />
+              <span className="text-slate-900 font-extrabold">32°C</span>
             </div>
-
-            {/* Filter Bencana */}
-            <div className="relative shrink-0">
-              <select
-                value={selectedDisaster}
-                onChange={(e) => setSelectedDisaster(e.target.value as DisasterType | "semua")}
-                className="h-8.5 pl-3 pr-7 rounded-full border border-slate-200/90 bg-white hover:border-slate-300 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none cursor-pointer appearance-none transition-all"
-              >
-                <option value="semua">Semua Bencana</option>
-                <option value="banjir">Banjir</option>
-                <option value="longsor">Tanah Longsor</option>
-                <option value="kebakaran">Kebakaran</option>
-                <option value="gempa">Gempa Bumi</option>
-                <option value="karhutla">Karhutla</option>
-                <option value="lainnya">Lainnya</option>
-              </select>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                <ChevronDown className="w-3 h-3" />
-              </div>
-            </div>
-
-            {/* Filter Status */}
-            <div className="relative shrink-0">
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as ReportStatus | "sos" | "semua")}
-                className="h-8.5 pl-3 pr-7 rounded-full border border-slate-200/90 bg-white hover:border-slate-300 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none cursor-pointer appearance-none transition-all"
-              >
-                <option value="semua">Semua Status</option>
-                <option value="diterima">Status: Diterima</option>
-                <option value="diverifikasi">Status: Diverifikasi</option>
-                <option value="ditindaklanjuti">Status: Ditindaklanjuti</option>
-                <option value="selesai">Status: Selesai</option>
-                <option value="sos">Khusus Sinyal SOS Darurat</option>
-              </select>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                <ChevronDown className="w-3 h-3" />
-              </div>
-            </div>
-
-            {/* Reset Button */}
-            {(selectedProvince !== "Semua Provinsi" ||
-              selectedDisaster !== "semua" ||
-              selectedStatus !== "semua" ||
-              searchQuery.trim() !== "") && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedProvince("Semua Provinsi");
-                  setSelectedDisaster("semua");
-                  setSelectedStatus("semua");
-                  setSearchQuery("");
-                }}
-                className="text-xs font-bold text-orange-600 hover:text-orange-700 hover:underline px-2 py-1"
-              >
-                Reset Filter
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {actionNotice && (
-        <div className="p-3 px-4 bg-emerald-50 border border-emerald-200/80 rounded-xl text-emerald-700 text-xs font-semibold flex items-center gap-2 shadow-2xs animate-fade-in">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          <span>{actionNotice}</span>
-        </div>
-      )}
-
-      {/* 4. Main Grid: Leaflet Map (Left 65%) + Inspector Panel (Right 35%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 items-start">
-        {/* Map Container */}
-        <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_16px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-          <div className="w-full h-[380px] sm:h-[480px] lg:h-[600px] relative rounded-xl overflow-hidden border border-slate-100">
-            <DisasterMap
-              className="w-full h-full"
-              points={filteredPoints}
-              selectedPointId={selectedPointId}
-              onSelectPoint={(pt) => setSelectedPointId(pt.id)}
-              showLegend={false}
-            />
-          </div>
-
-          {/* Quick Legend Bar under Map */}
-          <div className="pt-3 px-1 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
-                Legenda Peta:
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                <span>Banjir</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                <span>Longsor</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                <span>Kebakaran</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <span>Gempa</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
-                <span>Panggilan SOS</span>
-              </span>
-            </div>
-
-            <span className="font-semibold text-slate-600">
-              {filteredPoints.length} titik aktif
+            <span className="text-[10px] text-slate-500 font-medium mt-1 leading-none">
+              Cerah Berawan
             </span>
           </div>
         </div>
 
-        {/* Selected Point Inspector & Tactical Command Panel */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_16px_rgba(0,0,0,0.02)] space-y-4">
-          <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
-            <div>
-              <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                Panel Kendali Taktis
-              </h2>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Inspeksi detail titik kejadian & disposisi armada
-              </p>
-            </div>
-            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
-              {filteredPoints.length} Titik
-            </span>
+        {/* Floating Bottom Sheet (Filter & Info Titik di Bawah Peta) */}
+        <div
+          className={`absolute inset-x-0 bottom-14 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 transition-all duration-300 flex flex-col ${
+            isMobileSheetOpen ? "max-h-[68vh]" : "max-h-[76px]"
+          }`}
+        >
+          {/* Handle Bar Drag Pill */}
+          <div
+            onClick={() => setIsMobileSheetOpen((prev) => !prev)}
+            className="pt-2 pb-1 flex flex-col items-center cursor-pointer select-none"
+          >
+            <div className="w-11 h-1.5 bg-slate-300 rounded-full" />
           </div>
 
-          {selectedPoint ? (
-            <div className="space-y-4">
-              {/* Point Header */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-md">
+          {/* Header Bottom Sheet */}
+          <div className="px-4 py-2 flex items-center justify-between gap-3 border-b border-slate-100">
+            {selectedPoint ? (
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="text-[10px] font-bold font-mono px-2 py-0.5 bg-slate-100 text-slate-800 rounded">
                     {selectedPoint.tracking_code}
                   </span>
                   <span
-                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       selectedPoint.is_sos
-                        ? "bg-[#FFF1F2] text-[#E11D48] border border-rose-200"
+                        ? "bg-rose-100 text-rose-700"
                         : selectedPoint.status === "selesai"
-                        ? "bg-[#ECFDF5] text-[#059669] border border-emerald-200"
-                        : selectedPoint.status === "ditindaklanjuti"
-                        ? "bg-[#FFF7ED] text-[#EA580C] border border-amber-200"
-                        : "bg-[#EFF6FF] text-[#2563EB] border border-blue-200"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-amber-100 text-amber-700"
                     }`}
                   >
-                    {selectedPoint.is_sos && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
-                    )}
-                    <span>
-                      {selectedPoint.is_sos
-                        ? "PANGGILAN SOS"
-                        : selectedPoint.status.toUpperCase()}
-                    </span>
+                    {selectedPoint.is_sos ? "SOS DARURAT" : selectedPoint.status}
                   </span>
                 </div>
-
-                <h3 className="text-base font-bold text-slate-900 leading-snug">
+                <h4 className="text-xs font-bold text-slate-900 truncate">
                   {selectedPoint.title}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1.5 flex items-start gap-1.5 leading-relaxed">
-                  <MapPin className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                </h4>
+                <p className="text-[10px] text-slate-500 truncate flex items-center gap-1">
+                  <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
                   <span>{selectedPoint.location_name}</span>
                 </p>
               </div>
-
-              {/* Data Specs Grid */}
-              <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-100">
-                <div>
-                  <span className="text-slate-400 block text-[11px] font-medium">Jenis Bencana</span>
-                  <span className="font-bold text-slate-800 capitalize flex items-center gap-1.5 mt-0.5">
-                    {getDisasterIcon(selectedPoint.disaster_type)}
-                    <span>{selectedPoint.disaster_type}</span>
+            ) : (
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-slate-900">
+                    Filter & Titik Operasional
+                  </h4>
+                  <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                    {filteredPoints.length} Titik
                   </span>
                 </div>
-                <div>
-                  <span className="text-slate-400 block text-[11px] font-medium">Waktu Masuk</span>
-                  <span className="font-bold text-slate-800 mt-0.5 block">{selectedPoint.created_at}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[11px] font-medium">Koordinat GPS</span>
-                  <span className="font-mono text-[11px] font-bold text-slate-800 mt-0.5 block">
-                    {selectedPoint.lat.toFixed(4)}, {selectedPoint.lng.toFixed(4)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[11px] font-medium">Konfirmasi Warga</span>
-                  <span className="font-bold text-amber-600 flex items-center gap-1 mt-0.5">
-                    <Shield className="w-3.5 h-3.5 text-amber-500" />
-                    <span>{selectedPoint.confirmation_count} Saksi</span>
-                  </span>
-                </div>
+                <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                  {selectedDisaster !== "semua" ? `Bencana: ${selectedDisaster}` : "Semua Bencana"} • {selectedProvince}
+                </p>
               </div>
+            )}
 
-              {/* Action Buttons */}
-              <div className="space-y-2 pt-1">
+            <div className="flex items-center gap-1 shrink-0">
+              {selectedPoint && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPointId(undefined);
+                  }}
+                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  title="Tutup Titik Terpilih"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsMobileSheetOpen((prev) => !prev)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-600 cursor-pointer"
+                title={isMobileSheetOpen ? "Tutup Sheet" : "Buka Sheet"}
+              >
+                {isMobileSheetOpen ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronUp className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Body Konten Bottom Sheet (Saat Di-expand) */}
+          <div className={`overflow-y-auto p-4 space-y-3.5 ${isMobileSheetOpen ? "block" : "hidden"}`}>
+            {selectedPoint && (
+              <div className="space-y-2 pb-2 border-b border-slate-100">
                 <a
                   href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-2 shadow-2xs transition-colors"
+                  className="w-full h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-2xs"
                 >
-                  <Navigation className="w-3.5 h-3.5 text-slate-600" />
+                  <Navigation className="w-3.5 h-3.5 text-blue-600" />
                   <span>Buka Rute Navigasi Google Maps</span>
                 </a>
 
@@ -657,7 +562,7 @@ export default function AdminPetaPage() {
                     <button
                       type="button"
                       onClick={() => handleUpdateStatus("ditindaklanjuti")}
-                      className="h-9 px-3 rounded-xl border border-amber-200 bg-[#FFF7ED] text-[#EA580C] hover:bg-amber-100 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                      className="h-8.5 px-3 rounded-xl border border-amber-200 bg-[#FFF7ED] text-[#EA580C] text-xs font-bold inline-flex items-center justify-center gap-1 cursor-pointer"
                     >
                       <Clock className="w-3.5 h-3.5" />
                       <span>Diproses</span>
@@ -665,42 +570,553 @@ export default function AdminPetaPage() {
                     <button
                       type="button"
                       onClick={() => handleUpdateStatus("selesai")}
-                      className="h-9 px-3 rounded-xl bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                      className="h-8.5 px-3 rounded-xl bg-emerald-600 text-white text-xs font-bold inline-flex items-center justify-center gap-1 cursor-pointer"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                      <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Selesai</span>
                     </button>
                   </div>
                 )}
 
                 <Link
-                  href={
-                    selectedPoint.is_sos
-                      ? "/admin/sos"
-                      : `/admin/laporan/${selectedPoint.id}`
-                  }
-                  className="w-full h-9 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
+                  href={selectedPoint.is_sos ? "/admin/sos" : `/admin/laporan/${selectedPoint.id}`}
+                  className="w-full h-8.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5"
                 >
                   <span>Lihat Lembar Kerja Lengkap</span>
                   <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                 </Link>
               </div>
-            </div>
-          ) : (
-            <div className="py-14 px-4 text-center rounded-xl bg-slate-50 border border-dashed border-slate-200 flex flex-col items-center justify-center">
-              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
-                <MapPin className="w-6 h-6 stroke-[2.2]" />
+            )}
+
+            {/* Panel Filter Geospasial Mobile */}
+            <div className="space-y-2.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                Filter & Pencarian Bencana
+              </span>
+
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari lokasi atau kode laporan..."
+                  className="w-full h-8.5 pl-8 pr-3 rounded-xl bg-slate-50 border border-slate-200 text-xs placeholder:text-slate-400 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                />
               </div>
-              <h4 className="text-xs font-bold text-slate-800">
-                Pilih Titik di Peta
-              </h4>
-              <p className="text-[11px] text-slate-400 mt-1 max-w-[200px] leading-relaxed">
-                Klik salah satu pin bencana atau panggilan SOS pada peta untuk menginspeksi rincian dan melakukan komando tindakan.
+
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={selectedDisaster}
+                  onChange={(e) => setSelectedDisaster(e.target.value as DisasterType | "semua")}
+                  className="h-8.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
+                >
+                  <option value="semua">Semua Bencana</option>
+                  <option value="banjir">Banjir</option>
+                  <option value="longsor">Tanah Longsor</option>
+                  <option value="kebakaran">Kebakaran</option>
+                  <option value="gempa">Gempa Bumi</option>
+                  <option value="karhutla">Karhutla</option>
+                  <option value="lainnya">Lainnya</option>
+                </select>
+
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value as ReportStatus | "sos" | "semua")}
+                  className="h-8.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
+                >
+                  <option value="semua">Semua Status</option>
+                  <option value="diterima">Diterima</option>
+                  <option value="ditindaklanjuti">Diproses</option>
+                  <option value="selesai">Selesai</option>
+                  <option value="sos">Khusus SOS</option>
+                </select>
+              </div>
+
+              <select
+                value={selectedProvince}
+                onChange={(e) => setSelectedProvince(e.target.value)}
+                className="w-full h-8.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
+              >
+                {PROVINCE_OPTIONS.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedProvince("Semua Provinsi");
+                    setSelectedDisaster("semua");
+                    setSelectedStatus("semua");
+                    setSearchQuery("");
+                  }}
+                  className="text-xs font-bold text-orange-600 hover:underline cursor-pointer"
+                >
+                  Reset Filter
+                </button>
+                <button
+                  type="button"
+                  onClick={loadData}
+                  className="text-xs font-bold text-slate-600 flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 cursor-pointer"
+                >
+                  <RotateCw className="w-3 h-3" />
+                  <span>Segarkan</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Bottom Navigation Bar (Fixed 5 Nav Items Sesuai Gambar Referensi) */}
+        <nav className="absolute inset-x-0 bottom-0 h-14 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 flex items-center justify-around shadow-[0_-2px_12px_rgba(0,0,0,0.05)]">
+          <Link
+            href="/admin"
+            className="flex flex-col items-center justify-center text-slate-500 hover:text-slate-800 transition-colors w-14"
+          >
+            <LayoutDashboard className="w-5 h-5" />
+            <span className="text-[10px] mt-0.5 font-medium">Dasbor</span>
+          </Link>
+
+          <Link
+            href="/admin/peta"
+            className="flex flex-col items-center justify-center text-emerald-600 font-bold transition-colors w-14 relative"
+          >
+            <MapPin className="w-5 h-5 text-emerald-600" />
+            <span className="text-[10px] mt-0.5 font-bold">Peta SAR</span>
+            <span className="absolute bottom-1 w-1 h-1 rounded-full bg-emerald-600" />
+          </Link>
+
+          <Link
+            href="/admin/laporan"
+            className="flex flex-col items-center justify-center text-slate-500 hover:text-slate-800 transition-colors w-14"
+          >
+            <FileText className="w-5 h-5" />
+            <span className="text-[10px] mt-0.5 font-medium">Triage</span>
+          </Link>
+
+          <Link
+            href="/admin/sos"
+            className="flex flex-col items-center justify-center text-slate-500 hover:text-slate-800 transition-colors w-14 relative"
+          >
+            <Home className="w-5 h-5" />
+            <span className="text-[10px] mt-0.5 font-medium">Posko</span>
+            {activeSosCount > 0 && (
+              <span className="absolute top-1 right-2.5 w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+            )}
+          </Link>
+
+          <Link
+            href="/admin/statistik"
+            className="flex flex-col items-center justify-center text-slate-500 hover:text-slate-800 transition-colors w-14"
+          >
+            <BarChart2 className="w-5 h-5" />
+            <span className="text-[10px] mt-0.5 font-medium">Telemetri</span>
+          </Link>
+        </nav>
+      </div>
+
+      {/* ============================================================== */}
+      {/* 2. TAMPILAN DESKTOP (MD KE ATAS): DASHBOARD OPERASIONAL LENGKAP */}
+      {/* ============================================================== */}
+      <div className="hidden md:block space-y-6 max-w-[1400px] mx-auto font-sans pb-12 select-none">
+        {/* 1. Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
+                Yurisdiksi: {activeUnitName}
+              </span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
+              Peta Operasional Taktis
+            </h1>
+            <p className="text-xs md:text-sm text-slate-500 font-normal mt-0.5">
+              Pantau sebaran titik bencana, panggilan darurat SOS, dan armada darurat secara geospasial real-time.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
+            {/* Segarkan Data Button */}
+            <button
+              type="button"
+              onClick={loadData}
+              disabled={isLoading}
+              className="px-4 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors inline-flex items-center gap-2 cursor-pointer"
+            >
+              <RotateCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-orange-500" : "text-slate-500"}`} />
+              <span>Segarkan Data</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 2. 4 Kartu Metrik KPI (Row 1) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+          {/* Card 1: Total Titik */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#2563EB] shrink-0 font-bold">
+              <Layers className="w-6 h-6 stroke-[2.2]" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-400 font-medium">Total Titik Terdata</p>
+              <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
+                {totalTitik}
+              </p>
+              <p className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 mt-0.5">
+                <span>9 Provinsi</span>
+                <span className="text-slate-400 font-normal">tercakup</span>
               </p>
             </div>
-          )}
+          </div>
+
+          {/* Card 2: SOS Aktif */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 rounded-full bg-[#FEE2E2] flex items-center justify-center text-[#EF4444] shrink-0 font-bold">
+              <AlertCircle className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-400 font-medium">Sinyal SOS Aktif</p>
+              <p className="text-2xl md:text-3xl font-extrabold text-rose-600 tracking-tight leading-tight mt-0.5">
+                {sosTotal}
+              </p>
+              <p className="text-[11px] text-rose-600 font-semibold mt-0.5">
+                Perlu tanggap cepat
+              </p>
+            </div>
+          </div>
+
+          {/* Card 3: Dalam Penanganan */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 rounded-full bg-[#FEF3C7] flex items-center justify-center text-[#D97706] shrink-0 font-bold">
+              <Clock className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-400 font-medium">Dalam Penanganan</p>
+              <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
+                {prosesTotal}
+              </p>
+              <p className="text-[11px] text-slate-400 font-normal mt-0.5">
+                Regu di lapangan
+              </p>
+            </div>
+          </div>
+
+          {/* Card 4: Selesai */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 rounded-full bg-[#D1FAE5] flex items-center justify-center text-[#059669] shrink-0 font-bold">
+              <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-400 font-medium">Selesai Ditangani</p>
+              <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
+                {selesaiTotal}
+              </p>
+              <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">
+                Telah dievakuasi
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Filter Bar Horizontal */}
+        <div className="pt-1">
+          <div className="flex items-center justify-between gap-3 sm:gap-4 overflow-x-auto pb-1 scrollbar-none w-full">
+            {/* Search Input Box */}
+            <div className="relative w-48 sm:w-60 shrink-0">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari lokasi atau kode..."
+                className="w-full h-8.5 pl-9 pr-3 rounded-full bg-white border border-slate-200/90 text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-orange-500/30 transition-all"
+              />
+            </div>
+
+            {/* Filter Pills Controls */}
+            <div className="flex items-center gap-2.5 sm:gap-3 text-xs shrink-0 whitespace-nowrap">
+              {/* Filter Provinsi */}
+              <div className="relative shrink-0">
+                <select
+                  value={selectedProvince}
+                  onChange={(e) => setSelectedProvince(e.target.value)}
+                  className="h-8.5 pl-3 pr-7 rounded-full border border-slate-200/90 bg-white hover:border-slate-300 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none cursor-pointer appearance-none transition-all"
+                >
+                  {PROVINCE_OPTIONS.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <ChevronDown className="w-3 h-3" />
+                </div>
+              </div>
+
+              {/* Filter Bencana */}
+              <div className="relative shrink-0">
+                <select
+                  value={selectedDisaster}
+                  onChange={(e) => setSelectedDisaster(e.target.value as DisasterType | "semua")}
+                  className="h-8.5 pl-3 pr-7 rounded-full border border-slate-200/90 bg-white hover:border-slate-300 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none cursor-pointer appearance-none transition-all"
+                >
+                  <option value="semua">Semua Bencana</option>
+                  <option value="banjir">Banjir</option>
+                  <option value="longsor">Tanah Longsor</option>
+                  <option value="kebakaran">Kebakaran</option>
+                  <option value="gempa">Gempa Bumi</option>
+                  <option value="karhutla">Karhutla</option>
+                  <option value="lainnya">Lainnya</option>
+                </select>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <ChevronDown className="w-3 h-3" />
+                </div>
+              </div>
+
+              {/* Filter Status */}
+              <div className="relative shrink-0">
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value as ReportStatus | "sos" | "semua")}
+                  className="h-8.5 pl-3 pr-7 rounded-full border border-slate-200/90 bg-white hover:border-slate-300 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none cursor-pointer appearance-none transition-all"
+                >
+                  <option value="semua">Semua Status</option>
+                  <option value="diterima">Status: Diterima</option>
+                  <option value="diverifikasi">Status: Diverifikasi</option>
+                  <option value="ditindaklanjuti">Status: Ditindaklanjuti</option>
+                  <option value="selesai">Status: Selesai</option>
+                  <option value="sos">Khusus Sinyal SOS Darurat</option>
+                </select>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <ChevronDown className="w-3 h-3" />
+                </div>
+              </div>
+
+              {/* Reset Button */}
+              {(selectedProvince !== "Semua Provinsi" ||
+                selectedDisaster !== "semua" ||
+                selectedStatus !== "semua" ||
+                searchQuery.trim() !== "") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedProvince("Semua Provinsi");
+                    setSelectedDisaster("semua");
+                    setSelectedStatus("semua");
+                    setSearchQuery("");
+                  }}
+                  className="text-xs font-bold text-orange-600 hover:text-orange-700 hover:underline px-2 py-1 cursor-pointer"
+                >
+                  Reset Filter
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {actionNotice && (
+          <div className="p-3 px-4 bg-emerald-50 border border-emerald-200/80 rounded-xl text-emerald-700 text-xs font-semibold flex items-center gap-2 shadow-2xs animate-fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>{actionNotice}</span>
+          </div>
+        )}
+
+        {/* 4. Main Grid: Leaflet Map (Left 65%) + Inspector Panel (Right 35%) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 items-start">
+          {/* Map Container */}
+          <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_16px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+            <div className="w-full h-[380px] sm:h-[480px] lg:h-[600px] relative rounded-xl overflow-hidden border border-slate-100">
+              <DisasterMap
+                className="w-full h-full"
+                points={filteredPoints}
+                selectedPointId={selectedPointId}
+                onSelectPoint={(pt) => setSelectedPointId(pt.id)}
+                showLegend={false}
+              />
+            </div>
+
+            {/* Quick Legend Bar under Map */}
+            <div className="pt-3 px-1 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
+                  Legenda Peta:
+                </span>
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                  <span>Banjir</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                  <span>Longsor</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                  <span>Kebakaran</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <span>Gempa</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
+                  <span>Panggilan SOS</span>
+                </span>
+              </div>
+
+              <span className="font-semibold text-slate-600">
+                {filteredPoints.length} titik aktif
+              </span>
+            </div>
+          </div>
+
+          {/* Selected Point Inspector & Tactical Command Panel */}
+          <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_16px_rgba(0,0,0,0.02)] space-y-4">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+              <div>
+                <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+                  Panel Kendali Taktis
+                </h2>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Inspeksi detail titik kejadian & disposisi armada
+                </p>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
+                {filteredPoints.length} Titik
+              </span>
+            </div>
+
+            {selectedPoint ? (
+              <div className="space-y-4">
+                {/* Point Header */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-md">
+                      {selectedPoint.tracking_code}
+                    </span>
+                    <span
+                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
+                        selectedPoint.is_sos
+                          ? "bg-[#FFF1F2] text-[#E11D48] border border-rose-200"
+                          : selectedPoint.status === "selesai"
+                          ? "bg-[#ECFDF5] text-[#059669] border border-emerald-200"
+                          : selectedPoint.status === "ditindaklanjuti"
+                          ? "bg-[#FFF7ED] text-[#EA580C] border border-amber-200"
+                          : "bg-[#EFF6FF] text-[#2563EB] border border-blue-200"
+                      }`}
+                    >
+                      {selectedPoint.is_sos && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                      )}
+                      <span>
+                        {selectedPoint.is_sos
+                          ? "PANGGILAN SOS"
+                          : selectedPoint.status.toUpperCase()}
+                      </span>
+                    </span>
+                  </div>
+
+                  <h3 className="text-base font-bold text-slate-900 leading-snug">
+                    {selectedPoint.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1.5 flex items-start gap-1.5 leading-relaxed">
+                    <MapPin className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                    <span>{selectedPoint.location_name}</span>
+                  </p>
+                </div>
+
+                {/* Data Specs Grid */}
+                <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                  <div>
+                    <span className="text-slate-400 block text-[11px] font-medium">Jenis Bencana</span>
+                    <span className="font-bold text-slate-800 capitalize flex items-center gap-1.5 mt-0.5">
+                      {getDisasterIcon(selectedPoint.disaster_type)}
+                      <span>{selectedPoint.disaster_type}</span>
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[11px] font-medium">Waktu Masuk</span>
+                    <span className="font-bold text-slate-800 mt-0.5 block">{selectedPoint.created_at}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[11px] font-medium">Koordinat GPS</span>
+                    <span className="font-mono text-[11px] font-bold text-slate-800 mt-0.5 block">
+                      {selectedPoint.lat.toFixed(4)}, {selectedPoint.lng.toFixed(4)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[11px] font-medium">Konfirmasi Warga</span>
+                    <span className="font-bold text-amber-600 flex items-center gap-1 mt-0.5">
+                      <Shield className="w-3.5 h-3.5 text-amber-500" />
+                      <span>{selectedPoint.confirmation_count} Saksi</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-2 pt-1">
+                  <a
+                    href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-2 shadow-2xs transition-colors"
+                  >
+                    <Navigation className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Buka Rute Navigasi Google Maps</span>
+                  </a>
+
+                  {selectedPoint.status !== "selesai" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateStatus("ditindaklanjuti")}
+                        className="h-9 px-3 rounded-xl border border-amber-200 bg-[#FFF7ED] text-[#EA580C] hover:bg-amber-100 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Diproses</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateStatus("selesai")}
+                        className="h-9 px-3 rounded-xl bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                        <span>Selesai</span>
+                      </button>
+                    </div>
+                  )}
+
+                  <Link
+                    href={
+                      selectedPoint.is_sos
+                        ? "/admin/sos"
+                        : `/admin/laporan/${selectedPoint.id}`
+                    }
+                    className="w-full h-9 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
+                  >
+                    <span>Lihat Lembar Kerja Lengkap</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="py-14 px-4 text-center rounded-xl bg-slate-50 border border-dashed border-slate-200 flex flex-col items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
+                  <MapPin className="w-6 h-6 stroke-[2.2]" />
+                </div>
+                <h4 className="text-xs font-bold text-slate-800">
+                  Pilih Titik di Peta
+                </h4>
+                <p className="text-[11px] text-slate-400 mt-1 max-w-[200px] leading-relaxed">
+                  Klik salah satu pin bencana atau panggilan SOS pada peta untuk menginspeksi rincian dan melakukan komando tindakan.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
