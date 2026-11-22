@@ -1,16 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Settings,
   User,
   Shield,
-  Radio,
   Volume2,
   VolumeX,
   Bell,
   MapPin,
-  Sliders,
   Flame,
   HeartPulse,
   LifeBuoy,
@@ -20,16 +18,12 @@ import {
   RotateCcw,
   Play,
   Square,
-  Compass,
-  Send,
-  Download,
-  Trash2,
   Layers,
-  Wifi,
-  ExternalLink,
   Info,
   Lock,
   Building2,
+  Radio,
+  Sliders,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import { playSosSiren, stopSosSiren } from "@/lib/audio/siren";
@@ -40,9 +34,8 @@ import {
   type AdminSettingsConfig,
   DEFAULT_ADMIN_SETTINGS,
 } from "@/lib/services/settings";
-import { sendSosAlert } from "@/lib/services/sos";
 
-type SettingsTab = "petugas" | "audio" | "radar" | "integrasi" | "peta" | "data";
+type SettingsTab = "petugas" | "audio" | "peta";
 
 export default function AdminPengaturanPage() {
   const { adminUser, updateAdminUser, isSirenMuted, setIsSirenMuted } = useAdmin();
@@ -68,8 +61,6 @@ export default function AdminPengaturanPage() {
   const [toastMessage, setToastMessage] = useState("Pengaturan berhasil disimpan.");
   const [isTestingSiren, setIsTestingSiren] = useState(false);
   const [stopSirenRef, setStopSirenRef] = useState<(() => void) | null>(null);
-  const [isGettingGps, setIsGettingGps] = useState(false);
-  const [isSendingTestSos, setIsSendingTestSos] = useState(false);
 
   // Load initial settings and officer profile
   useEffect(() => {
@@ -148,103 +139,6 @@ export default function AdminPengaturanPage() {
     }
   };
 
-  // Ambil titik koordinat riil GPS posko saat ini
-  const handleDetectStationGps = () => {
-    if (typeof window === "undefined" || !("geolocation" in navigator)) {
-      alert("Browser Anda tidak mendukung deteksi GPS otomatis.");
-      return;
-    }
-
-    setIsGettingGps(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setSettings((prev) => ({
-          ...prev,
-          stationLat: Number(pos.coords.latitude.toFixed(5)),
-          stationLng: Number(pos.coords.longitude.toFixed(5)),
-        }));
-        setIsGettingGps(false);
-        showToast("Titik koordinat posko berhasil disinkronkan dengan GPS riil!");
-      },
-      (err) => {
-        setIsGettingGps(false);
-        alert(`Gagal mengambil koordinat GPS: ${err.message}`);
-      },
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
-  };
-
-  // Kirim Sinyal SOS Simulasi Uji Coba
-  const handleSendTestSos = async () => {
-    setIsSendingTestSos(true);
-    try {
-      await sendSosAlert({
-        lat: settings.stationLat + (Math.random() - 0.5) * 0.015,
-        lng: settings.stationLng + (Math.random() - 0.5) * 0.015,
-        assistanceType: (officerForm.unit === "damkar"
-          ? "damkar"
-          : officerForm.unit === "medis"
-          ? "medis"
-          : officerForm.unit === "polisi"
-          ? "polisi"
-          : "bnpb_bpbd") as any,
-        note: `[SIMULASI GLADI RESIK] Uji Coba Kesiapsiagaan Posko ${settings.stationCode}`,
-        phoneNumber: settings.whatsappDispatcherNumber || "0812-3456-7890",
-        senderName: "Petugas Operator Gladi Resik",
-      });
-
-      if (settings.autoPlaySiren) {
-        playSosSiren(2, settings.sirenVolume);
-      }
-
-      showToast("Sinyal darurat uji coba berhasil disiarkan ke Radar SOS!");
-    } catch {
-      alert("Gagal menyiarkan sinyal SOS simulasi.");
-    } finally {
-      setIsSendingTestSos(false);
-    }
-  };
-
-  // Bersihkan cache panggilan darurat lokal & database SOS
-  const handleClearSosCache = async () => {
-    if (window.confirm("Hapus semua riwayat sinyal darurat SOS? Data laporan umum tetap aman.")) {
-      try {
-        const { clearAllSosAlerts } = await import("@/lib/services/sos");
-        await clearAllSosAlerts();
-        showToast("Seluruh data panggilan darurat SOS berhasil dibersihkan!");
-      } catch {
-        alert("Gagal menghapus cache.");
-      }
-    }
-  };
-
-  // Ekspor rekap data konfigurasi & log
-  const handleExportConfig = () => {
-    const dataStr =
-      "data:text/json;charset=utf-8," +
-      encodeURIComponent(
-        JSON.stringify(
-          {
-            timestamp: new Date().toISOString(),
-            posko: settings,
-            petugas: officerForm,
-          },
-          null,
-          2
-        )
-      );
-    const downloadAnchor = document.createElement("a");
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute(
-      "download",
-      `sigapbumi_config_${settings.stationCode.toLowerCase()}_${Date.now()}.json`
-    );
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    showToast("Berkas konfigurasi posko berhasil diunduh!");
-  };
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
       {/* Toast Notification */}
@@ -270,8 +164,7 @@ export default function AdminPengaturanPage() {
             Pengaturan & Konfigurasi Posko
           </h1>
           <p className="text-xs md:text-sm text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Kelola profil petugas jaga, preferensi sirene darurat SOS, radius radar geofencing,
-            dan integrasi komunikasi taktis lintas instansi.
+            Kelola profil petugas jaga, preferensi sirene darurat SOS, dan opsi visualisasi tampilan peta posko.
           </p>
         </div>
 
@@ -331,32 +224,6 @@ export default function AdminPengaturanPage() {
 
         <button
           type="button"
-          onClick={() => setActiveTab("radar")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
-            activeTab === "radar"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-          }`}
-        >
-          <Compass className="w-4 h-4 text-blue-500" />
-          <span>Radar & Geofencing</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("integrasi")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
-            activeTab === "integrasi"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-          }`}
-        >
-          <Radio className="w-4 h-4 text-emerald-500" />
-          <span>Integrasi & Komunikasi</span>
-        </button>
-
-        <button
-          type="button"
           onClick={() => setActiveTab("peta")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
             activeTab === "peta"
@@ -366,19 +233,6 @@ export default function AdminPengaturanPage() {
         >
           <Layers className="w-4 h-4 text-purple-500" />
           <span>Tampilan Peta</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("data")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
-            activeTab === "data"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-          }`}
-        >
-          <Sliders className="w-4 h-4 text-slate-600" />
-          <span>Uji Coba & Data</span>
         </button>
       </div>
 
@@ -891,270 +745,7 @@ export default function AdminPengaturanPage() {
         </div>
       )}
 
-      {/* Tab 3: Radar & Geofencing */}
-      {activeTab === "radar" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="p-6 md:p-8 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-6">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <Compass className="w-5 h-5 text-blue-600" />
-                  <span>Jangkauan Radar Geofencing Tanggap Darurat</span>
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Menentukan perimeter radius wilayah tanggung jawab posko dan target SLA waktu respon cepat armada.
-                </p>
-              </div>
-
-              {/* Titik Pusat Koordinat Posko */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-[#EA580C]" />
-                    <span>Koordinat Pusat Posko Induk (Base Station)</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleDetectStationGps}
-                    disabled={isGettingGps}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-[11px] font-bold text-slate-700 transition-colors shadow-xs"
-                  >
-                    <Compass className={`w-3.5 h-3.5 ${isGettingGps ? "animate-spin text-blue-600" : ""}`} />
-                    <span>{isGettingGps ? "Mencari GPS..." : "Gunakan GPS Saat Ini"}</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <span className="text-[10px] text-slate-500 font-medium">Latitude:</span>
-                    <input
-                      type="number"
-                      step="0.00001"
-                      value={settings.stationLat}
-                      onChange={(e) =>
-                        setSettings({ ...settings, stationLat: parseFloat(e.target.value) || 0 })
-                      }
-                      className="w-full mt-1 px-3 py-2 text-xs font-mono rounded-lg border border-slate-200 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-500 font-medium">Longitude:</span>
-                    <input
-                      type="number"
-                      step="0.00001"
-                      value={settings.stationLng}
-                      onChange={(e) =>
-                        setSettings({ ...settings, stationLng: parseFloat(e.target.value) || 0 })
-                      }
-                      className="w-full mt-1 px-3 py-2 text-xs font-mono rounded-lg border border-slate-200 bg-white"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Pilihan Radius Geofence */}
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-2">
-                  Radius Geofence Prioritas Posko
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                  {[
-                    { km: 5, label: "5 KM", desc: "Kelurahan/Lokal" },
-                    { km: 10, label: "10 KM", desc: "Kecamatan" },
-                    { km: 25, label: "25 KM", desc: "Kota / Rayon (Standar)" },
-                    { km: 50, label: "50 KM", desc: "Lintas Wilayah" },
-                    { km: 0, label: "Nasional", desc: "Semua Sinyal Masuk" },
-                  ].map((r) => {
-                    const isSelected = settings.geofenceRadiusKm === r.km;
-                    return (
-                      <button
-                        key={r.km}
-                        type="button"
-                        onClick={() => setSettings({ ...settings, geofenceRadiusKm: r.km })}
-                        className={`p-3 rounded-xl border text-center transition-all ${
-                          isSelected
-                            ? "border-blue-600 bg-blue-50/70 ring-1 ring-blue-600 text-blue-900"
-                            : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        <p className="text-xs font-extrabold">{r.label}</p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">{r.desc}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Target SLA Waktu Respon Cepat */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                    Target SLA Waktu Tanggap Armada (Menit)
-                  </label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="60"
-                    value={settings.targetSlaMinutes}
-                    onChange={(e) =>
-                      setSettings({ ...settings, targetSlaMinutes: parseInt(e.target.value) || 15 })
-                    }
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-mono font-bold text-slate-800"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Laporan darurat dengan waktu tunggu melampaui target ini akan berubah warna merah di radar.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                    Ambang Skor Prioritas Tinggi (0 - 100)
-                  </label>
-                  <input
-                    type="number"
-                    min="50"
-                    max="95"
-                    value={settings.highPriorityThreshold}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        highPriorityThreshold: parseInt(e.target.value) || 75,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-mono font-bold text-slate-800"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Laporan dengan skor AI di atas angka ini otomatis memicu tanda bahaya tingkat satu.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <Compass className="w-4 h-4 text-blue-600" />
-                <span>Prinsip Radar Geofencing</span>
-              </h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Radius Geofencing membantu operator memilah antara insiden di zona yurisdiksi utama dan insiden lintas rayon posko lain.
-              </p>
-              <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200/60 text-xs text-blue-900 font-medium">
-                Sinyal SOS dari warga di luar radius ini tetap tercatat, namun tidak memicu alarm otomatis secara agresif.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 4: Integrasi & Komunikasi */}
-      {activeTab === "integrasi" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="p-6 md:p-8 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-6">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <Radio className="w-5 h-5 text-emerald-600" />
-                  <span>Kanal Dispatcher & Komunikasi Eksternal</span>
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Hubungkan sistem posko dengan gateway perpesanan WhatsApp, notifikasi desktop browser, dan webhook darurat.
-                </p>
-              </div>
-
-              {/* Notifikasi Desktop Browser */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200/80">
-                <div className="pr-4">
-                  <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                    <Bell className="w-4 h-4 text-amber-500" />
-                    <span>Notifikasi Pop-up Desktop Browser</span>
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Tampilkan pop-up peringatan di layar komputer petugas meskipun tab posko sedang berada di latar belakang.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if ("Notification" in window) {
-                      Notification.requestPermission().then((res) => {
-                        if (res === "granted") {
-                          new Notification("SigapBumi Posko", {
-                            body: "Notifikasi darurat desktop posko aktif dan berfungsi!",
-                          });
-                          showToast("Izin notifikasi desktop berhasil diaktifkan!");
-                        } else {
-                          alert("Izin notifikasi ditolak oleh browser.");
-                        }
-                      });
-                    }
-                  }}
-                  className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-xs"
-                >
-                  Uji Izin Notifikasi
-                </button>
-              </div>
-
-              {/* WhatsApp Gateway Dispatcher */}
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                  Nomor WhatsApp Dispatcher Komando
-                </label>
-                <input
-                  type="tel"
-                  value={settings.whatsappDispatcherNumber}
-                  onChange={(e) =>
-                    setSettings({ ...settings, whatsappDispatcherNumber: e.target.value })
-                  }
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-mono text-slate-800"
-                  placeholder="Contoh: 0811-9876-5432"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Nomor ini akan terlampir otomatis saat operator menekan tombol &ldquo;Kirim Info ke Armada via WA&rdquo;.
-                </p>
-              </div>
-
-              {/* Webhook Dispatcher Eksternal */}
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                  Webhook Dispatcher Terpadu (Opsional)
-                </label>
-                <input
-                  type="url"
-                  value={settings.emergencyWebhookUrl}
-                  onChange={(e) =>
-                    setSettings({ ...settings, emergencyWebhookUrl: e.target.value })
-                  }
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-mono text-slate-800"
-                  placeholder="https://api.bpbd.go.id/dispatch/webhook"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  URL endpoint POST JSON untuk meneruskan payload sinyal SOS ke sistem komando nasional BNPB/112.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <Wifi className="w-4 h-4 text-emerald-600" />
-                <span>Konektivitas Realtime Supabase</span>
-              </h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Kanal WebSocket `sos_alerts` dan `reports` aktif mendengarkan perubahan data secara langsung di browser tanpa perlu reload halaman.
-              </p>
-              <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-800 font-bold">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Kanal Siaga 24 Jam Terhubung</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 5: Tampilan Peta */}
+      {/* Tab 3: Tampilan Peta */}
       {activeTab === "peta" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
@@ -1265,128 +856,6 @@ export default function AdminPengaturanPage() {
               </h4>
               <p className="text-xs text-slate-600 leading-relaxed">
                 Pengaturan interval membantu menghemat konsumsi memori browser saat memantau dashboard 24/7 di monitor layar lebar posko.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 6: Uji Coba & Manajemen Data */}
-      {activeTab === "data" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="p-6 md:p-8 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-6">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <Sliders className="w-5 h-5 text-slate-700" />
-                  <span>Simulasi Gladi Resik & Pemeliharaan Sistem</span>
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Alat bantu pengujian kesiapsiagaan tim, ekspor berkas audit, dan pembersihan cache darurat.
-                </p>
-              </div>
-
-              {/* Mode Simulasi Gladi Resik */}
-              <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="p-1 rounded bg-amber-500 text-white">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                    </span>
-                    <h4 className="text-xs font-bold text-amber-950">
-                      Mode Simulasi Gladi Resik (Latihan Siaga Bencana)
-                    </h4>
-                  </div>
-                  <p className="text-xs text-amber-900/80 mt-1 leading-relaxed">
-                    Saat mode ini aktif, banner penanda &ldquo;Mode Simulasi&rdquo; akan ditampilkan agar operator dapat membedakan data latihan dengan kejadian bencana nyata.
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
-                  <input
-                    type="checkbox"
-                    checked={settings.simulationMode}
-                    onChange={(e) =>
-                      setSettings({ ...settings, simulationMode: e.target.checked })
-                    }
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500" />
-                </label>
-              </div>
-
-              {/* Tombol Aksi Uji Coba */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Broadcast Test SOS */}
-                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col justify-between">
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-900 flex items-center gap-1.5 mb-1">
-                      <Send className="w-3.5 h-3.5 text-rose-600" />
-                      <span>Siarkan Sinyal SOS Uji Coba</span>
-                    </h5>
-                    <p className="text-[11px] text-slate-500 leading-snug">
-                      Membuat satu sinyal panggilan darurat demo untuk menguji radar dan sirine posko.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleSendTestSos}
-                    disabled={isSendingTestSos}
-                    className="mt-3 w-full py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-xs"
-                  >
-                    {isSendingTestSos ? "Menyiarkan..." : "Kirim SOS Simulasi"}
-                  </button>
-                </div>
-
-                {/* Ekspor Konfigurasi */}
-                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col justify-between">
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-900 flex items-center gap-1.5 mb-1">
-                      <Download className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Ekspor Berkas Konfigurasi Posko</span>
-                    </h5>
-                    <p className="text-[11px] text-slate-500 leading-snug">
-                      Unduh salinan JSON konfigurasi stasiun posko dan parameter radar operasional.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleExportConfig}
-                    className="mt-3 w-full py-2 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors shadow-xs"
-                  >
-                    Unduh File JSON
-                  </button>
-                </div>
-
-                {/* Hapus Cache SOS */}
-                <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/40 flex flex-col justify-between sm:col-span-2">
-                  <div>
-                    <h5 className="text-xs font-bold text-rose-900 flex items-center gap-1.5 mb-1">
-                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                      <span>Bersihkan Cache Sinyal Darurat Lokal</span>
-                    </h5>
-                    <p className="text-[11px] text-rose-700 leading-snug">
-                      Menghapus panggilan darurat simulasi yang tersimpan di browser setelah kegiatan gladi resik selesai.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleClearSosCache}
-                    className="mt-3 w-fit py-2 px-4 rounded-lg bg-white border border-rose-300 hover:bg-rose-50 text-rose-700 font-bold text-xs transition-colors shadow-xs"
-                  >
-                    Bersihkan Cache Sekarang
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-3">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Integritas Data
-              </h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Semua pengaturan disimpan dengan aman pada browser lokal petugas dan dapat dicadangkan kapan saja untuk pergantian shift piket.
               </p>
             </div>
           </div>
