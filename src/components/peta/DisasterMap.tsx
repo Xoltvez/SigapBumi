@@ -103,9 +103,36 @@ function safeNavigateMap(
   }
 }
 
-// Generate custom DivIcon based on status and emergency SOS
-function createPinIcon(status: ReportStatus, isSos: boolean = false) {
+// Generate custom DivIcon based on status, emergency SOS, and selected state
+function createPinIcon(
+  status: ReportStatus,
+  isSos: boolean = false,
+  isSelected: boolean = false,
+  trackingCode?: string
+) {
   if (isSos) {
+    if (isSelected) {
+      return L.divIcon({
+        className: "custom-sos-pin-selected",
+        html: `
+          <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <!-- Outer Pulsing Radar Ring -->
+            <div style="position: absolute; width: 100%; height: 100%; border-radius: 9999px; background-color: rgba(220, 38, 38, 0.45); animation: ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+            <!-- Floating Indicator Badge Label -->
+            <div style="position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); background: #0F172A; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2.5px 8px; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.4); border: 1.5px solid #EF4444; white-space: nowrap; pointer-events: none; display: flex; align-items: center; gap: 4px; z-index: 100;">
+              <span style="width: 6px; height: 6px; border-radius: 9999px; background: #EF4444; animation: ping 1s infinite;"></span>
+              <span>${trackingCode || "SOS AKTIF"}</span>
+            </div>
+            <!-- Core Selected SOS Pin -->
+            <div style="width: 26px; height: 26px; border-radius: 9999px; background-color: #DC2626; border: 3px solid #FFFFFF; box-shadow: 0 0 0 3px #DC2626, 0 6px 16px rgba(220,38,38,0.7); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 10px;">SOS</div>
+          </div>
+        `,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+        popupAnchor: [0, -22],
+      });
+    }
+
     return L.divIcon({
       className: "custom-sos-pin",
       html: `
@@ -124,6 +151,28 @@ function createPinIcon(status: ReportStatus, isSos: boolean = false) {
   if (status === "ditindaklanjuti") bgHex = "#F59E0B";
   else if (status === "selesai") bgHex = "#16A34A";
   else if (status === "ditolak") bgHex = "#DC2626";
+
+  if (isSelected) {
+    return L.divIcon({
+      className: "custom-report-pin-selected",
+      html: `
+        <div style="position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <!-- Outer Pulsing Radar Ring -->
+          <div style="position: absolute; width: 100%; height: 100%; border-radius: 9999px; background-color: ${bgHex}; opacity: 0.4; animation: ping 1.3s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+          <!-- Floating Indicator Badge Label -->
+          <div style="position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); background: #0F172A; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2.5px 8px; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.4); border: 1.5px solid ${bgHex}; white-space: nowrap; pointer-events: none; display: flex; align-items: center; gap: 4px; z-index: 100;">
+            <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: ${bgHex};"></span>
+            <span>${trackingCode || "TERPILIH"}</span>
+          </div>
+          <!-- Core Selected Pin -->
+          <div style="width: 22px; height: 22px; border-radius: 9999px; background-color: ${bgHex}; border: 3px solid #FFFFFF; box-shadow: 0 0 0 3px ${bgHex}, 0 4px 14px rgba(0,0,0,0.45);"></div>
+        </div>
+      `,
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+      popupAnchor: [0, -20],
+    });
+  }
 
   return L.divIcon({
     className: "custom-report-pin",
@@ -459,6 +508,18 @@ export default function DisasterMap({
     }
   }, [selectedPointId, points]);
 
+  // Update visual indikator marker terpilih secara instan (animasi ring radar & badge kode)
+  useEffect(() => {
+    markersMapRef.current.forEach((marker, id) => {
+      const pt = points.find((p) => p.id === id);
+      if (pt) {
+        const isSelected = id === selectedPointId;
+        marker.setIcon(createPinIcon(pt.status, pt.is_sos, isSelected, pt.tracking_code));
+        marker.setZIndexOffset(isSelected ? 1000 : 0);
+      }
+    });
+  }, [selectedPointId, points]);
+
   // Update Markers secara cerdas (diffing) saat points berubah: Tanpa glitch, tanpa flicker, dan tidak mereset zoom peta
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -516,16 +577,20 @@ export default function DisasterMap({
         if (Math.abs(curLatLng.lat - latNum) > 0.00001 || Math.abs(curLatLng.lng - lngNum) > 0.00001) {
           existingMarker.setLatLng([latNum, lngNum]);
         }
+        const isSelected = pt.id === selectedPointId;
         // Perbarui icon jika status/sos berubah
-        existingMarker.setIcon(createPinIcon(pt.status, pt.is_sos));
+        existingMarker.setIcon(createPinIcon(pt.status, pt.is_sos, isSelected, pt.tracking_code));
+        existingMarker.setZIndexOffset(isSelected ? 1000 : 0);
         // Perbarui isi popup jika popup diaktifkan
         if (!disablePopup) {
           existingMarker.setPopupContent(popupHtml);
         }
       } else {
+        const isSelected = pt.id === selectedPointId;
         // Buat marker baru
         const marker = L.marker([latNum, lngNum], {
-          icon: createPinIcon(pt.status, pt.is_sos),
+          icon: createPinIcon(pt.status, pt.is_sos, isSelected, pt.tracking_code),
+          zIndexOffset: isSelected ? 1000 : 0,
         });
 
         if (!disablePopup) {

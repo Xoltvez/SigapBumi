@@ -87,13 +87,6 @@ export default function AdminPetaPage() {
   // State khusus drawer & filter mobile
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
-  // Otomatis buka bottom sheet ketika ada titik kejadian yang dipilih
-  useEffect(() => {
-    if (selectedPointId) {
-      setIsMobileSheetOpen(true);
-    }
-  }, [selectedPointId]);
-
   // Handler tutup detail informasi titik & otomatis zoom out fokus ke seluruh Indonesia
   const handleCloseDetail = useCallback((e?: React.MouseEvent) => {
     if (e) {
@@ -357,7 +350,7 @@ export default function AdminPetaPage() {
             selectedPointId={selectedPointId}
             onSelectPoint={(pt) => {
               setSelectedPointId(pt.id);
-              setIsMobileSheetOpen(true);
+              setIsMobileSheetOpen(false); // Tetap di bawah (peek mode) agar peta tidak tertutup!
             }}
             showLegend={false}
             disablePopup={true}
@@ -443,7 +436,14 @@ export default function AdminPetaPage() {
           </div>
 
           {/* Header Bottom Sheet */}
-          <div className="px-4 py-2 flex items-center justify-between gap-3 border-b border-slate-100">
+          <div
+            onClick={() => {
+              if (!isMobileSheetOpen) {
+                setIsMobileSheetOpen(true);
+              }
+            }}
+            className="px-4 py-2 flex items-center justify-between gap-3 border-b border-slate-100 cursor-pointer select-none"
+          >
             {selectedPoint ? (
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-0.5">
@@ -484,7 +484,7 @@ export default function AdminPetaPage() {
               </div>
             )}
 
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
               {selectedPoint && (
                 <button
                   type="button"
@@ -495,18 +495,42 @@ export default function AdminPetaPage() {
                   <X className="w-4 h-4" />
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => setIsMobileSheetOpen((prev) => !prev)}
-                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-600 cursor-pointer"
-                title={isMobileSheetOpen ? "Tutup Sheet" : "Buka Sheet"}
-              >
-                {isMobileSheetOpen ? (
-                  <ChevronDown className="w-4 h-4" />
+
+              {selectedPoint ? (
+                isMobileSheetOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileSheetOpen(false)}
+                    className="p-1.5 rounded-full hover:bg-slate-100 text-slate-600 cursor-pointer"
+                    title="Lipat ke Bawah"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
                 ) : (
-                  <ChevronUp className="w-4 h-4" />
-                )}
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileSheetOpen(true)}
+                    className="p-1 px-2.5 rounded-full bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Buka Detail Informasi"
+                  >
+                    <span className="text-[11px] font-bold">Detail</span>
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                )
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsMobileSheetOpen((prev) => !prev)}
+                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-600 cursor-pointer"
+                  title={isMobileSheetOpen ? "Tutup Sheet" : "Buka Sheet"}
+                >
+                  {isMobileSheetOpen ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronUp className="w-4 h-4" />
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
