@@ -831,19 +831,9 @@ export default function AdminPetaPage() {
                         <Navigation className="w-3.5 h-3.5 text-white fill-white" />
                         <span>Mulai Rute</span>
                       </button>
-
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${selectedPoint.lat},${selectedPoint.lng}&travelmode=driving`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-slate-400 hover:text-slate-600 font-medium inline-flex items-center justify-center gap-1 text-center w-full pt-0.5"
-                      >
-                        <span>Buka panduan eksternal Google Maps</span>
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
                     </div>
                   ) : (
-                    <div className="space-y-1.5">
+                    <div>
                       <button
                         type="button"
                         onClick={() => handleStartNavigation(selectedPoint)}
@@ -862,16 +852,6 @@ export default function AdminPetaPage() {
                           </>
                         )}
                       </button>
-
-                      <a
-                        href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full h-8 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
-                      >
-                        <ExternalLink className="w-3 h-3 text-slate-400" />
-                        <span>Buka Titik di Google Maps</span>
-                      </a>
                     </div>
                   )}
 
@@ -1477,19 +1457,9 @@ export default function AdminPetaPage() {
                         <Navigation className="w-4 h-4 text-white fill-white" />
                         <span>Mulai Rute</span>
                       </button>
-
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${selectedPoint.lat},${selectedPoint.lng}&travelmode=driving`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-slate-400 hover:text-slate-600 font-medium inline-flex items-center justify-center gap-1 text-center w-full pt-0.5"
-                      >
-                        <span>Buka panduan eksternal Google Maps</span>
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
                     </div>
                   ) : (
-                    <div className="space-y-1.5">
+                    <div>
                       <button
                         type="button"
                         onClick={() => handleStartNavigation(selectedPoint)}
@@ -1508,16 +1478,6 @@ export default function AdminPetaPage() {
                           </>
                         )}
                       </button>
-
-                      <a
-                        href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full h-8 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Buka Titik di Google Maps</span>
-                      </a>
                     </div>
                   )}
 
