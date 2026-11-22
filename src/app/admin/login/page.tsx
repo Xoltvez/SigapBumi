@@ -80,6 +80,8 @@ function AdminLoginContent() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [successMsg, setSuccessMsg] = useState<string>("");
+  const [shakeKey, setShakeKey] = useState<number>(0);
+  const [fieldErrors, setFieldErrors] = useState<{ nip?: string; password?: string }>({});
 
   // Muat pilihan instansi yang sebelumnya diingat jika ada
   React.useEffect(() => {
@@ -108,16 +110,23 @@ function AdminLoginContent() {
     e.preventDefault();
     setErrorMsg("");
 
+    const errors: { nip?: string; password?: string } = {};
+
     if (!nip.trim()) {
-      setErrorMsg("Harap masukkan NIP atau ID Petugas Posko.");
-      return;
+      errors.nip = "Harap masukkan NIP atau ID Petugas Posko.";
     }
 
     if (!password.trim()) {
-      setErrorMsg("Harap masukkan kata sandi akses komando.");
+      errors.password = "Harap masukkan kata sandi akses komando.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setShakeKey((prev) => prev + 1);
       return;
     }
 
+    setFieldErrors({});
     setIsLoading(true);
 
     const activeUnitData =
@@ -248,7 +257,12 @@ function AdminLoginContent() {
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
+          <form
+            key={shakeKey}
+            noValidate
+            onSubmit={handleLoginSubmit}
+            className={`space-y-4 ${shakeKey > 0 ? "animate-shake" : ""}`}
+          >
             {/* Instansi / Unit Dropdown (Pilihan Role Akses) */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -283,7 +297,7 @@ function AdminLoginContent() {
             {/* NIP / ID Input */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                NIP / ID Petugas
+                NIP / ID Petugas <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
@@ -294,19 +308,30 @@ function AdminLoginContent() {
                   value={nip}
                   onChange={(e) => {
                     setNip(e.target.value);
+                    if (fieldErrors.nip) setFieldErrors((prev) => ({ ...prev, nip: undefined }));
                     setErrorMsg("");
                   }}
                   placeholder="Contoh: BPBD-JKT-042"
-                  className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-slate-200 bg-white text-xs font-mono uppercase text-slate-800 placeholder:text-slate-400 placeholder:font-sans focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition-all"
+                  className={`w-full h-11 pl-10 pr-3.5 rounded-xl border bg-white text-xs font-mono uppercase text-slate-800 placeholder:text-slate-400 placeholder:font-sans focus:outline-none transition-all ${
+                    fieldErrors.nip
+                      ? "border-red-500 focus:border-red-500 ring-1 ring-red-500/20"
+                      : "border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                  }`}
                 />
               </div>
+              {fieldErrors.nip && (
+                <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 mt-1.5 animate-in fade-in">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{fieldErrors.nip}</span>
+                </p>
+              )}
             </div>
 
             {/* Password Input */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-semibold text-slate-700">
-                  Kata Sandi
+                  Kata Sandi <span className="text-red-500">*</span>
                 </label>
                 <span className="text-[11px] text-slate-400">
                   Default: <code className="text-slate-600 font-mono">admin123</code>
@@ -321,10 +346,15 @@ function AdminLoginContent() {
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
+                    if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
                     setErrorMsg("");
                   }}
                   placeholder="••••••••"
-                  className="w-full h-11 pl-10 pr-10 rounded-xl border border-slate-200 bg-white text-xs font-mono text-slate-800 placeholder:text-slate-400 placeholder:font-sans focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition-all"
+                  className={`w-full h-11 pl-10 pr-10 rounded-xl border bg-white text-xs font-mono text-slate-800 placeholder:text-slate-400 placeholder:font-sans focus:outline-none transition-all ${
+                    fieldErrors.password
+                      ? "border-red-500 focus:border-red-500 ring-1 ring-red-500/20"
+                      : "border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                  }`}
                 />
                 <button
                   type="button"
@@ -339,6 +369,12 @@ function AdminLoginContent() {
                   )}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 mt-1.5 animate-in fade-in">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{fieldErrors.password}</span>
+                </p>
+              )}
             </div>
 
             {/* Remember Unit Preference */}

@@ -39,6 +39,17 @@ export default function DaftarPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Error per-field & Shake state
+  const [fieldErrors, setFieldErrors] = useState<{
+    fullName?: string;
+    phoneNumber?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+    agreeTerms?: string;
+  }>({});
+  const [shakeKey, setShakeKey] = useState(0);
+
   // Kriteria Validasi Kata Sandi
   const hasMinLen = password.length >= 8;
   const hasUpperLower = /[a-z]/.test(password) && /[A-Z]/.test(password);
@@ -54,32 +65,42 @@ export default function DaftarPage() {
     e.preventDefault();
     setErrorMsg(null);
 
-    // Validasi Form
+    // Validasi Form Komprehensif
+    const errors: typeof fieldErrors = {};
     if (!fullName.trim()) {
-      setErrorMsg("Mohon isi Nama Lengkap Anda.");
-      return;
+      errors.fullName = "Nama lengkap wajib diisi sesuai identitas.";
     }
     if (!phoneNumber.trim()) {
-      setErrorMsg("Mohon isi Nomor WhatsApp / Telepon aktif.");
-      return;
+      errors.phoneNumber = "Nomor WhatsApp aktif wajib diisi.";
+    } else if (phoneNumber.replace(/\D/g, "").length < 9) {
+      errors.phoneNumber = "Nomor WhatsApp minimal 9 digit angka.";
     }
-    if (!email.trim() || !email.includes("@")) {
-      setErrorMsg("Mohon masukkan alamat email yang valid.");
-      return;
+    if (!email.trim()) {
+      errors.email = "Alamat email wajib diisi.";
+    } else if (!email.includes("@") || !email.includes(".")) {
+      errors.email = "Format alamat email tidak valid.";
     }
-    if (!isPasswordValid) {
-      setErrorMsg("Kata sandi belum memenuhi kriteria keamanan (minimal 8 karakter, huruf besar & kecil, angka, dan simbol).");
-      return;
+    if (!password) {
+      errors.password = "Kata sandi wajib diisi.";
+    } else if (!isPasswordValid) {
+      errors.password = "Kata sandi belum memenuhi seluruh kriteria keamanan.";
     }
-    if (password !== confirmPassword) {
-      setErrorMsg("Konfirmasi kata sandi tidak cocok. Silakan periksa kembali.");
-      return;
+    if (!confirmPassword) {
+      errors.confirmPassword = "Ketik ulang kata sandi Anda di sini.";
+    } else if (password !== confirmPassword) {
+      errors.confirmPassword = "Konfirmasi kata sandi tidak cocok.";
     }
     if (!agreeTerms) {
-      setErrorMsg("Anda harus menyetujui komitmen kebenaran data pelaporan.");
+      errors.agreeTerms = "Anda harus menyetujui komitmen kebenaran data pelaporan.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setShakeKey((prev) => prev + 1);
       return;
     }
 
+    setFieldErrors({});
     setLoading(true);
 
     try {
@@ -189,7 +210,12 @@ export default function DaftarPage() {
           </div>
         ) : (
           /* Form Pendaftaran */
-          <form onSubmit={handleRegister} className="space-y-4 text-left">
+          <form
+            key={shakeKey}
+            noValidate
+            onSubmit={handleRegister}
+            className={`space-y-4 text-left ${shakeKey > 0 ? "animate-shake" : ""}`}
+          >
             {errorMsg && (
               <div className="p-3.5 rounded-xl bg-danger-soft border border-danger/30 flex items-start gap-2.5 text-xs text-danger-text animate-in fade-in">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-danger" />
@@ -205,14 +231,26 @@ export default function DaftarPage() {
               <div className="relative">
                 <input
                   type="text"
-                  required
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    if (fieldErrors.fullName) setFieldErrors((prev) => ({ ...prev, fullName: undefined }));
+                  }}
                   placeholder="Contoh: Budi Prasetyo"
-                  className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-line bg-surface text-xs sm:text-sm text-ink placeholder:text-ink-muted focus:border-primary focus:outline-none"
+                  className={`w-full h-11 pl-10 pr-3.5 rounded-xl border bg-surface text-xs sm:text-sm text-ink placeholder:text-ink-muted focus:outline-none transition-all ${
+                    fieldErrors.fullName
+                      ? "border-danger focus:border-danger ring-1 ring-danger/20"
+                      : "border-line focus:border-primary"
+                  }`}
                 />
-                <User className="w-4 h-4 text-ink-muted absolute left-3.5 top-3.5" />
+                <User className={`w-4 h-4 absolute left-3.5 top-3.5 transition-colors ${fieldErrors.fullName ? "text-danger" : "text-ink-muted"}`} />
               </div>
+              {fieldErrors.fullName && (
+                <p className="text-[11px] text-danger font-medium flex items-center gap-1 mt-1.5 animate-in fade-in">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{fieldErrors.fullName}</span>
+                </p>
+              )}
             </div>
 
             {/* Nomor HP / WhatsApp */}
@@ -223,17 +261,30 @@ export default function DaftarPage() {
               <div className="relative">
                 <input
                   type="tel"
-                  required
                   value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  onChange={(e) => {
+                    setPhoneNumber(e.target.value);
+                    if (fieldErrors.phoneNumber) setFieldErrors((prev) => ({ ...prev, phoneNumber: undefined }));
+                  }}
                   placeholder="Contoh: 081234567890"
-                  className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-line bg-surface text-xs sm:text-sm text-ink placeholder:text-ink-muted focus:border-primary focus:outline-none"
+                  className={`w-full h-11 pl-10 pr-3.5 rounded-xl border bg-surface text-xs sm:text-sm text-ink placeholder:text-ink-muted focus:outline-none transition-all ${
+                    fieldErrors.phoneNumber
+                      ? "border-danger focus:border-danger ring-1 ring-danger/20"
+                      : "border-line focus:border-primary"
+                  }`}
                 />
-                <Phone className="w-4 h-4 text-ink-muted absolute left-3.5 top-3.5" />
+                <Phone className={`w-4 h-4 absolute left-3.5 top-3.5 transition-colors ${fieldErrors.phoneNumber ? "text-danger" : "text-ink-muted"}`} />
               </div>
-              <p className="text-[11px] text-ink-muted mt-1">
-                Digunakan posko terpadu untuk verifikasi cepat saat Anda mengirimkan sinyal darurat atau laporan.
-              </p>
+              {fieldErrors.phoneNumber ? (
+                <p className="text-[11px] text-danger font-medium flex items-center gap-1 mt-1.5 animate-in fade-in">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{fieldErrors.phoneNumber}</span>
+                </p>
+              ) : (
+                <p className="text-[11px] text-ink-muted mt-1">
+                  Digunakan posko terpadu untuk verifikasi cepat saat Anda mengirimkan sinyal darurat atau laporan.
+                </p>
+              )}
             </div>
 
             {/* Email */}
@@ -244,14 +295,26 @@ export default function DaftarPage() {
               <div className="relative">
                 <input
                   type="email"
-                  required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                  }}
                   placeholder="nama@email.com"
-                  className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-line bg-surface text-xs sm:text-sm text-ink placeholder:text-ink-muted focus:border-primary focus:outline-none"
+                  className={`w-full h-11 pl-10 pr-3.5 rounded-xl border bg-surface text-xs sm:text-sm text-ink placeholder:text-ink-muted focus:outline-none transition-all ${
+                    fieldErrors.email
+                      ? "border-danger focus:border-danger ring-1 ring-danger/20"
+                      : "border-line focus:border-primary"
+                  }`}
                 />
-                <Mail className="w-4 h-4 text-ink-muted absolute left-3.5 top-3.5" />
+                <Mail className={`w-4 h-4 absolute left-3.5 top-3.5 transition-colors ${fieldErrors.email ? "text-danger" : "text-ink-muted"}`} />
               </div>
+              {fieldErrors.email && (
+                <p className="text-[11px] text-danger font-medium flex items-center gap-1 mt-1.5 animate-in fade-in">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{fieldErrors.email}</span>
+                </p>
+              )}
             </div>
 
             {/* Kata Sandi & Konfirmasi */}
@@ -263,19 +326,23 @@ export default function DaftarPage() {
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
-                    required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                    }}
                     placeholder="Minimal 8 karakter"
                     className={`w-full h-11 pl-9 pr-9 rounded-xl border bg-surface text-xs text-ink placeholder:text-ink-muted focus:outline-none transition-all ${
-                      password
+                      fieldErrors.password
+                        ? "border-danger focus:border-danger ring-1 ring-danger/20"
+                        : password
                         ? isPasswordValid
                           ? "border-emerald-500 focus:border-emerald-500 ring-1 ring-emerald-500/20"
                           : "border-line focus:border-primary"
                         : "border-line focus:border-primary"
                     }`}
                   />
-                  <Lock className="w-3.5 h-3.5 text-ink-muted absolute left-3 top-3.5" />
+                  <Lock className={`w-3.5 h-3.5 absolute left-3 top-3.5 transition-colors ${fieldErrors.password ? "text-danger" : "text-ink-muted"}`} />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
@@ -284,6 +351,12 @@ export default function DaftarPage() {
                     {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
+                {fieldErrors.password && (
+                  <p className="text-[11px] text-danger font-medium flex items-center gap-1 mt-1.5 animate-in fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{fieldErrors.password}</span>
+                  </p>
+                )}
               </div>
 
               <div>
@@ -293,19 +366,23 @@ export default function DaftarPage() {
                 <div className="relative">
                   <input
                     type={showConfirmPassword ? "text" : "password"}
-                    required
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (fieldErrors.confirmPassword) setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+                    }}
                     placeholder="Ketik ulang kata sandi"
                     className={`w-full h-11 pl-9 pr-9 rounded-xl border bg-surface text-xs text-ink placeholder:text-ink-muted focus:outline-none transition-all ${
-                      confirmPassword
+                      fieldErrors.confirmPassword
+                        ? "border-danger focus:border-danger ring-1 ring-danger/20"
+                        : confirmPassword
                         ? isConfirmMatching
                           ? "border-emerald-500 focus:border-emerald-500 ring-1 ring-emerald-500/20"
                           : "border-rose-400 focus:border-rose-500 ring-1 ring-rose-400/20"
                         : "border-line focus:border-primary"
                     }`}
                   />
-                  <Lock className="w-3.5 h-3.5 text-ink-muted absolute left-3 top-3.5" />
+                  <Lock className={`w-3.5 h-3.5 absolute left-3 top-3.5 transition-colors ${fieldErrors.confirmPassword ? "text-danger" : "text-ink-muted"}`} />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -316,8 +393,13 @@ export default function DaftarPage() {
                   </button>
                 </div>
 
-                {/* Feedback Real-time Validasi Ulangi Kata Sandi */}
-                {confirmPassword.length > 0 && (
+                {/* Feedback Real-time Validasi Ulangi Kata Sandi atau Error */}
+                {fieldErrors.confirmPassword ? (
+                  <p className="text-[11px] text-danger font-medium flex items-center gap-1 mt-1.5 animate-in fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{fieldErrors.confirmPassword}</span>
+                  </p>
+                ) : confirmPassword.length > 0 ? (
                   <p
                     className={`text-[11px] font-medium flex items-center gap-1 mt-1.5 transition-all ${
                       isConfirmMatching
@@ -337,7 +419,7 @@ export default function DaftarPage() {
                       </>
                     )}
                   </p>
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -404,13 +486,22 @@ export default function DaftarPage() {
                 <input
                   type="checkbox"
                   checked={agreeTerms}
-                  onChange={(e) => setAgreeTerms(e.target.checked)}
+                  onChange={(e) => {
+                    setAgreeTerms(e.target.checked);
+                    if (fieldErrors.agreeTerms) setFieldErrors((prev) => ({ ...prev, agreeTerms: undefined }));
+                  }}
                   className="mt-0.5 rounded border-line text-primary focus:ring-primary h-4 w-4 shrink-0"
                 />
                 <span className="leading-relaxed">
                   Saya menyatakan bahwa informasi yang saya berikan akurat dan berkomitmen tidak menyebarkan laporan palsu/hoaks demi keselamatan umum.
                 </span>
               </label>
+              {fieldErrors.agreeTerms && (
+                <p className="text-[11px] text-danger font-medium flex items-center gap-1 mt-1.5 animate-in fade-in">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{fieldErrors.agreeTerms}</span>
+                </p>
+              )}
             </div>
 
             {/* Tombol Submit */}

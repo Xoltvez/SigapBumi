@@ -85,6 +85,10 @@ button, a, input, select, textarea {
   80% { transform: translateX(3px); }
 }
 
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;

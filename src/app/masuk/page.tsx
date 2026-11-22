@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   LogOut,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import {
   getCurrentUser,
@@ -31,6 +32,8 @@ export default function MasukPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [shakeKey, setShakeKey] = useState(0);
 
   useEffect(() => {
     setCurrentUserSession(getCurrentUser());
@@ -42,8 +45,24 @@ export default function MasukPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password) return;
 
+    const errors: typeof fieldErrors = {};
+    if (!email.trim()) {
+      errors.email = "Alamat email wajib diisi.";
+    } else if (!email.includes("@") || !email.includes(".")) {
+      errors.email = "Format alamat email tidak valid.";
+    }
+    if (!password) {
+      errors.password = "Kata sandi wajib diisi.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setShakeKey((prev) => prev + 1);
+      return;
+    }
+
+    setFieldErrors({});
     setLoading(true);
 
     try {
@@ -202,33 +221,56 @@ export default function MasukPage() {
           </div>
         ) : (
           /* Form Login jika belum masuk */
-          <form onSubmit={handleSubmit} className="space-y-4 text-left">
+          <form
+            key={shakeKey}
+            noValidate
+            onSubmit={handleSubmit}
+            className={`space-y-4 text-left ${shakeKey > 0 ? "animate-shake" : ""}`}
+          >
             <div>
               <label className="block text-xs font-semibold text-ink mb-1.5">
-                Alamat Email
+                Alamat Email <span className="text-danger">*</span>
               </label>
               <input
                 type="email"
-                required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                }}
                 placeholder="nama@email.com"
-                className="w-full h-11 px-3.5 rounded-md border border-line bg-surface text-sm text-ink focus:border-primary focus:outline-none"
+                className={`w-full h-11 px-3.5 rounded-md border bg-surface text-sm text-ink focus:outline-none transition-all ${
+                  fieldErrors.email
+                    ? "border-danger focus:border-danger ring-1 ring-danger/20"
+                    : "border-line focus:border-primary"
+                }`}
               />
+              {fieldErrors.email && (
+                <p className="text-[11px] text-danger font-medium flex items-center gap-1 mt-1.5 animate-in fade-in">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{fieldErrors.email}</span>
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-ink mb-1.5">
-                Kata Sandi
+                Kata Sandi <span className="text-danger">*</span>
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
-                  required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                  }}
                   placeholder="••••••••"
-                  className="w-full h-11 pl-3.5 pr-10 rounded-md border border-line bg-surface text-sm text-ink focus:border-primary focus:outline-none"
+                  className={`w-full h-11 pl-3.5 pr-10 rounded-md border bg-surface text-sm text-ink focus:outline-none transition-all ${
+                    fieldErrors.password
+                      ? "border-danger focus:border-danger ring-1 ring-danger/20"
+                      : "border-line focus:border-primary"
+                  }`}
                 />
                 <button
                   type="button"
@@ -243,6 +285,12 @@ export default function MasukPage() {
                   )}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <p className="text-[11px] text-danger font-medium flex items-center gap-1 mt-1.5 animate-in fade-in">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{fieldErrors.password}</span>
+                </p>
+              )}
             </div>
 
             <button
