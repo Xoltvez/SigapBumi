@@ -377,15 +377,17 @@ export async function fetchUserReports(user: { id: string; email: string; phone_
         const imageUrl = extractPhotoFromDescription(row.description) || mediaPhoto || row.image_url || undefined;
         const cleanDescription = cleanReportDescription(row.description);
 
-        const isSosReport = isSos || Boolean(
-          row.title?.toUpperCase().includes("SOS") ||
+        const isSosReport = Boolean(
+          isSos ||
           (row.tracking_code || "").toUpperCase().startsWith("SOS-") ||
-          (row.priority_score && row.priority_score >= 95)
+          row.title?.toUpperCase().includes("SOS")
         );
 
         const calculatedPriority: "kritis" | "tinggi" | "sedang" | "rendah" | "normal" =
-          isSosReport || row.priority_score >= 90
+          isSosReport
             ? "kritis"
+            : row.status === "selesai"
+            ? "rendah"
             : row.priority_score >= 70
             ? "tinggi"
             : row.priority_score >= 35
@@ -629,14 +631,15 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
         const disaster = row.disaster_type as DisasterType;
         const agency = inferAgencyFromDisaster(disaster);
         const isSosReport = Boolean(
-          row.title?.toUpperCase().includes("SOS") ||
           (row.tracking_code || "").toUpperCase().startsWith("SOS-") ||
-          (row.priority_score && row.priority_score >= 95)
+          row.title?.toUpperCase().includes("SOS")
         );
 
         const priority: "kritis" | "tinggi" | "sedang" | "rendah" | "normal" =
-          isSosReport || row.priority_score >= 90
+          isSosReport
             ? "kritis"
+            : row.status === "selesai"
+            ? "rendah"
             : row.priority_score >= 70
             ? "tinggi"
             : row.priority_score >= 35
@@ -845,12 +848,28 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
             ];
 
       const isSosReport = Boolean(
-        data.title?.toUpperCase().includes("SOS") ||
         (data.tracking_code || "").toUpperCase().startsWith("SOS-") ||
-        (data.priority_score && data.priority_score >= 95)
+        data.title?.toUpperCase().includes("SOS")
       );
 
       const { province: inferredProv, regency: inferredReg } = inferRegionFromAddress(data.address);
+      const priority = isSosReport
+        ? "kritis"
+        : data.status === "selesai"
+        ? "rendah"
+        : data.priority_score >= 70
+        ? "tinggi"
+        : data.priority_score >= 35
+        ? "sedang"
+        : "rendah";
+
+      const priority_label = isSosReport
+        ? "Kritis"
+        : priority === "tinggi"
+        ? "Tinggi"
+        : priority === "rendah"
+        ? "Rendah"
+        : "Sedang";
 
       return {
         id: data.id,
@@ -865,8 +884,8 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         lat: coords.lat,
         lng: coords.lng,
         status: data.status as ReportStatus,
-        priority: isSosReport || data.priority_score >= 90 ? "kritis" : data.priority_score >= 70 ? "tinggi" : data.priority_score >= 35 ? "sedang" : "rendah",
-        priority_label: isSosReport || data.priority_score >= 90 ? "Kritis" : data.priority_score >= 70 ? "Tinggi" : data.priority_score >= 35 ? "Sedang" : "Rendah",
+        priority,
+        priority_label,
         confirmation_count: data.confirmation_count || 0,
         created_at: formatReportTime(data.created_at),
         timeline,

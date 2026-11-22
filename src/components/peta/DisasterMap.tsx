@@ -64,7 +64,7 @@ function safeNavigateMap(
   try {
     try {
       map.invalidateSize({ pan: false });
-    } catch {}
+    } catch { }
 
     let canFly = false;
     if (useFly) {
@@ -292,7 +292,7 @@ export default function DisasterMap({
           initialLocationRendered = true;
         }
       }
-    } catch {}
+    } catch { }
 
     // Default lokasi warga jika GPS belum tersedia (Indramayu / Jawa Barat)
     if (!initialLocationRendered) {
@@ -309,10 +309,10 @@ export default function DisasterMap({
               "sigapbumi_user_last_coords",
               JSON.stringify({ lat: latitude, lng: longitude, accuracy })
             );
-          } catch {}
+          } catch { }
           renderUserLocation(latitude, longitude, false, false);
         },
-        () => {},
+        () => { },
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
       );
     }
@@ -334,7 +334,7 @@ export default function DisasterMap({
             renderUserLocation(parsed.lat, parsed.lng, true, true);
           }
         }
-      } catch {}
+      } catch { }
 
       // 2. Ambil koordinat presisi langsung dari browser geolocation
       if (typeof window !== "undefined" && navigator.geolocation) {
@@ -346,7 +346,7 @@ export default function DisasterMap({
                 "sigapbumi_user_last_coords",
                 JSON.stringify({ lat: latitude, lng: longitude, accuracy })
               );
-            } catch {}
+            } catch { }
             renderUserLocation(latitude, longitude, true, true);
           },
           (err) => {
@@ -428,7 +428,7 @@ export default function DisasterMap({
           setTimeout(() => {
             try {
               marker.openPopup();
-            } catch {}
+            } catch { }
           }, 350);
         }
       }, 50);
@@ -463,30 +463,27 @@ export default function DisasterMap({
       // Construct popup HTML (tanpa emoji, mematuhi Anti-Slop R-01)
       const popupHtml = `
         <div style="font-family: system-ui, sans-serif; font-size: 12px; color: #1F2937; min-width: 190px; max-width: 250px; padding: 2px;">
-          ${
-            pt.is_sos
-              ? `<div style="background-color: #FEE2E2; color: #991B1B; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px;">PANGGILAN DARURAT SOS</div>`
-              : `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          ${pt.is_sos
+          ? `<div style="background-color: #FEE2E2; color: #991B1B; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px;">PANGGILAN DARURAT SOS</div>`
+          : `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                   <span style="font-family: monospace; font-weight: bold; color: #EF6806;">${pt.tracking_code}</span>
                   <span style="font-size: 10px; text-transform: capitalize; background: #F6F7F8; padding: 1px 6px; border-radius: 4px; border: 1px solid #E5E7EB;">${pt.status}</span>
                 </div>`
-          }
-          ${
-            pt.is_demo
-              ? `<div style="background: #FEF0E6; color: #A74904; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; display: inline-block; margin-bottom: 4px;">DATA DEMONSTRASI</div>`
-              : ""
-          }
+        }
+          ${pt.is_demo
+          ? `<div style="background: #FEF0E6; color: #A74904; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; display: inline-block; margin-bottom: 4px;">DATA DEMONSTRASI</div>`
+          : ""
+        }
           <div style="font-weight: 700; font-size: 13px; line-height: 1.3; margin-bottom: 4px;">${pt.title}</div>
           <div style="color: #4B5563; font-size: 11px; margin-bottom: 6px;">Lokasi: ${pt.location_name}</div>
           <div style="display: flex; justify-content: space-between; font-size: 10px; color: #6B7280; padding-top: 4px; border-top: 1px solid #E5E7EB;">
             <span>Waktu: ${pt.created_at}</span>
             ${!pt.is_sos ? `<span style="color: #EF6806; font-weight: 600;">${pt.confirmation_count} konfirmasi</span>` : ""}
           </div>
-          ${
-            !pt.is_sos
-              ? `<a href="/lacak?kode=${pt.tracking_code}" style="display: block; text-align: center; background-color: #EF6806; color: white; text-decoration: none; padding: 6px 8px; border-radius: 6px; font-weight: 600; font-size: 11px; margin-top: 8px;">Lacak Status & Detail</a>`
-              : ""
-          }
+          ${!pt.is_sos
+          ? `<a href="/lacak?kode=${pt.tracking_code}" style="display: block; text-align: center; background-color: #EF6806; color: white; text-decoration: none; padding: 6px 8px; border-radius: 6px; font-weight: 600; font-size: 11px; margin-top: 8px;">Lacak Status & Detail</a>`
+          : ""
+        }
         </div>
       `;
 

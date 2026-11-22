@@ -100,31 +100,25 @@ export default function AdminRingkasanPage() {
         const live = await fetchLiveReports();
         if (isMounted) {
           const formatted: AdminReportItem[] = (live || []).map((r) => {
-            let pLabel: PriorityLabel = "Sedang";
             const isSos = Boolean(
-              r.tracking_code?.startsWith("SOS-") ||
-              r.title?.toUpperCase().includes("SOS") ||
-              r.target_agency === "damkar" ||
-              r.target_agency === "medis" ||
-              r.target_agency === "polisi" ||
-              r.target_agency === "bnpb_bpbd"
+              r.tracking_code?.toUpperCase().startsWith("SOS-") ||
+              r.title?.toUpperCase().includes("SOS")
             );
 
-            const p = String(r.priority || "").toLowerCase();
-            if (isSos || p === "kritis" || r.priority_label === "Kritis") {
+            let pLabel: PriorityLabel = "Sedang";
+            if (isSos) {
               pLabel = "Kritis";
-            } else if (p === "tinggi" || r.priority_label === "Tinggi") {
-              pLabel = "Tinggi";
-            } else if (p === "rendah" || r.priority_label === "Rendah") {
-              pLabel = "Rendah";
-            } else if (p === "sedang" || p === "normal" || r.priority_label === "Sedang") {
-              pLabel = "Sedang";
-            } else if (r.confirmation_count >= 20) {
-              pLabel = "Kritis";
-            } else if (r.confirmation_count >= 10) {
-              pLabel = "Tinggi";
             } else if (r.status === "selesai") {
               pLabel = "Rendah";
+            } else {
+              const p = String(r.priority || "").toLowerCase();
+              if (p === "tinggi" || r.priority_label === "Tinggi" || r.confirmation_count >= 10) {
+                pLabel = "Tinggi";
+              } else if (p === "rendah" || r.priority_label === "Rendah") {
+                pLabel = "Rendah";
+              } else {
+                pLabel = "Sedang";
+              }
             }
 
             return {
