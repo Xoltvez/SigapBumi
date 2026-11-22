@@ -162,16 +162,29 @@ export function saveLocalReport(report: LiveReportItem): void {
 
 export const LOCAL_STORAGE_DELETED_KEY = "sigapbumi_deleted_reports";
 
+// Daftar ID & kode tracking data uji coba lama yang telah dibersihkan secara permanen
+export const PURGED_LEGACY_IDS = new Set([
+  "f7257756-b1ae-48d9-8e49-1f3bf6bd14d7",
+  "57735c09-b0e8-45a5-8e74-bfb4f530a68f",
+  "SOS-7111",
+  "SOS-9233",
+]);
+
 /**
  * Mengambil ID dan kode tracking laporan yang telah dihapus admin
  */
 export function getDeletedReportIds(): Set<string> {
-  if (typeof window === "undefined") return new Set();
+  const baseSet = new Set(PURGED_LEGACY_IDS);
+  if (typeof window === "undefined") return baseSet;
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_DELETED_KEY);
-    return raw ? new Set(JSON.parse(raw)) : new Set();
+    if (raw) {
+      const parsed: string[] = JSON.parse(raw);
+      parsed.forEach((id) => baseSet.add(id));
+    }
+    return baseSet;
   } catch {
-    return new Set();
+    return baseSet;
   }
 }
 

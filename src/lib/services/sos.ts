@@ -61,16 +61,28 @@ function saveLocalSosCache(items: LiveSosItem[]): void {
 
 export const LOCAL_STORAGE_DELETED_SOS_KEY = "sigapbumi_deleted_sos";
 
+const PURGED_SOS_LEGACY_IDS = new Set([
+  "f7257756-b1ae-48d9-8e49-1f3bf6bd14d7",
+  "57735c09-b0e8-45a5-8e74-bfb4f530a68f",
+  "SOS-7111",
+  "SOS-9233",
+]);
+
 /**
  * Mengambil ID sinyal SOS yang telah dihapus oleh admin
  */
 export function getDeletedSosIds(): Set<string> {
-  if (typeof window === "undefined") return new Set();
+  const baseSet = new Set(PURGED_SOS_LEGACY_IDS);
+  if (typeof window === "undefined") return baseSet;
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_DELETED_SOS_KEY);
-    return raw ? new Set(JSON.parse(raw)) : new Set();
+    if (raw) {
+      const parsed: string[] = JSON.parse(raw);
+      parsed.forEach((id) => baseSet.add(id));
+    }
+    return baseSet;
   } catch {
-    return new Set();
+    return baseSet;
   }
 }
 

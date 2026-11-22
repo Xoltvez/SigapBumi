@@ -119,19 +119,28 @@ export default function StatistikPage() {
       .sort((a, b) => b.total - a.total);
   }, [reports]);
 
-  // Monthly trend mock distribution
-  const monthlyData = [
-    { bulan: "Jan", laporan: 8, selesai: 8 },
-    { bulan: "Feb", laporan: 10, selesai: 9 },
-    { bulan: "Mar", laporan: 7, selesai: 7 },
-    { bulan: "Apr", laporan: 6, selesai: 6 },
-    { bulan: "Mei", laporan: 5, selesai: 5 },
-    { bulan: "Jun", laporan: 6, selesai: 6 },
-    { bulan: "Jul", laporan: 8, selesai: 8 },
-    { bulan: "Agu", laporan: 9, selesai: 8 },
-    { bulan: "Sep", laporan: 12, selesai: 11 },
-    { bulan: "Okt", laporan: totalReports, selesai: selesaiCount },
-  ];
+  // Distribusi tren bulanan murni dari data laporan riil
+  const monthlyData = useMemo(() => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    const counts = months.map((m) => ({ bulan: m, laporan: 0, selesai: 0 }));
+
+    reports.forEach((r) => {
+      try {
+        const d = new Date(r.raw_created_at || r.created_at);
+        if (!isNaN(d.getTime())) {
+          const mIdx = d.getMonth();
+          if (mIdx >= 0 && mIdx < 12) {
+            counts[mIdx].laporan += 1;
+            if (r.status === "selesai") {
+              counts[mIdx].selesai += 1;
+            }
+          }
+        }
+      } catch {}
+    });
+
+    return counts;
+  }, [reports]);
 
   return (
     <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 pb-28 md:pb-12 space-y-8">
