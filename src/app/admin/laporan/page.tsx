@@ -676,12 +676,42 @@ function LaporanContent() {
             </thead>
             <tbody className="divide-y divide-slate-100 font-sans">
               {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="py-16 text-center text-slate-400">
-                    <RotateCw className="w-6 h-6 animate-spin text-orange-500 mx-auto mb-2" />
-                    <p className="font-semibold text-slate-700">Memuat data laporan...</p>
-                  </td>
-                </tr>
+                <>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <tr key={i} className="animate-pulse h-16">
+                      <td className="py-3 px-5">
+                        <div className="h-6 w-16 bg-slate-200/80 rounded-full" />
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="h-4 w-20 bg-slate-200/80 rounded" />
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="h-4 w-16 bg-slate-100 rounded" />
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="space-y-1.5">
+                          <div className="h-4 w-48 bg-slate-200/80 rounded" />
+                          <div className="h-3 w-32 bg-slate-100 rounded" />
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="h-6 w-20 bg-slate-100 rounded-full" />
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="h-4 w-12 bg-slate-100 rounded" />
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="h-4 w-24 bg-slate-100 rounded" />
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="inline-flex gap-2">
+                          <div className="h-7 w-24 bg-slate-100 rounded-lg" />
+                          <div className="h-7 w-20 bg-slate-100 rounded-lg" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </>
               ) : paginatedReports.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-16 text-center text-slate-400">

@@ -52,42 +52,11 @@ interface SosAlertItem {
 
 const INITIAL_SOS_ALERTS: SosAlertItem[] = [];
 
-// Data awal tampilan sesuai persis dengan contoh gambar
-const INITIAL_FEATURED_REPORTS = [
-  {
-    id: "rep-air",
-    title: "Banjir di Kecamatan Air",
-    location: "Banjarnegara · 2 mnt yang lalu",
-    status: "diproses",
-    image: "/thumbnails/flood.jpg",
-  },
-  {
-    id: "rep-longsor",
-    title: "Tanah Longsor di Desa Suka Maju",
-    location: "Wonosobo · 5 mnt yang lalu",
-    status: "diproses",
-    image: "/thumbnails/landslide.jpg",
-  },
-  {
-    id: "rep-kebakaran",
-    title: "Kebakaran Hutan",
-    location: "Purwokerto · 10 mnt yang lalu",
-    status: "baru",
-    image: "/thumbnails/wildfire.jpg",
-  },
-  {
-    id: "rep-gempa",
-    title: "Gempa Bumi",
-    location: "Cilacap · 15 mnt yang lalu",
-    status: "selesai",
-    image: "/thumbnails/earthquake.jpg",
-  },
-];
-
 export default function AdminRingkasanPage() {
   const { activeUnit, activeUnitName, adminUser, setActiveSosCount, setIsLiveConnected } = useAdmin();
   const [reports, setReports] = useState<AdminReportItem[]>([]);
   const [sosAlerts, setSosAlerts] = useState<SosAlertItem[]>(INITIAL_SOS_ALERTS);
+  const [isLoading, setIsLoading] = useState(true);
   const [updatingReportId, setUpdatingReportId] = useState<string | null>(null);
 
   const handleQuickStatusChange = async (
@@ -124,6 +93,7 @@ export default function AdminRingkasanPage() {
     let isMounted = true;
 
     async function loadData() {
+      setIsLoading(true);
       try {
         const live = await fetchLiveReports();
         if (isMounted) {
@@ -185,6 +155,8 @@ export default function AdminRingkasanPage() {
         }
       } catch (err) {
         console.warn("Gagal memuat ringkasan live:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     }
 
@@ -298,6 +270,21 @@ export default function AdminRingkasanPage() {
   useEffect(() => {
     setActiveSosCount(activeSos.length);
   }, [activeSos.length, setActiveSosCount]);
+
+  // Distribusi tipe bencana dinamis dari data live
+  const totalReportsCount = unitReports.length;
+  const banjirCount = unitReports.filter((r) => r.disaster_type === "banjir").length;
+  const longsorCount = unitReports.filter((r) => r.disaster_type === "longsor").length;
+  const kebakaranCount = unitReports.filter(
+    (r) => r.disaster_type === "kebakaran" || r.disaster_type === "karhutla"
+  ).length;
+  const lainnyaCount = Math.max(0, totalReportsCount - (banjirCount + longsorCount + kebakaranCount));
+
+  const banjirPct = totalReportsCount > 0 ? Math.round((banjirCount / totalReportsCount) * 100) : 0;
+  const longsorPct = totalReportsCount > 0 ? Math.round((longsorCount / totalReportsCount) * 100) : 0;
+  const kebakaranPct = totalReportsCount > 0 ? Math.round((kebakaranCount / totalReportsCount) * 100) : 0;
+  const lainnyaPct =
+    totalReportsCount > 0 ? Math.max(0, 100 - (banjirPct + longsorPct + kebakaranPct)) : 0;
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-10">
@@ -511,95 +498,129 @@ export default function AdminRingkasanPage() {
 
           {/* List Laporan */}
           <div className="divide-y divide-slate-100">
-            {(unitReports.length > 0
-              ? unitReports.slice(0, 4).map((r, idx) => ({
+            {unitReports.length === 0 ? (
+              <div className="divide-y divide-slate-100/80">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="py-3 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 animate-pulse -mx-1 sm:-mx-2 px-1 sm:px-2 rounded-xl"
+                  >
+                    <div className="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
+                      {/* Foto Thumbnail Skeleton */}
+                      <div className="w-14 h-11 sm:w-16 sm:h-11 md:w-20 md:h-14 rounded-xl bg-slate-200/80 shrink-0" />
+
+                      {/* Judul & Lokasi Skeleton */}
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="h-4 bg-slate-200/80 rounded-md w-3/4 max-w-[260px]" />
+                        <div className="h-3 bg-slate-100 rounded-md w-1/2 max-w-[170px]" />
+                      </div>
+                    </div>
+
+                    {/* Status Pill Skeleton */}
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto pl-14 sm:pl-0">
+                      <div className="h-6 w-16 bg-slate-100 rounded-full" />
+                      <div className="w-5 h-5 bg-slate-100 rounded-lg" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              unitReports.slice(0, 4).map((r, idx) => {
+                const item = {
                   id: r.id,
                   title: r.title,
                   location: `${r.location} · ${r.time}`,
-                  status: r.status === "ditindaklanjuti" ? "diproses" : r.status === "selesai" ? "selesai" : "baru",
-                  image: INITIAL_FEATURED_REPORTS[idx % INITIAL_FEATURED_REPORTS.length].image,
-                }))
-              : INITIAL_FEATURED_REPORTS
-            ).map((item) => (
-              <div
-                key={item.id}
-                className="py-3 sm:py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 group hover:bg-slate-50/60 -mx-1 sm:-mx-2 px-1 sm:px-2 rounded-xl transition-colors"
-              >
-                <div className="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
-                  {/* Foto Thumbnail Kebencanaan Landscape */}
-                  <div className="w-14 h-11 sm:w-16 sm:h-11 md:w-20 md:h-14 rounded-xl overflow-hidden bg-slate-100 shrink-0 relative shadow-2xs">
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      fill
-                      sizes="80px"
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
+                  status:
+                    r.status === "ditindaklanjuti"
+                      ? "diproses"
+                      : r.status === "selesai"
+                      ? "selesai"
+                      : "baru",
+                  image: r.image_url || "/thumbnails/flood.jpg",
+                };
 
-                  {/* Judul & Lokasi Waktu */}
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/admin/laporan/${item.id}`}
-                      className="text-xs sm:text-sm font-bold text-slate-900 truncate block hover:text-[#EA580C] transition-colors"
-                    >
-                      {item.title}
-                    </Link>
-                    <p className="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1 mt-0.5 sm:mt-1">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{item.location}</span>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Status Badge & Action Buttons */}
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 self-end sm:self-auto pl-14 sm:pl-0">
-                  {/* Quick Action: Tandai Proses */}
-                  {item.status !== "diproses" && item.status !== "selesai" && (
-                    <button
-                      type="button"
-                      disabled={updatingReportId === item.id}
-                      onClick={(e) => handleQuickStatusChange(item.id, "ditindaklanjuti", e)}
-                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#FFF7ED] text-[#EA580C] border border-amber-200/90 hover:bg-amber-100/80 transition-colors shadow-2xs inline-flex items-center gap-1 cursor-pointer disabled:opacity-60"
-                      title="Tandai sedang diproses"
-                    >
-                      <Clock className="w-3 h-3 text-amber-600" />
-                      <span>Proses</span>
-                    </button>
-                  )}
-
-                  {/* Quick Action: Tandai Selesai */}
-                  {item.status !== "selesai" ? (
-                    <button
-                      type="button"
-                      disabled={updatingReportId === item.id}
-                      onClick={(e) => handleQuickStatusChange(item.id, "selesai", e)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors shadow-2xs inline-flex items-center gap-1 cursor-pointer disabled:opacity-60 ${
-                        item.status === "diproses"
-                          ? "bg-[#059669] hover:bg-[#047857] text-white"
-                          : "bg-[#ECFDF5] text-[#059669] border border-emerald-200/90 hover:bg-emerald-100/80"
-                      }`}
-                      title="Tandai telah selesai"
-                    >
-                      <CheckCircle2 className="w-3 h-3" />
-                      <span>Selesai</span>
-                    </button>
-                  ) : (
-                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#ECFDF5] text-[#059669] border border-emerald-200/80 shadow-2xs inline-flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      <span>Selesai</span>
-                    </span>
-                  )}
-
-                  <Link
-                    href={`/admin/laporan/${item.id}`}
-                    className="p-1 rounded-lg hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 transition-colors"
+                return (
+                  <div
+                    key={item.id}
+                    className="py-3 sm:py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 group hover:bg-slate-50/60 -mx-1 sm:-mx-2 px-1 sm:px-2 rounded-xl transition-colors"
                   >
-                    <ChevronRight className="w-4 h-4" />
-                  </Link>
-                </div>
-              </div>
-            ))}
+                    <div className="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
+                      {/* Foto Thumbnail Kebencanaan Landscape */}
+                      <div className="w-14 h-11 sm:w-16 sm:h-11 md:w-20 md:h-14 rounded-xl overflow-hidden bg-slate-100 shrink-0 relative shadow-2xs">
+                        <Image
+                          src={item.image}
+                          alt={item.title}
+                          fill
+                          sizes="80px"
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+
+                      {/* Judul & Lokasi Waktu */}
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={`/admin/laporan/${item.id}`}
+                          className="text-xs sm:text-sm font-bold text-slate-900 truncate block hover:text-[#EA580C] transition-colors"
+                        >
+                          {item.title}
+                        </Link>
+                        <p className="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1 mt-0.5 sm:mt-1">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{item.location}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Status Badge & Action Buttons */}
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 self-end sm:self-auto pl-14 sm:pl-0">
+                      {/* Quick Action: Tandai Proses */}
+                      {item.status !== "diproses" && item.status !== "selesai" && (
+                        <button
+                          type="button"
+                          disabled={updatingReportId === item.id}
+                          onClick={(e) => handleQuickStatusChange(item.id, "ditindaklanjuti", e)}
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#FFF7ED] text-[#EA580C] border border-amber-200/90 hover:bg-amber-100/80 transition-colors shadow-2xs inline-flex items-center gap-1 cursor-pointer disabled:opacity-60"
+                          title="Tandai sedang diproses"
+                        >
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          <span>Proses</span>
+                        </button>
+                      )}
+
+                      {/* Quick Action: Tandai Selesai */}
+                      {item.status !== "selesai" ? (
+                        <button
+                          type="button"
+                          disabled={updatingReportId === item.id}
+                          onClick={(e) => handleQuickStatusChange(item.id, "selesai", e)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors shadow-2xs inline-flex items-center gap-1 cursor-pointer disabled:opacity-60 ${
+                            item.status === "diproses"
+                              ? "bg-[#059669] hover:bg-[#047857] text-white"
+                              : "bg-[#ECFDF5] text-[#059669] border border-emerald-200/90 hover:bg-emerald-100/80"
+                          }`}
+                          title="Tandai telah selesai"
+                        >
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>Selesai</span>
+                        </button>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#ECFDF5] text-[#059669] border border-emerald-200/80 shadow-2xs inline-flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>Selesai</span>
+                        </span>
+                      )}
+
+                      <Link
+                        href={`/admin/laporan/${item.id}`}
+                        className="p-1 rounded-lg hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 transition-colors"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </section>
 
@@ -613,7 +634,7 @@ export default function AdminRingkasanPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-2">
-            {/* Donut Chart SVG dengan Angka 103 di Tengah */}
+            {/* Donut Chart SVG Dinamis */}
             <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 160 160">
                 {/* Background Ring */}
@@ -626,63 +647,63 @@ export default function AdminRingkasanPage() {
                   strokeWidth="20"
                 />
 
-                {/* Segmen 1: Biru (Banjir & Genangan Air - 35%) */}
-                {/* Keliling = 2 * PI * 62 = 389.55 -> 35% = 136.3 */}
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="62"
-                  fill="transparent"
-                  stroke="#2563EB"
-                  strokeWidth="20"
-                  strokeDasharray="136.3 389.5"
-                  strokeDashoffset="0"
-                />
+                {totalReportsCount > 0 && (
+                  <>
+                    {/* Segmen 1: Biru (Banjir) */}
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r="62"
+                      fill="transparent"
+                      stroke="#2563EB"
+                      strokeWidth="20"
+                      strokeDasharray={`${((banjirPct / 100) * 389.55).toFixed(1)} 389.5`}
+                      strokeDashoffset="0"
+                    />
 
-                {/* Segmen 2: Oranye (Tanah Longsor - 14%) */}
-                {/* 14% = 54.5 */}
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="62"
-                  fill="transparent"
-                  stroke="#F97316"
-                  strokeWidth="20"
-                  strokeDasharray="54.5 389.5"
-                  strokeDashoffset="-136.3"
-                />
+                    {/* Segmen 2: Oranye (Tanah Longsor) */}
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r="62"
+                      fill="transparent"
+                      stroke="#F97316"
+                      strokeWidth="20"
+                      strokeDasharray={`${((longsorPct / 100) * 389.55).toFixed(1)} 389.5`}
+                      strokeDashoffset={`-${((banjirPct / 100) * 389.55).toFixed(1)}`}
+                    />
 
-                {/* Segmen 3: Merah (Kebakaran Pemukiman - 20%) */}
-                {/* 20% = 77.9 */}
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="62"
-                  fill="transparent"
-                  stroke="#EF4444"
-                  strokeWidth="20"
-                  strokeDasharray="77.9 389.5"
-                  strokeDashoffset="-190.8"
-                />
+                    {/* Segmen 3: Merah (Kebakaran) */}
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r="62"
+                      fill="transparent"
+                      stroke="#EF4444"
+                      strokeWidth="20"
+                      strokeDasharray={`${((kebakaranPct / 100) * 389.55).toFixed(1)} 389.5`}
+                      strokeDashoffset={`-${(((banjirPct + longsorPct) / 100) * 389.55).toFixed(1)}`}
+                    />
 
-                {/* Segmen 4: Abu-abu (Lainnya - 31%) */}
-                {/* 31% = 120.7 */}
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="62"
-                  fill="transparent"
-                  stroke="#CBD5E1"
-                  strokeWidth="20"
-                  strokeDasharray="120.7 389.5"
-                  strokeDashoffset="-268.7"
-                />
+                    {/* Segmen 4: Abu-abu (Lainnya) */}
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r="62"
+                      fill="transparent"
+                      stroke="#CBD5E1"
+                      strokeWidth="20"
+                      strokeDasharray={`${((lainnyaPct / 100) * 389.55).toFixed(1)} 389.5`}
+                      strokeDashoffset={`-${(((banjirPct + longsorPct + kebakaranPct) / 100) * 389.55).toFixed(1)}`}
+                    />
+                  </>
+                )}
               </svg>
 
               {/* Teks di Tengah Donut Chart */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
                 <span className="text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
-                  103
+                  {totalReportsCount}
                 </span>
                 <span className="text-[11px] text-slate-400 font-medium mt-1">
                   Total Laporan
@@ -697,7 +718,7 @@ export default function AdminRingkasanPage() {
                   <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB] shrink-0" />
                   <span className="text-slate-700 font-medium">Banjir & Genangan Air</span>
                 </div>
-                <span className="font-bold text-slate-900 ml-2">35%</span>
+                <span className="font-bold text-slate-900 ml-2">{banjirPct}%</span>
               </div>
 
               <div className="flex items-center justify-between text-xs">
@@ -705,7 +726,7 @@ export default function AdminRingkasanPage() {
                   <span className="w-2.5 h-2.5 rounded-full bg-[#F97316] shrink-0" />
                   <span className="text-slate-700 font-medium">Tanah Longsor</span>
                 </div>
-                <span className="font-bold text-slate-900 ml-2">14%</span>
+                <span className="font-bold text-slate-900 ml-2">{longsorPct}%</span>
               </div>
 
               <div className="flex items-center justify-between text-xs">
@@ -713,7 +734,7 @@ export default function AdminRingkasanPage() {
                   <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] shrink-0" />
                   <span className="text-slate-700 font-medium">Kebakaran Pemukiman</span>
                 </div>
-                <span className="font-bold text-slate-900 ml-2">20%</span>
+                <span className="font-bold text-slate-900 ml-2">{kebakaranPct}%</span>
               </div>
 
               <div className="flex items-center justify-between text-xs">
@@ -721,7 +742,7 @@ export default function AdminRingkasanPage() {
                   <span className="w-2.5 h-2.5 rounded-full bg-[#CBD5E1] shrink-0" />
                   <span className="text-slate-700 font-medium">Lainnya</span>
                 </div>
-                <span className="font-bold text-slate-900 ml-2">31%</span>
+                <span className="font-bold text-slate-900 ml-2">{lainnyaPct}%</span>
               </div>
             </div>
           </div>
