@@ -218,7 +218,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const { apiKey, model: configuredModel } = getGeminiConfig();
+    const { apiKey, model: rawModel } = getGeminiConfig();
+    const configuredModel = rawModel || "gemini-3.1-flash-lite";
 
     // Fail-Safe: Jika GEMINI_API_KEY benar-benar belum diisi sama sekali
     if (!apiKey) {
@@ -238,11 +239,13 @@ export async function POST(request: Request) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
+    // Prioritaskan model ultra-cepat gemini-3.1-flash-lite lalu fallback model flash lainnya
     const modelsToTry = [
       configuredModel,
-      "gemini-3.8-flash",
       "gemini-3.1-flash-lite",
-    ].filter((v, i, a) => a.indexOf(v) === i);
+      "gemini-2.5-flash",
+      "gemini-3.8-flash",
+    ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
     const promptText = `Anda adalah sistem verifikasi visual darurat kebencanaan untuk platform SIGAP-BUMI.
 Tugas Anda adalah menilai bukti visual dari foto yang diunggah warga secara objektif dan independen.
@@ -276,8 +279,9 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
 
     let outputText: string | undefined;
 
-    // Helper timeout darurat per percobaan (maksimal 4 detik per request)
+    // Helper timeout darurat per percobaan (8 detik per request)
     const callWithTimeout = async (modelName: string): Promise<string | undefined> => {
+      const t0 = Date.now();
       const generatePromise = ai.models
         .generateContent({
           model: modelName,
@@ -294,10 +298,13 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
             responseMimeType: "application/json",
           },
         })
-        .then((res) => res.text);
+        .then((res) => {
+          console.log(`[AI-VISION] Model ${modelName} berhasil dalam ${Date.now() - t0} ms`);
+          return res.text;
+        });
 
       const timeoutPromise = new Promise<undefined>((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout AI")), 4000)
+        setTimeout(() => reject(new Error(`Timeout AI pada model ${modelName}`)), 8000)
       );
 
       return Promise.race([generatePromise, timeoutPromise]);
@@ -305,13 +312,14 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
 
     for (const modelToTry of modelsToTry) {
       try {
+        console.log(`[AI-VISION] Mencoba verifikasi visual dengan model ${modelToTry}...`);
         const text = await callWithTimeout(modelToTry);
         if (text) {
           outputText = text;
           break;
         }
       } catch (err: unknown) {
-        console.warn(`Model ${modelToTry} lambat/sibuk, mencoba berikutnya...`, (err as Error)?.message || err);
+        console.warn(`[AI-VISION] Model ${modelToTry} mengalami kendala:`, (err as Error)?.message || err);
       }
     }
 

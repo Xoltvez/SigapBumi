@@ -434,7 +434,8 @@ export function SosFab() {
     setPhotoError("");
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    // Berikan toleransi waktu 12 detik untuk inferensi visual AI sebelum fallback posko
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
 
     try {
       // Kompresi kilat sisi client ke ~70 KB sebelum dikirim ke AI (memangkas waktu jaringan hingga 90%)
@@ -470,7 +471,7 @@ export function SosFab() {
       }
     } catch (err) {
       console.warn("AI verification error / timeout fallback:", err);
-      // Fast-Pass Darurat: jika AI melebihi 3.5 detik atau offline, sinyal darurat langsung dibuka!
+      // Fast-Pass Darurat: jika AI offline atau timeout, sinyal darurat dialihkan ke posko
       setAiResult({
         status: "perlu_review",
         pesan: "Verifikasi visual otomatis dialihkan ke posko agar panggilan darurat segera terkirim.",
