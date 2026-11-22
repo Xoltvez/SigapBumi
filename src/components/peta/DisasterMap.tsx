@@ -96,6 +96,9 @@ export default function DisasterMap({
           box-shadow: 0 8px 24px rgba(31,41,55,0.15) !important;
           padding: 4px !important;
         }
+        .leaflet-control-zoom {
+          display: none !important;
+        }
       `;
       document.head.appendChild(style);
     }
@@ -110,7 +113,7 @@ export default function DisasterMap({
     const map = L.map(mapContainerRef.current, {
       center: [-2.5, 118.0],
       zoom: 5,
-      zoomControl: true,
+      zoomControl: false,
     });
 
     // Required OpenStreetMap Attribution
