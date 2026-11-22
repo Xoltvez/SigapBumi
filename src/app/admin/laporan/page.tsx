@@ -18,7 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  MoreVertical,
+  Eye,
   Check,
   Trash2,
   X,
@@ -900,8 +900,9 @@ function LaporanContent() {
                             href={`/admin/laporan/${row.id}`}
                             className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors inline-flex items-center justify-center shrink-0 ml-0.5"
                             title="Buka Lembar Kerja Laporan"
+                            aria-label="Buka Lembar Kerja Laporan"
                           >
-                            <MoreVertical className="w-4 h-4" />
+                            <Eye className="w-4 h-4" />
                           </Link>
 
                           {/* Tombol Hapus Laporan */}
