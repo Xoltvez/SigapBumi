@@ -189,8 +189,13 @@ export async function POST(request: Request) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const configuredModel = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-    const fallbackModels = [configuredModel, "gemini-3.1-flash-lite"];
+    // Prioritaskan gemini-3.1-flash-lite untuk latensi ultra-cepat (< 1 detik) dalam situasi darurat
+    const preferredModel = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
+    const modelsToTry = [
+      preferredModel,
+      "gemini-3.1-flash-lite",
+      "gemini-3.8-flash",
+    ].filter((v, i, a) => a.indexOf(v) === i);
 
     const promptText = `Anda adalah sistem verifikasi visual darurat kebencanaan untuk platform SIGAP-BUMI.
 Tugas Anda adalah menilai bukti visual dari foto yang diunggah warga secara objektif dan independen.
@@ -223,13 +228,12 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
 }`;
 
     let outputText: string | undefined;
-    let lastError: unknown;
 
-    // Coba model yang dikonfigurasi, dan auto-fallback ke gemini-3.1-flash-lite jika terjadi 503 high demand
-    for (const modelToTry of fallbackModels) {
-      try {
-        const response = await ai.models.generateContent({
-          model: modelToTry,
+    // Helper timeout darurat per percobaan (maksimal 3.2 detik agar tidak menghambat korban darurat)
+    const callWithTimeout = async (modelName: string): Promise<string | undefined> => {
+      const generatePromise = ai.models
+        .generateContent({
+          model: modelName,
           contents: [
             promptText,
             {
@@ -242,20 +246,43 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
           config: {
             responseMimeType: "application/json",
           },
-        });
+        })
+        .then((res) => res.text);
 
-        if (response.text) {
-          outputText = response.text;
+      const timeoutPromise = new Promise<undefined>((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout AI")), 3200)
+      );
+
+      return Promise.race([generatePromise, timeoutPromise]);
+    };
+
+    for (const modelToTry of modelsToTry) {
+      try {
+        const text = await callWithTimeout(modelToTry);
+        if (text) {
+          outputText = text;
           break;
         }
       } catch (err: unknown) {
-        lastError = err;
-        console.warn(`Model ${modelToTry} gagal/sibuk, mencoba fallback berikutnya:`, (err as Error)?.message || err);
+        console.warn(`Model ${modelToTry} lambat/sibuk, mencoba berikutnya...`, (err as Error)?.message || err);
       }
     }
 
+    // Jika semua model timeout atau sibuk: FAST-PASS DARURAT
+    // Nyawa korban adalah prioritas mutlak, verifikasi visual dialihkan ke operator posko
     if (!outputText) {
-      throw lastError || new Error("Model Gemini tidak mengembalikan output teks.");
+      return NextResponse.json({
+        status: "perlu_review",
+        pesan: "Verifikasi visual otomatis dialihkan ke petugas posko agar bantuan segera meluncur.",
+        category,
+        visual: {
+          kondisi: "meragukan",
+          tipe: "lainnya",
+          bukti: ["Foto berstempel GPS & waktu riil siap diverifikasi tim posko"],
+          penjelasan: "Pemeriksaan dipercepat demi keselamatan korban darurat.",
+        },
+        verificationScope: "emergency_fast_pass",
+      });
     }
 
     // Bersihkan karakter markdown jika ada (misal ```json ... ```)

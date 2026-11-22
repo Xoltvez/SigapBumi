@@ -42,6 +42,49 @@ import {
   type ReverseGeocodeResult,
 } from "@/lib/cameraStamp";
 
+// Helper kompresi kilat sisi client untuk inferensi AI ultra-cepat (~70 KB)
+async function compressImageForAi(file: File): Promise<Blob> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      img.src = e.target?.result as string;
+    };
+    img.onload = () => {
+      const maxDim = 800;
+      let width = img.width;
+      let height = img.height;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            resolve(blob || file);
+          },
+          "image/jpeg",
+          0.65
+        );
+      } else {
+        resolve(file);
+      }
+    };
+    img.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
 export function SosFab() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
@@ -390,15 +433,23 @@ export function SosFab() {
     setIsVerifyingAi(true);
     setPhotoError("");
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+
     try {
+      // Kompresi kilat sisi client ke ~70 KB sebelum dikirim ke AI (memangkas waktu jaringan hingga 90%)
+      const compressedBlob = await compressImageForAi(photoFile);
       const formData = new FormData();
-      formData.append("photo", photoFile);
+      formData.append("photo", compressedBlob, "photo.jpg");
       formData.append("category", categoryKey);
 
       const res = await fetch("/api/verify-disaster", {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
@@ -418,15 +469,16 @@ export function SosFab() {
         setPhotoError(data.pesan);
       }
     } catch (err) {
-      console.warn("AI verification error fallback:", err);
-      // Fallback toleransi darurat: jika API offline, tetap teruskan foto berstempel ke posko
+      console.warn("AI verification error / timeout fallback:", err);
+      // Fast-Pass Darurat: jika AI melebihi 3.5 detik atau offline, sinyal darurat langsung dibuka!
       setAiResult({
         status: "perlu_review",
-        pesan: "Pemeriksaan AI offline. Foto berstempel GPS diteruskan ke posko terdekat.",
+        pesan: "Verifikasi visual otomatis dialihkan ke posko agar panggilan darurat segera terkirim.",
         tipe: "lainnya",
-        bukti: ["Verifikasi manual petugas posko"],
+        bukti: ["Foto berstempel GPS & waktu siap diverifikasi tim posko"],
       });
     } finally {
+      clearTimeout(timeoutId);
       setIsVerifyingAi(false);
     }
   };
