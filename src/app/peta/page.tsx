@@ -243,6 +243,59 @@ function PetaContent() {
   const [desktopSearch, setDesktopSearch] = useState<string>("");
   const [desktopFilterCategory, setDesktopFilterCategory] = useState<"semua" | "posko" | "laporan" | "sos">("semua");
   const [isDesktopPanelOpen, setIsDesktopPanelOpen] = useState<boolean>(false);
+  const desktopPanelRef = useRef<HTMLDivElement>(null);
+  const desktopTriggerRef = useRef<HTMLButtonElement>(null);
+
+  // Animasi halus Maximize & Minimize panel filter desktop via GSAP
+  const handleMaximizeDesktop = () => {
+    if (desktopTriggerRef.current) {
+      gsap.to(desktopTriggerRef.current, {
+        scale: 0.9,
+        opacity: 0,
+        x: -20,
+        duration: 0.2,
+        ease: "power2.in",
+        onComplete: () => {
+          setIsDesktopPanelOpen(true);
+        },
+      });
+    } else {
+      setIsDesktopPanelOpen(true);
+    }
+  };
+
+  const handleMinimizeDesktop = () => {
+    if (desktopPanelRef.current) {
+      gsap.to(desktopPanelRef.current, {
+        x: -40,
+        opacity: 0,
+        scale: 0.95,
+        duration: 0.25,
+        ease: "power2.in",
+        onComplete: () => {
+          setIsDesktopPanelOpen(false);
+        },
+      });
+    } else {
+      setIsDesktopPanelOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isDesktopPanelOpen && desktopPanelRef.current) {
+      gsap.fromTo(
+        desktopPanelRef.current,
+        { x: -50, opacity: 0, scale: 0.96 },
+        { x: 0, opacity: 1, scale: 1, duration: 0.35, ease: "power3.out" }
+      );
+    } else if (!isDesktopPanelOpen && desktopTriggerRef.current) {
+      gsap.fromTo(
+        desktopTriggerRef.current,
+        { x: -25, opacity: 0, scale: 0.92 },
+        { x: 0, opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.4)" }
+      );
+    }
+  }, [isDesktopPanelOpen]);
 
   // Helper trigger action peta Leaflet di mobile / desktop
   const triggerZoomIn = () => {
@@ -825,124 +878,15 @@ function PetaContent() {
           />
         </div>
 
-        {/* Kiri Atas: Floating Search Bar & Quick Filter Chips */}
-        <div className="absolute top-5 left-6 z-20 space-y-2.5">
-          {/* Search Bar Melayang */}
-          <div className="bg-white/95 backdrop-blur-md shadow-lg border border-slate-200/90 rounded-full px-4 py-2.5 flex items-center gap-2.5 w-[380px] lg:w-[410px]">
-            <Search className="w-4 h-4 text-slate-400 shrink-0" />
-            <input
-              type="text"
-              value={desktopSearch}
-              onChange={(e) => setDesktopSearch(e.target.value)}
-              placeholder="Cari titik kejadian, wilayah, atau jalan..."
-              className="w-full bg-transparent text-xs lg:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
-            />
-            {desktopSearch ? (
-              <button
-                type="button"
-                onClick={() => setDesktopSearch("")}
-                className="text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            ) : (
-              <SlidersHorizontal className="w-4 h-4 text-slate-400" />
-            )}
-          </div>
-
-          {/* Quick Filter Chips Horizontal (Warna Oranye SigapBumi) */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5 max-w-[410px]">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedCategory("semua");
-                setShowSos(true);
-              }}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                selectedCategory === "semua"
-                  ? "bg-orange-600 text-white ring-2 ring-orange-400/30 shadow-xs"
-                  : "bg-white/95 text-slate-700 hover:bg-slate-50 border border-slate-200/80"
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Semua Kejadian</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedCategory("banjir")}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                selectedCategory === "banjir"
-                  ? "bg-orange-600 text-white ring-2 ring-orange-400/30 shadow-xs"
-                  : "bg-white/95 text-slate-700 hover:bg-slate-50 border border-slate-200/80"
-              }`}
-            >
-              <DisasterIcon type="banjir" size={14} />
-              <span>Banjir</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedCategory("gempa")}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                selectedCategory === "gempa"
-                  ? "bg-orange-600 text-white ring-2 ring-orange-400/30 shadow-xs"
-                  : "bg-white/95 text-slate-700 hover:bg-slate-50 border border-slate-200/80"
-              }`}
-            >
-              <DisasterIcon type="gempa" size={14} />
-              <span>Gempa Bumi</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedCategory("kebakaran")}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                selectedCategory === "kebakaran"
-                  ? "bg-orange-600 text-white ring-2 ring-orange-400/30 shadow-xs"
-                  : "bg-white/95 text-slate-700 hover:bg-slate-50 border border-slate-200/80"
-              }`}
-            >
-              <DisasterIcon type="kebakaran" size={14} />
-              <span>Kebakaran</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedCategory("longsor")}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                selectedCategory === "longsor"
-                  ? "bg-orange-600 text-white ring-2 ring-orange-400/30 shadow-xs"
-                  : "bg-white/95 text-slate-700 hover:bg-slate-50 border border-slate-200/80"
-              }`}
-            >
-              <DisasterIcon type="longsor" size={14} />
-              <span>Longsor</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowSos((prev) => !prev)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                showSos
-                  ? "bg-rose-600 text-white ring-2 ring-rose-400 shadow-xs"
-                  : "bg-white/95 text-rose-600 hover:bg-rose-50 border border-rose-200"
-              }`}
-            >
-              <Siren className="w-3.5 h-3.5" />
-              <span>Sinyal SOS</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Kiri Tengah: Floating Filter Panel Desktop (Minimized / Maximized) */}
-        <div className="absolute top-28 left-6 z-20">
+        {/* Kiri Atas: Floating Filter Panel Desktop (Minimized / Maximized dengan Animasi GSAP) */}
+        <div className="absolute top-5 left-6 z-20">
           {!isDesktopPanelOpen ? (
             <button
+              ref={desktopTriggerRef}
               type="button"
-              onClick={() => setIsDesktopPanelOpen(true)}
-              className="group bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/90 rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-all duration-300 text-slate-800 cursor-pointer animate-in fade-in slide-in-from-left-4 hover:shadow-2xl"
-              title="Buka / Maksimalkan Filter Peta Kejadian"
+              onClick={handleMaximizeDesktop}
+              className="group bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/90 rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-slate-800 cursor-pointer hover:shadow-2xl select-none"
+              title="Buka / Maksimalkan Filter &amp; Pencarian Peta"
             >
               <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
                 <SlidersHorizontal className="w-4 h-4" />
@@ -956,14 +900,17 @@ function PetaContent() {
                     {desktopPoints.length} Titik
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400">Klik untuk membuka filter</p>
+                <p className="text-[10px] text-slate-400">Klik untuk membuka filter &amp; cari kejadian</p>
               </div>
               <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-orange-50 text-slate-400 group-hover:text-orange-600 flex items-center justify-center transition-colors shrink-0 ml-1">
                 <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
               </div>
             </button>
           ) : (
-            <div className="w-[380px] lg:w-[410px] max-h-[calc(100vh-9.5rem)] flex flex-col bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden select-none animate-in fade-in slide-in-from-left duration-300">
+            <div
+              ref={desktopPanelRef}
+              className="w-[380px] lg:w-[410px] max-h-[calc(100vh-6.5rem)] flex flex-col bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden select-none"
+            >
               {/* Header Panel */}
               <div className="p-3.5 px-4 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -985,19 +932,42 @@ function PetaContent() {
                   </div>
                 </div>
 
+                {/* Tombol Minimize (Hanya Icon Chevron Left tanpa teks Minimize) */}
                 <button
                   type="button"
-                  onClick={() => setIsDesktopPanelOpen(false)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900 text-xs font-bold transition-all cursor-pointer shadow-2xs"
-                  title="Kecilkan / Minimize Panel"
+                  onClick={handleMinimizeDesktop}
+                  className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95"
+                  title="Kecilkan Panel"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  <span className="text-[11px]">Minimize</span>
                 </button>
               </div>
 
               {/* Body Konten Filter Desktop */}
-              <div className="overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-14rem)] scrollbar-thin">
+              <div className="overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-11rem)] scrollbar-thin">
+                {/* Search Bar Terintegrasi Langsung dalam Filter */}
+                <div className="relative">
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center gap-2 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-200/60 transition-all shadow-2xs">
+                    <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                    <input
+                      type="text"
+                      value={desktopSearch}
+                      onChange={(e) => setDesktopSearch(e.target.value)}
+                      placeholder="Cari titik kejadian, wilayah, atau jalan..."
+                      className="w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                    />
+                    {desktopSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setDesktopSearch("")}
+                        className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                        title="Hapus kata kunci pencarian"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
               {/* Highlight Titik Terpilih jika ada */}
               {selectedPoint && (
                 <div className="p-3 bg-orange-50/80 rounded-xl border border-orange-200 space-y-2">
@@ -1223,7 +1193,13 @@ function PetaContent() {
         {/* Toggle Panel Kiri (Buka / Tutup Filter) */}
         <button
           type="button"
-          onClick={() => setIsDesktopPanelOpen((prev) => !prev)}
+          onClick={() => {
+            if (isDesktopPanelOpen) {
+              handleMinimizeDesktop();
+            } else {
+              handleMaximizeDesktop();
+            }
+          }}
           className={`w-10 h-10 rounded-full backdrop-blur-xs shadow-md border flex items-center justify-center active:scale-95 transition-transform cursor-pointer ${
             isDesktopPanelOpen
               ? "bg-orange-600 text-white border-orange-500 shadow-orange-500/20"
