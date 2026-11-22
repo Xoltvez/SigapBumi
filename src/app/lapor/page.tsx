@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, Suspense } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Waves,
@@ -114,12 +115,12 @@ function LaporForm() {
     urgent_needs: [],
   });
 
-  const categories: { key: DisasterType; label: string; icon: React.ElementType; color: string }[] = [
-    { key: "banjir", label: "Banjir", icon: Waves, color: "text-info" },
-    { key: "gempa", label: "Gempa Bumi", icon: Activity, color: "text-warning" },
-    { key: "kebakaran", label: "Kebakaran", icon: Flame, color: "text-danger" },
-    { key: "longsor", label: "Tanah Longsor", icon: Mountain, color: "text-ink" },
-    { key: "karhutla", label: "Karhutla", icon: Trees, color: "text-warning" },
+  const categories: { key: DisasterType; label: string; icon?: React.ElementType; iconUrl?: string; color: string }[] = [
+    { key: "banjir", label: "Banjir", iconUrl: "/icon%20bencana/banjir.png", icon: Waves, color: "text-info" },
+    { key: "gempa", label: "Gempa Bumi", iconUrl: "/icon%20bencana/gempa%20bumi.png", icon: Activity, color: "text-warning" },
+    { key: "kebakaran", label: "Kebakaran", iconUrl: "/icon%20bencana/house-fire.png", icon: Flame, color: "text-danger" },
+    { key: "longsor", label: "Tanah Longsor", iconUrl: "/icon%20bencana/avalanche.png", icon: Mountain, color: "text-ink" },
+    { key: "karhutla", label: "Karhutla", iconUrl: "/icon%20bencana/fire.png", icon: Trees, color: "text-warning" },
     { key: "lainnya", label: "Lainnya", icon: AlertTriangle, color: "text-ink-muted" },
   ];
 
@@ -577,7 +578,19 @@ function LaporForm() {
                           : "border-line bg-surface hover:border-line-strong text-ink font-semibold"
                       }`}
                     >
-                      <Icon className={`w-7 h-7 mb-2 ${cat.color}`} />
+                      {cat.iconUrl ? (
+                        <div className="relative w-8 h-8 mb-2 flex items-center justify-center">
+                          <Image
+                            src={cat.iconUrl}
+                            alt={cat.label}
+                            width={30}
+                            height={30}
+                            className="object-contain"
+                          />
+                        </div>
+                      ) : Icon ? (
+                        <Icon className={`w-7 h-7 mb-2 ${cat.color}`} />
+                      ) : null}
                       <span className="text-xs">{cat.label}</span>
                     </button>
                   );

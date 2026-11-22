@@ -122,7 +122,8 @@ export default function HomePage() {
     type: DisasterType;
     label: string;
     desc: string;
-    icon: React.ElementType;
+    icon?: React.ElementType;
+    iconUrl?: string;
     badgeColor: string;
     borderColor: string;
     bgAccent: string;
@@ -132,7 +133,7 @@ export default function HomePage() {
       type: "banjir",
       label: "Banjir & Genangan",
       desc: "Luapan sungai, rob pantai, dan genangan air pemukiman",
-      icon: Waves,
+      iconUrl: "/icon%20bencana/banjir.png",
       badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
       borderColor: "hover:border-blue-400 hover:shadow-blue-500/10",
       bgAccent: "group-hover:bg-blue-50/50",
@@ -142,7 +143,7 @@ export default function HomePage() {
       type: "gempa",
       label: "Gempa Bumi & Tsunami",
       desc: "Guncangan tektonik, retakan tanah, dan peringatan gelombang",
-      icon: Activity,
+      iconUrl: "/icon%20bencana/gempa%20bumi.png",
       badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
       borderColor: "hover:border-amber-400 hover:shadow-amber-500/10",
       bgAccent: "group-hover:bg-amber-50/50",
@@ -152,7 +153,7 @@ export default function HomePage() {
       type: "kebakaran",
       label: "Kebakaran Pemukiman",
       desc: "Insiden api perumahan, korsleting listrik, dan gedung publik",
-      icon: Flame,
+      iconUrl: "/icon%20bencana/house-fire.png",
       badgeColor: "bg-red-50 text-red-700 border-red-200",
       borderColor: "hover:border-red-400 hover:shadow-red-500/10",
       bgAccent: "group-hover:bg-red-50/50",
@@ -162,7 +163,7 @@ export default function HomePage() {
       type: "longsor",
       label: "Tanah Longsor",
       desc: "Gerakan lereng tebing, jalan terputus, dan material batuan",
-      icon: Mountain,
+      iconUrl: "/icon%20bencana/avalanche.png",
       badgeColor: "bg-stone-50 text-stone-700 border-stone-200",
       borderColor: "hover:border-stone-400 hover:shadow-stone-500/10",
       bgAccent: "group-hover:bg-stone-50/50",
@@ -172,7 +173,7 @@ export default function HomePage() {
       type: "karhutla",
       label: "Karhutla & Kabut Asap",
       desc: "Kebakaran lahan gambut, hutan lindung, dan titik api (hotspot)",
-      icon: Trees,
+      iconUrl: "/icon%20bencana/fire.png",
       badgeColor: "bg-orange-50 text-orange-700 border-orange-200",
       borderColor: "hover:border-orange-400 hover:shadow-orange-500/10",
       bgAccent: "group-hover:bg-orange-50/50",
@@ -880,8 +881,20 @@ export default function HomePage() {
               >
                 <div>
                   <div className="mb-3.5">
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-2 ${cat.iconColor}`}>
-                      <IconComponent className="w-6 h-6" />
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-2 ${cat.iconColor} p-2`}>
+                      {cat.iconUrl ? (
+                        <div className="relative w-6 h-6 flex items-center justify-center">
+                          <Image
+                            src={cat.iconUrl}
+                            alt={cat.label}
+                            width={24}
+                            height={24}
+                            className="object-contain"
+                          />
+                        </div>
+                      ) : IconComponent ? (
+                        <IconComponent className="w-6 h-6" />
+                      ) : null}
                     </div>
                   </div>
 
