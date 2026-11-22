@@ -132,8 +132,8 @@ export function AdminSidebar({
           )}
         </div>
 
-        {/* Main Navigation Menu */}
-        <nav className="flex-1 py-5 md:py-6 px-4 space-y-1.5 overflow-y-auto">
+        {/* Main Navigation Menu (Hanya tampil di Desktop, di Mobile sudah ada di Bottom Navbar!) */}
+        <nav className="hidden md:block flex-1 py-5 md:py-6 px-4 space-y-1.5 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -184,6 +184,69 @@ export function AdminSidebar({
           })}
         </nav>
 
+        {/* Mobile Drawer Body: Hanya Menu Pengaturan & Profil sesuai instruksi */}
+        <div className="md:hidden flex-1 py-6 px-4 flex flex-col justify-between overflow-y-auto">
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
+              Menu Pengaturan
+            </span>
+            <Link
+              href="/admin/pengaturan"
+              onClick={onCloseMobile}
+              className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[13px] transition-colors border ${
+                pathname.startsWith("/admin/pengaturan")
+                  ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
+                  : "border-slate-100 bg-slate-50 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-medium"
+              }`}
+            >
+              <Settings
+                className={`w-5 h-5 shrink-0 ${
+                  pathname.startsWith("/admin/pengaturan") ? "text-white" : "text-slate-500"
+                }`}
+              />
+              <span className="font-semibold text-sm">Pengaturan Posko</span>
+            </Link>
+          </div>
+
+          <div className="space-y-2.5 pt-4 border-t border-slate-100">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
+              Profil Petugas
+            </span>
+            <Link
+              href="/admin/pengaturan"
+              onClick={onCloseMobile}
+              className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100 transition-colors cursor-pointer group"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-[#1E293B] text-white flex items-center justify-center text-sm font-bold shrink-0 shadow-xs">
+                  <User className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-900 truncate leading-tight">
+                    {adminUser?.unitName || "Pemerintahan"}
+                  </p>
+                  <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                    {adminUser?.name || "Drs. Tri Wahyudi (Koordinator Operasi)"}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (onCloseMobile) onCloseMobile();
+                logout("manual");
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold transition-colors cursor-pointer"
+            >
+              <LogOut className="w-4 h-4 text-rose-500" />
+              <span>Keluar Sesi</span>
+            </button>
+          </div>
+        </div>
+
         {/* Subtle Topo Contour Lines Watermark at Bottom Left */}
         <div className="pointer-events-none absolute bottom-0 left-0 w-36 h-36 overflow-hidden opacity-35 z-0">
           <svg
@@ -215,8 +278,8 @@ export function AdminSidebar({
           </svg>
         </div>
 
-        {/* Footer: Settings & Officer Profile Card */}
-        <div className="p-4 border-t border-slate-100 space-y-2 relative z-10 bg-white/90">
+        {/* Desktop Footer: Settings & Officer Profile Card */}
+        <div className="hidden md:block p-4 border-t border-slate-100 space-y-2 relative z-10 bg-white/90">
           {/* Settings Item */}
           <Link
             href="/admin/pengaturan"
