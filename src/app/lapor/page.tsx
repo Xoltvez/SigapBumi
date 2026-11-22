@@ -288,7 +288,28 @@ function LaporForm() {
       }
     }
     setStep((prev) => prev + 1);
+    scrollToTop();
   };
+
+  const scrollToTop = () => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      });
+    }
+  };
+
+  // Otomatis scroll ke paling atas halaman saat berpindah tahap
+  useEffect(() => {
+    scrollToTop();
+  }, [step]);
 
   // Gulir ke pesan error setiap kali validasi gagal agar langsung terlihat
   useEffect(() => {
@@ -303,6 +324,7 @@ function LaporForm() {
   const handlePrev = () => {
     setErrorMessage(null);
     setStep((prev) => Math.max(1, prev - 1));
+    scrollToTop();
   };
 
   // Final submit handler with double-submit prevention & local resilience
