@@ -14,7 +14,6 @@ import {
   AlertCircle,
   Clock,
   CheckCircle2,
-  Shield,
   MapPin,
   ChevronLeft,
   ChevronRight,
@@ -824,14 +823,9 @@ function LaporanContent() {
                       <td className="py-3 px-4 min-w-[240px]">
                         <Link
                           href={`/admin/laporan/${row.id}`}
-                          className="font-bold text-slate-900 group-hover:text-orange-600 transition-colors flex items-center gap-1.5"
+                          className="font-bold text-slate-900 group-hover:text-orange-600 transition-colors block truncate"
                         >
-                          <AlertTriangle
-                            className={`w-3.5 h-3.5 shrink-0 ${
-                              isSosRow ? "text-rose-500" : "text-amber-500"
-                            }`}
-                          />
-                          <span className="truncate">{removeEmojis(row.title)}</span>
+                          <span>{removeEmojis(row.title)}</span>
                         </Link>
                         <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 truncate">
                           <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
@@ -871,9 +865,8 @@ function LaporanContent() {
                       {/* Konfirmasi */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {row.confirmation_count > 0 ? (
-                          <span className="flex items-center gap-1 text-amber-600 font-semibold text-xs">
-                            <Shield className="w-3.5 h-3.5 text-amber-500" />
-                            <span>{row.confirmation_count} Warga</span>
+                          <span className="text-amber-600 font-semibold text-xs">
+                            {row.confirmation_count} Warga
                           </span>
                         ) : (
                           <span className="text-slate-400 font-medium">-</span>
