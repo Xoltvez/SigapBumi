@@ -2,7 +2,8 @@ import { GoogleGenAI } from "@google/genai";
 import { fileTypeFromBuffer } from "file-type";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
+import fs from "fs";
+import path from "path";
 
 // Batas ukuran maksimal file (3.5 MB) agar tetap di bawah limit serverless payload
 const MAX_BYTES = 3.5 * 1024 * 1024;
@@ -21,12 +22,41 @@ export const SUPPORTED_CATEGORIES = [
   // Kategori SOS
   "damkar",
   "sar",
+  "bnpb_bpbd",
   "evakuasi",
   "medis",
   "polisi",
 ] as const;
 
 export type SupportedCategory = (typeof SUPPORTED_CATEGORIES)[number];
+
+// Helper membaca kunci API dan model secara tangguh dari process.env atau .env.local
+function getGeminiConfig(): { apiKey: string | undefined; model: string } {
+  let apiKey =
+    process.env.GEMINI_API_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_GEMINI_API_KEY?.trim();
+  let model = process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash";
+
+  // Jika Next.js belum me-reload memory environment, baca langsung dari .env.local
+  if (!apiKey) {
+    try {
+      const envPath = path.join(process.cwd(), ".env.local");
+      if (fs.existsSync(envPath)) {
+        const content = fs.readFileSync(envPath, "utf8");
+        const keyMatch = content.match(/GEMINI_API_KEY\s*=\s*([^\r\n]+)/);
+        const modelMatch = content.match(/GEMINI_MODEL\s*=\s*([^\r\n]+)/);
+        if (keyMatch && keyMatch[1]?.trim()) {
+          apiKey = keyMatch[1].trim();
+        }
+        if (modelMatch && modelMatch[1]?.trim()) {
+          model = modelMatch[1].trim();
+        }
+      }
+    } catch { }
+  }
+
+  return { apiKey, model };
+}
 
 const visionSchema = z.object({
   kondisi: z.enum(["bencana_jelas", "meragukan", "bukan_bencana"]),
@@ -68,12 +98,30 @@ function evaluate(vision: VisionResult, category: string) {
 
   // Pemetaan kecocokan visual terhadap kategori yang dipilih pelapor
   const matches: Record<string, string[]> = {
-    // Kategori Banjir / Air
+    // Kategori Banjir / Air & SAR BPBD
     banjir: ["banjir", "tsunami", "cuaca_ekstrem"],
     banjir_tsunami: ["banjir", "tsunami", "cuaca_ekstrem"],
     tsunami: ["tsunami", "banjir"],
     sar: ["banjir", "tsunami", "longsor", "cuaca_ekstrem", "kerusakan_struktur"],
-    evakuasi: ["banjir", "tsunami", "longsor", "kebakaran", "kerusakan_struktur"],
+    bnpb_bpbd: [
+      "banjir",
+      "tsunami",
+      "longsor",
+      "kebakaran",
+      "karhutla",
+      "kerusakan_struktur",
+      "cuaca_ekstrem",
+      "erupsi",
+      "lainnya",
+    ],
+    evakuasi: [
+      "banjir",
+      "tsunami",
+      "longsor",
+      "kebakaran",
+      "kerusakan_struktur",
+      "cuaca_ekstrem",
+    ],
 
     // Kategori Kebakaran
     kebakaran: ["kebakaran", "karhutla", "erupsi"],
@@ -170,10 +218,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fail-Safe: Jika GEMINI_API_KEY belum dikonfigurasikan di environment
-    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const { apiKey, model: configuredModel } = getGeminiConfig();
+
+    // Fail-Safe: Jika GEMINI_API_KEY benar-benar belum diisi sama sekali
     if (!apiKey) {
-      console.warn("GEMINI_API_KEY belum dikonfigurasi di environment. Mengaktifkan mode fail-safe posko.");
+      console.warn("GEMINI_API_KEY belum dikonfigurasi di environment atau .env.local. Mengaktifkan mode fail-safe posko.");
       return NextResponse.json({
         status: "perlu_review",
         pesan: "Foto diterima dan berstempel GPS. Laporan diteruskan untuk konfirmasi posko.",
@@ -189,9 +238,8 @@ export async function POST(request: Request) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const preferredModel = process.env.GEMINI_MODEL || "gemini-3.8-flash";
     const modelsToTry = [
-      preferredModel,
+      configuredModel,
       "gemini-3.8-flash",
       "gemini-3.1-flash-lite",
     ].filter((v, i, a) => a.indexOf(v) === i);
@@ -228,7 +276,7 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
 
     let outputText: string | undefined;
 
-    // Helper timeout darurat per percobaan (maksimal 3.2 detik agar tidak menghambat korban darurat)
+    // Helper timeout darurat per percobaan (maksimal 4 detik per request)
     const callWithTimeout = async (modelName: string): Promise<string | undefined> => {
       const generatePromise = ai.models
         .generateContent({
@@ -249,7 +297,7 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
         .then((res) => res.text);
 
       const timeoutPromise = new Promise<undefined>((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout AI")), 3200)
+        setTimeout(() => reject(new Error("Timeout AI")), 4000)
       );
 
       return Promise.race([generatePromise, timeoutPromise]);
@@ -268,7 +316,6 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
     }
 
     // Jika semua model timeout atau sibuk: FAST-PASS DARURAT
-    // Nyawa korban adalah prioritas mutlak, verifikasi visual dialihkan ke operator posko
     if (!outputText) {
       return NextResponse.json({
         status: "perlu_review",
@@ -304,7 +351,6 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
     });
   } catch (error) {
     console.error("SIGAP-BUMI AI disaster photo verification failed:", error);
-    // Fail-Safe Darurat: Jika terjadi kegagalan jaringan atau provider, jangan sampai memblokir laporan korban bencana
     return NextResponse.json(
       {
         status: "perlu_review",
@@ -321,3 +367,4 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
     );
   }
 }
+

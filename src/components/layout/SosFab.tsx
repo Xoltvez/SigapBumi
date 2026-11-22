@@ -635,9 +635,12 @@ export function SosFab() {
     };
   }, [handleStartSos]);
 
-  // Mengubah tipe bantuan: HANYA memperbarui SOS yang sudah ada secara live
+  // Mengubah tipe bantuan: update state, trigger re-verifikasi foto jika ada, dan update SOS live
   const handleSelectAssistance = (type: SosAssistanceType) => {
     setSelectedAssistance(type);
+    if (rawPhotoFileRef.current) {
+      verifyDisasterPhotoWithAi(rawPhotoFileRef.current, type);
+    }
     if (activeSosId) {
       updateSosAssistanceType(activeSosId, type);
     }
@@ -1126,7 +1129,7 @@ export function SosFab() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <button
                       type="button"
-                      onClick={() => setSelectedAssistance("damkar")}
+                      onClick={() => handleSelectAssistance("damkar")}
                       className={`p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
                         selectedAssistance === "damkar"
                           ? "border-orange-500 bg-orange-50 text-orange-800 ring-2 ring-orange-500/20"
@@ -1139,7 +1142,7 @@ export function SosFab() {
 
                     <button
                       type="button"
-                      onClick={() => setSelectedAssistance("medis")}
+                      onClick={() => handleSelectAssistance("medis")}
                       className={`p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
                         selectedAssistance === "medis"
                           ? "border-orange-500 bg-orange-50 text-orange-800 ring-2 ring-orange-500/20"
@@ -1152,7 +1155,7 @@ export function SosFab() {
 
                     <button
                       type="button"
-                      onClick={() => setSelectedAssistance("polisi")}
+                      onClick={() => handleSelectAssistance("polisi")}
                       className={`p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
                         selectedAssistance === "polisi"
                           ? "border-orange-500 bg-orange-50 text-orange-800 ring-2 ring-orange-500/20"
@@ -1165,7 +1168,7 @@ export function SosFab() {
 
                     <button
                       type="button"
-                      onClick={() => setSelectedAssistance("bnpb_bpbd")}
+                      onClick={() => handleSelectAssistance("bnpb_bpbd")}
                       className={`p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
                         selectedAssistance === "bnpb_bpbd"
                           ? "border-orange-500 bg-orange-50 text-orange-800 ring-2 ring-orange-500/20"
