@@ -1101,19 +1101,13 @@ export default function HomePage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Bento 1: Checklist Tas Siaga Bencana (TSB) Standar BPBD (7 cols) */}
           <div className="gsap-tsb-box opacity-0 lg:col-span-7 bg-surface border border-line rounded-2xl p-6 shadow-card space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                  Checklist Kesiapsiagaan
-                </span>
-                <h3 className="text-lg font-bold text-ink mt-0.5">
-                  Tas Siaga Bencana (TSB) Keluarga
-                </h3>
-              </div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-xs font-bold">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Standar BPBD 72 Jam</span>
-              </div>
+            <div>
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                Checklist Kesiapsiagaan
+              </span>
+              <h3 className="text-lg font-bold text-ink mt-0.5">
+                Tas Siaga Bencana (TSB) Keluarga
+              </h3>
             </div>
 
             <p className="text-xs text-ink-soft leading-relaxed">
