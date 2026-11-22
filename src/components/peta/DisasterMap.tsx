@@ -295,20 +295,21 @@ export default function DisasterMap({
     };
   }, []);
 
-  // Pan to selected point and open popup when selectedPointId changes
+  // Pan to selected point and open popup when selectedPointId changes with smooth flight animation
   useEffect(() => {
     if (!selectedPointId || !mapInstanceRef.current) return;
     const pt = points.find((p) => p.id === selectedPointId);
     if (pt) {
-      mapInstanceRef.current.setView([pt.lat, pt.lng], 15, {
-        animate: true,
+      mapInstanceRef.current.flyTo([pt.lat, pt.lng], 15, {
+        duration: 1.2,
+        easeLinearity: 0.25,
       });
       // Buka popup titik kejadian secara otomatis
       const marker = markersMapRef.current.get(pt.id);
       if (marker) {
         setTimeout(() => {
           marker.openPopup();
-        }, 250);
+        }, 400);
       }
     }
   }, [selectedPointId, points]);
@@ -360,6 +361,12 @@ export default function DisasterMap({
       marker.bindPopup(popupHtml);
 
       marker.on("click", () => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.flyTo([pt.lat, pt.lng], 15, {
+            duration: 1.2,
+            easeLinearity: 0.25,
+          });
+        }
         if (onSelectPoint) {
           onSelectPoint(pt);
         }
