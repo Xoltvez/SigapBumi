@@ -296,8 +296,8 @@ export default function LaporanSayaPage() {
         </div>
       </div>
 
-      {/* Banner Status Autentikasi & Sinkronisasi Otomatis */}
-      {!currentUser ? (
+      {/* Banner Status Autentikasi & Sinkronisasi */}
+      {!currentUser && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3.5 text-xs text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
           <div className="flex items-start gap-2.5">
             <Radio className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 animate-pulse" />
@@ -315,19 +315,6 @@ export default function LaporanSayaPage() {
             <LogIn className="w-3.5 h-3.5" />
             <span>Masuk ke Akun</span>
           </Link>
-        </div>
-      ) : (
-        <div className="bg-surface border border-line rounded-lg p-3.5 text-xs text-ink flex flex-wrap items-center justify-between gap-2.5 shadow-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-success animate-pulse" />
-            <span className="text-ink-soft">Akun Warga Terhubung:</span>
-            <span className="font-bold text-ink">{currentUser.full_name}</span>
-            <span className="text-ink-muted">({currentUser.email})</span>
-          </div>
-          <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-success-soft text-success-text border border-success/30 flex items-center gap-1">
-            <Check className="w-3 h-3" />
-            Riwayat Tersinkron Otomatis
-          </span>
         </div>
       )}
 
