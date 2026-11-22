@@ -149,7 +149,6 @@ export default function DisasterMap({
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
-  const [isMapReady, setIsMapReady] = React.useState(false);
 
   // Injeksi style animasi ping jika belum ada di document
   useEffect(() => {
@@ -172,17 +171,6 @@ export default function DisasterMap({
         }
         .leaflet-control-zoom {
           display: none !important;
-        }
-        .leaflet-container {
-          background-color: #f8fafc !important;
-          outline: none;
-        }
-        .leaflet-tile {
-          transition: opacity 0.25s ease-in-out;
-        }
-        .leaflet-marker-icon {
-          transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease;
-          will-change: transform, opacity;
         }
       `;
       document.head.appendChild(style);
@@ -208,12 +196,16 @@ export default function DisasterMap({
       worldCopyJump: false,
     });
 
-    // Required OpenStreetMap Attribution
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> kontributor',
-      maxZoom: 19,
-    }).addTo(map);
+    // Ubin peta OpenStreetMap berbasis CDN cepat CartoDB Voyager (merespon instan dalam milidetik)
+    L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> kontributor, &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
+        subdomains: "abcd",
+        maxZoom: 20,
+      }
+    ).addTo(map);
 
     const markersGroup = L.layerGroup().addTo(map);
     markersLayerRef.current = markersGroup;
@@ -375,15 +367,27 @@ export default function DisasterMap({
       window.addEventListener("sigapbumi:map-locate", handleLocate);
     }
 
-    const initTimer = setTimeout(() => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.invalidateSize({ pan: false });
-        setIsMapReady(true);
-      }
-    }, 120);
+    // Pastikan ukuran viewport peta segera dihitung secara presisi
+    const t1 = setTimeout(() => map.invalidateSize(), 100);
+    const t2 = setTimeout(() => map.invalidateSize(), 350);
+    const t3 = setTimeout(() => map.invalidateSize(), 800);
+
+    // ResizeObserver otomatis memanggil invalidateSize setiap kali dimensi container berubah
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && mapContainerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize({ pan: false });
+        }
+      });
+      resizeObserver.observe(mapContainerRef.current);
+    }
 
     return () => {
-      clearTimeout(initTimer);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      resizeObserver?.disconnect();
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:map-zoom-in", handleZoomIn);
         window.removeEventListener("sigapbumi:map-zoom-out", handleZoomOut);
@@ -520,9 +524,7 @@ export default function DisasterMap({
     >
       <div
         ref={mapContainerRef}
-        className={`w-full h-full min-h-[500px] md:min-h-[600px] z-10 transition-opacity duration-500 ease-out ${
-          isMapReady ? "opacity-100" : "opacity-0"
-        }`}
+        className="w-full h-full min-h-[500px] md:min-h-[600px] z-10"
       />
 
       {showLegend && (
