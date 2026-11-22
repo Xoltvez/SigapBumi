@@ -46,6 +46,39 @@ interface FormData {
   urgent_needs: string[];
 }
 
+function generateReportUUID(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+/**
+ * Perkecil foto (maks 1280px sisi terpanjang, JPEG 0.8) agar ringan disimpan
+ * sebagai data URL di localStorage maupun kolom report_media.media_url.
+ */
+function compressImageDataUrl(dataUrl: string, maxSide = 1280, quality = 0.8): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(dataUrl);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 function LaporForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -139,8 +172,10 @@ function LaporForm() {
       }
       setPhotoFileName(file.name);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
+      reader.onloadend = async () => {
+        const raw = reader.result as string;
+        // Kompres agar muat di localStorage & kolom media_url database
+        setPhotoPreview(await compressImageDataUrl(raw));
       };
       reader.readAsDataURL(file);
     }
@@ -197,6 +232,7 @@ function LaporForm() {
     setErrorMessage(null);
 
     const trackingCode = generateTrackingCode();
+    const reportId = generateReportUUID();
 
     // 1. Selalu simpan di penyimpanan lokal perangkat (Zero-loss offline resilience)
     const currentUser = getCurrentUser();
@@ -206,7 +242,7 @@ function LaporForm() {
     );
 
     const localReportItem: LiveReportItem = {
-      id: `rep-user-${Date.now()}`,
+      id: reportId,
       tracking_code: trackingCode,
       disaster_type: formData.disaster_type,
       target_agency: inferAgencyFromDisaster(formData.disaster_type),
@@ -221,6 +257,7 @@ function LaporForm() {
       priority: formData.urgent_needs.length > 0 ? "tinggi" : "normal",
       confirmation_count: 0,
       created_at: "Baru saja",
+      image_url: photoPreview || undefined,
       is_demo: false,
       reporter_id: currentUser?.id,
       user_email: currentUser?.email,
@@ -242,6 +279,7 @@ function LaporForm() {
     try {
       const supabase = createClient();
       const insertPayload: Record<string, unknown> = {
+        id: reportId,
         tracking_code: trackingCode,
         disaster_type: formData.disaster_type,
         title: formData.title,
@@ -263,6 +301,18 @@ function LaporForm() {
 
       if (!error) {
         isSavedRemote = true;
+
+        // Simpan foto bukti lapangan ke tabel report_media
+        if (photoPreview) {
+          const { error: mediaErr } = await supabase.from("report_media").insert({
+            report_id: reportId,
+            media_url: photoPreview,
+            media_type: "image",
+          });
+          if (mediaErr) {
+            console.warn("Supabase report_media insert notice:", mediaErr.message);
+          }
+        }
       } else {
         console.warn("Supabase insert notice:", error.message);
       }
