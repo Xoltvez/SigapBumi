@@ -181,9 +181,9 @@ export default function HomePage() {
     },
     {
       type: "lainnya",
-      label: "Cuaca Ekstrem & Lainnya",
-      desc: "Puting beliung, pohon tumbang, abrasi pantai, & darurat lain",
-      icon: Wind,
+      label: "Lainnya",
+      desc: "Insiden kedaruratan umum, cuaca ekstrem, pohon tumbang, & darurat lain",
+      iconUrl: "/icon%20bencana/disaster-management.png",
       badgeColor: "bg-cyan-50 text-cyan-700 border-cyan-200",
       borderColor: "hover:border-cyan-400 hover:shadow-cyan-500/10",
       bgAccent: "group-hover:bg-cyan-50/50",
@@ -881,19 +881,19 @@ export default function HomePage() {
               >
                 <div>
                   <div className="mb-3.5">
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-2 ${cat.iconColor} p-2`}>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-2 ${cat.iconColor} p-2.5 shadow-2xs`}>
                       {cat.iconUrl ? (
-                        <div className="relative w-6 h-6 flex items-center justify-center">
+                        <div className="relative w-9 h-9 flex items-center justify-center">
                           <Image
                             src={cat.iconUrl}
                             alt={cat.label}
-                            width={24}
-                            height={24}
-                            className="object-contain"
+                            width={36}
+                            height={36}
+                            className="object-contain drop-shadow-xs"
                           />
                         </div>
                       ) : IconComponent ? (
-                        <IconComponent className="w-6 h-6" />
+                        <IconComponent className="w-8 h-8" />
                       ) : null}
                     </div>
                   </div>

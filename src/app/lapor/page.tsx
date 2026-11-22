@@ -121,7 +121,7 @@ function LaporForm() {
     { key: "kebakaran", label: "Kebakaran", iconUrl: "/icon%20bencana/house-fire.png", icon: Flame, color: "text-danger" },
     { key: "longsor", label: "Tanah Longsor", iconUrl: "/icon%20bencana/avalanche.png", icon: Mountain, color: "text-ink" },
     { key: "karhutla", label: "Karhutla", iconUrl: "/icon%20bencana/fire.png", icon: Trees, color: "text-warning" },
-    { key: "lainnya", label: "Lainnya", icon: AlertTriangle, color: "text-ink-muted" },
+    { key: "lainnya", label: "Lainnya", iconUrl: "/icon%20bencana/disaster-management.png", icon: AlertTriangle, color: "text-ink-muted" },
   ];
 
   const urgentOptions = [
@@ -579,17 +579,17 @@ function LaporForm() {
                       }`}
                     >
                       {cat.iconUrl ? (
-                        <div className="relative w-8 h-8 mb-2 flex items-center justify-center">
+                        <div className="relative w-11 h-11 mb-2 flex items-center justify-center">
                           <Image
                             src={cat.iconUrl}
                             alt={cat.label}
-                            width={30}
-                            height={30}
+                            width={42}
+                            height={42}
                             className="object-contain"
                           />
                         </div>
                       ) : Icon ? (
-                        <Icon className={`w-7 h-7 mb-2 ${cat.color}`} />
+                        <Icon className={`w-9 h-9 mb-2 ${cat.color}`} />
                       ) : null}
                       <span className="text-xs">{cat.label}</span>
                     </button>
