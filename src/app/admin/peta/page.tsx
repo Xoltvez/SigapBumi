@@ -848,72 +848,47 @@ export default function AdminPetaPage() {
           </div>
         )}
 
-        {/* 4. Main Grid: Leaflet Map (Left 65%) + Inspector Panel (Right 35%) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 items-start">
-          {/* Map Container */}
-          <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_16px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-            <div className="w-full h-[380px] sm:h-[480px] lg:h-[600px] relative rounded-xl overflow-hidden border border-slate-100">
-              <DisasterMap
-                className="w-full h-full"
-                points={filteredPoints}
-                selectedPointId={selectedPointId}
-                onSelectPoint={(pt) => setSelectedPointId(pt.id)}
-                showLegend={false}
-              />
-            </div>
+        {/* 4. Full-Width Tactical Map Container (Sesuai Batas Margin Dashboard) */}
+        <div className="w-full bg-white rounded-2xl border border-slate-100 p-3.5 sm:p-4 shadow-[0_2px_16px_rgba(0,0,0,0.02)] flex flex-col justify-between relative overflow-hidden">
+          <div className="w-full h-[540px] sm:h-[620px] lg:h-[700px] xl:h-[740px] relative rounded-xl overflow-hidden border border-slate-100">
+            <DisasterMap
+              className="w-full h-full"
+              points={filteredPoints}
+              selectedPointId={selectedPointId}
+              onSelectPoint={(pt) => setSelectedPointId(pt.id)}
+              showLegend={false}
+            />
 
-            {/* Quick Legend Bar under Map */}
-            <div className="pt-3 px-1 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
-                  Legenda Peta:
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-medium">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                  <span>Banjir</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-medium">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                  <span>Longsor</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-medium">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                  <span>Kebakaran</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-medium">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                  <span>Gempa</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-medium">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
-                  <span>Panggilan SOS</span>
-                </span>
+            {/* Hint Terapung jika belum ada titik yang diklik */}
+            {!selectedPoint && (
+              <div className="absolute top-3.5 left-3.5 z-20 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-200/90 shadow-sm text-xs font-semibold text-slate-700 flex items-center gap-2 pointer-events-none animate-in fade-in duration-200">
+                <MapPin className="w-4 h-4 text-orange-500" />
+                <span>Klik pin bencana pada peta untuk menampilkan lembar kerja taktis</span>
               </div>
+            )}
 
-              <span className="font-semibold text-slate-600">
-                {filteredPoints.length} titik aktif
-              </span>
-            </div>
-          </div>
+            {/* Floating Tactical Overlay Card (Menimpa di Atas Peta Sisi Kanan) */}
+            {selectedPoint && (
+              <div className="absolute top-3.5 right-3.5 z-[500] w-[calc(100%-1.75rem)] sm:w-[380px] max-w-[420px] bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-[0_12px_36px_rgba(0,0,0,0.18)] space-y-4 animate-in fade-in zoom-in-95 duration-200 max-h-[calc(100%-1.75rem)] overflow-y-auto">
+                <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+                  <div>
+                    <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+                      Panel Kendali Taktis
+                    </h2>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Inspeksi detail titik kejadian & disposisi armada
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPointId(undefined)}
+                    className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer shrink-0 ml-2"
+                    title="Tutup Panel"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
 
-          {/* Selected Point Inspector & Tactical Command Panel */}
-          <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_16px_rgba(0,0,0,0.02)] space-y-4">
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
-              <div>
-                <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                  Panel Kendali Taktis
-                </h2>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Inspeksi detail titik kejadian & disposisi armada
-                </p>
-              </div>
-              <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
-                {filteredPoints.length} Titik
-              </span>
-            </div>
-
-            {selectedPoint ? (
-              <div className="space-y-4">
                 {/* Point Header */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -952,27 +927,27 @@ export default function AdminPetaPage() {
                 </div>
 
                 {/* Data Specs Grid */}
-                <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50/90 p-3 rounded-xl border border-slate-100">
                   <div>
-                    <span className="text-slate-400 block text-[11px] font-medium">Jenis Bencana</span>
-                    <span className="font-bold text-slate-800 capitalize flex items-center gap-1.5 mt-0.5">
+                    <span className="text-slate-400 block text-[10px] font-medium">Jenis Bencana</span>
+                    <span className="font-bold text-slate-800 capitalize flex items-center gap-1.5 mt-0.5 text-xs">
                       {getDisasterIcon(selectedPoint.disaster_type)}
                       <span>{selectedPoint.disaster_type}</span>
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[11px] font-medium">Waktu Masuk</span>
-                    <span className="font-bold text-slate-800 mt-0.5 block">{selectedPoint.created_at}</span>
+                    <span className="text-slate-400 block text-[10px] font-medium">Waktu Masuk</span>
+                    <span className="font-bold text-slate-800 mt-0.5 block text-xs">{selectedPoint.created_at}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[11px] font-medium">Koordinat GPS</span>
-                    <span className="font-mono text-[11px] font-bold text-slate-800 mt-0.5 block">
+                    <span className="text-slate-400 block text-[10px] font-medium">Koordinat GPS</span>
+                    <span className="font-mono text-[10px] font-bold text-slate-800 mt-0.5 block">
                       {selectedPoint.lat.toFixed(4)}, {selectedPoint.lng.toFixed(4)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[11px] font-medium">Konfirmasi Warga</span>
-                    <span className="font-bold text-amber-600 flex items-center gap-1 mt-0.5">
+                    <span className="text-slate-400 block text-[10px] font-medium">Konfirmasi Warga</span>
+                    <span className="font-bold text-amber-600 flex items-center gap-1 mt-0.5 text-xs">
                       <Shield className="w-3.5 h-3.5 text-amber-500" />
                       <span>{selectedPoint.confirmation_count} Saksi</span>
                     </span>
@@ -985,7 +960,7 @@ export default function AdminPetaPage() {
                     href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-2 shadow-2xs transition-colors"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-2 shadow-2xs transition-colors"
                   >
                     <Navigation className="w-3.5 h-3.5 text-slate-600" />
                     <span>Buka Rute Navigasi Google Maps</span>
@@ -996,7 +971,7 @@ export default function AdminPetaPage() {
                       <button
                         type="button"
                         onClick={() => handleUpdateStatus("ditindaklanjuti")}
-                        className="h-9 px-3 rounded-xl border border-amber-200 bg-[#FFF7ED] text-[#EA580C] hover:bg-amber-100 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                        className="h-8.5 px-3 rounded-xl border border-amber-200 bg-[#FFF7ED] text-[#EA580C] hover:bg-amber-100 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
                       >
                         <Clock className="w-3.5 h-3.5" />
                         <span>Diproses</span>
@@ -1004,7 +979,7 @@ export default function AdminPetaPage() {
                       <button
                         type="button"
                         onClick={() => handleUpdateStatus("selesai")}
-                        className="h-9 px-3 rounded-xl bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                        className="h-8.5 px-3 rounded-xl bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 text-white" />
                         <span>Selesai</span>
@@ -1018,26 +993,47 @@ export default function AdminPetaPage() {
                         ? "/admin/sos"
                         : `/admin/laporan/${selectedPoint.id}`
                     }
-                    className="w-full h-9 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
+                    className="w-full h-8.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
                   >
                     <span>Lihat Lembar Kerja Lengkap</span>
                     <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                   </Link>
                 </div>
               </div>
-            ) : (
-              <div className="py-14 px-4 text-center rounded-xl bg-slate-50 border border-dashed border-slate-200 flex flex-col items-center justify-center">
-                <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
-                  <MapPin className="w-6 h-6 stroke-[2.2]" />
-                </div>
-                <h4 className="text-xs font-bold text-slate-800">
-                  Pilih Titik di Peta
-                </h4>
-                <p className="text-[11px] text-slate-400 mt-1 max-w-[200px] leading-relaxed">
-                  Klik salah satu pin bencana atau panggilan SOS pada peta untuk menginspeksi rincian dan melakukan komando tindakan.
-                </p>
-              </div>
             )}
+          </div>
+
+          {/* Quick Legend Bar under Map */}
+          <div className="pt-3 px-1 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
+                Legenda Peta:
+              </span>
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                <span>Banjir</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                <span>Longsor</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                <span>Kebakaran</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <span>Gempa</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
+                <span>Panggilan SOS</span>
+              </span>
+            </div>
+
+            <span className="font-semibold text-slate-600">
+              {filteredPoints.length} titik aktif
+            </span>
           </div>
         </div>
       </div>
