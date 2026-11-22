@@ -151,6 +151,7 @@ export default function DisasterMap({
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
+  const prevSelectedPointIdRef = useRef<string | undefined>(undefined);
 
   // Injeksi style animasi ping jika belum ada di document
   useEffect(() => {
@@ -373,11 +374,17 @@ export default function DisasterMap({
 
     const handleZoomIn = () => map.zoomIn();
     const handleZoomOut = () => map.zoomOut();
+    const handleFocusIndonesia = () => {
+      if (mapInstanceRef.current) {
+        safeNavigateMap(mapInstanceRef.current, -2.5, 118.0, 5, true);
+      }
+    };
 
     if (typeof window !== "undefined") {
       window.addEventListener("sigapbumi:map-zoom-in", handleZoomIn);
       window.addEventListener("sigapbumi:map-zoom-out", handleZoomOut);
       window.addEventListener("sigapbumi:map-locate", handleLocate);
+      window.addEventListener("sigapbumi:map-focus-indonesia", handleFocusIndonesia);
     }
 
     // Pastikan ukuran viewport peta segera dihitung secara presisi
@@ -405,6 +412,7 @@ export default function DisasterMap({
         window.removeEventListener("sigapbumi:map-zoom-in", handleZoomIn);
         window.removeEventListener("sigapbumi:map-zoom-out", handleZoomOut);
         window.removeEventListener("sigapbumi:map-locate", handleLocate);
+        window.removeEventListener("sigapbumi:map-focus-indonesia", handleFocusIndonesia);
       }
       map.remove();
       mapInstanceRef.current = null;
@@ -413,7 +421,17 @@ export default function DisasterMap({
 
   // Pan to selected point and open popup when selectedPointId changes with smooth flight animation
   useEffect(() => {
-    if (!selectedPointId || !mapInstanceRef.current) return;
+    if (!selectedPointId) {
+      // Jika sebelumnya ada titik yang dipilih lalu petugas menutupnya, otomatis zoom out ke seluruh Indonesia
+      if (prevSelectedPointIdRef.current && mapInstanceRef.current) {
+        safeNavigateMap(mapInstanceRef.current, -2.5, 118.0, 5, true);
+      }
+      prevSelectedPointIdRef.current = undefined;
+      return;
+    }
+
+    prevSelectedPointIdRef.current = selectedPointId;
+    if (!mapInstanceRef.current) return;
     const pt = points.find((p) => p.id === selectedPointId);
     if (pt && isValidCoord(pt.lat, pt.lng)) {
       const latNum = Number(pt.lat);

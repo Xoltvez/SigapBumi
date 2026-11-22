@@ -94,6 +94,17 @@ export default function AdminPetaPage() {
     }
   }, [selectedPointId]);
 
+  // Handler tutup detail informasi titik & otomatis zoom out fokus ke seluruh Indonesia
+  const handleCloseDetail = useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setSelectedPointId(undefined);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sigapbumi:map-focus-indonesia"));
+    }
+  }, []);
+
   // Helper trigger action peta Leaflet di mobile
   const triggerZoomIn = () => {
     if (typeof window !== "undefined") {
@@ -477,12 +488,9 @@ export default function AdminPetaPage() {
               {selectedPoint && (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedPointId(undefined);
-                  }}
+                  onClick={handleCloseDetail}
                   className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
-                  title="Tutup Titik Terpilih"
+                  title="Tutup Titik Terpilih & Zoom Out ke Indonesia"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -591,10 +599,10 @@ export default function AdminPetaPage() {
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                   <button
                     type="button"
-                    onClick={() => setSelectedPointId(undefined)}
+                    onClick={handleCloseDetail}
                     className="text-xs text-orange-600 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <span>← Tutup detail titik & buka filter peta</span>
+                    <span>← Tutup detail titik & fokus ke Indonesia</span>
                   </button>
                 </div>
               </div>
@@ -923,9 +931,9 @@ export default function AdminPetaPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setSelectedPointId(undefined)}
+                    onClick={handleCloseDetail}
                     className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer shrink-0 ml-2"
-                    title="Tutup Panel"
+                    title="Tutup Panel & Zoom Out ke Indonesia"
                   >
                     <X className="w-4 h-4" />
                   </button>
