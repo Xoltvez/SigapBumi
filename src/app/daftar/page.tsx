@@ -8,7 +8,6 @@ import {
   User,
   ArrowRight,
   ChevronLeft,
-  HeartHandshake,
   CheckCircle2,
   Lock,
   Mail,
@@ -24,7 +23,7 @@ import { setCurrentUser } from "@/lib/auth";
 export default function DaftarPage() {
   const router = useRouter();
 
-  const [role, setRole] = useState<"warga" | "relawan">("warga");
+  const role = "warga";
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
@@ -184,39 +183,6 @@ export default function DaftarPage() {
                 <span>{errorMsg}</span>
               </div>
             )}
-
-            {/* Pilihan Peran */}
-            <div>
-              <label className="block text-xs font-bold text-ink mb-1.5">
-                Pilih Jenis Akun
-              </label>
-              <div className="grid grid-cols-2 p-1 bg-bg border border-line rounded-xl text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={() => setRole("warga")}
-                  className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                    role === "warga"
-                      ? "bg-surface text-ink shadow-xs font-bold border border-line"
-                      : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  <User className="w-3.5 h-3.5" />
-                  <span>Warga Pelapor</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole("relawan")}
-                  className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                    role === "relawan"
-                      ? "bg-surface text-primary font-bold shadow-xs border border-primary/20"
-                      : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  <HeartHandshake className="w-3.5 h-3.5" />
-                  <span>Relawan / SAR</span>
-                </button>
-              </div>
-            </div>
 
             {/* Nama Lengkap */}
             <div>

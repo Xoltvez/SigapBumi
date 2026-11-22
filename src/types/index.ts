@@ -1,4 +1,4 @@
-export type UserRole = "warga" | "relawan" | "petugas" | "koordinator";
+export type UserRole = "warga" | "petugas" | "koordinator";
 
 export type ReportStatus =
   | "diterima"

@@ -270,7 +270,7 @@ export default function MasukPage() {
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-primary" />
             <span className="text-xs font-bold text-ink">
-              Petugas Posko atau Relawan Lapangan?
+              Petugas Posko atau Tim Lapangan?
             </span>
           </div>
           <p className="text-[11px] text-ink-muted leading-relaxed">
