@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Siren, Volume2, VolumeX, X, Clock, ShieldAlert, AlertTriangle } from "lucide-react";
 import { AdminSidebar } from "@/components/admin/layout/AdminSidebar";
 import { AdminTopbar } from "@/components/admin/layout/AdminTopbar";
+import { AdminBottomNav } from "@/components/admin/layout/AdminBottomNav";
 import { playSosSiren, stopSosSiren } from "@/lib/audio/siren";
 import { supabase } from "@/lib/supabase/client";
 import { fetchLiveSosAlerts } from "@/lib/services/sos";
@@ -502,12 +503,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             className={`flex-1 ${
               pathname === "/admin/peta"
                 ? "p-0 md:p-6 lg:p-8 overflow-hidden md:overflow-y-auto relative md:static flex flex-col md:block h-full md:h-auto bg-[#F8FAFC] text-slate-800"
-                : "overflow-y-auto p-3.5 sm:p-5 md:p-6 lg:p-8 bg-[#F8FAFC] text-slate-800"
+                : "overflow-y-auto p-3.5 sm:p-5 md:p-6 lg:p-8 pb-20 md:pb-8 bg-[#F8FAFC] text-slate-800"
             }`}
           >
             {children}
           </main>
         </div>
+
+        {/* Bottom Navigation Bar Khusus Mobile untuk Menu Utama / Penting Admin */}
+        <AdminBottomNav />
       </div>
     </AdminContext.Provider>
   );

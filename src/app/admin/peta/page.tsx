@@ -136,6 +136,9 @@ export default function AdminPetaPage() {
     setActiveRoute(null);
     setIsLiveNavigating(false);
     if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("sigapbumi:live-nav-state", { detail: { active: false } })
+      );
       window.dispatchEvent(new CustomEvent("sigapbumi:map-focus-indonesia"));
     }
   }, []);
@@ -179,23 +182,38 @@ export default function AdminPetaPage() {
   const handleStartLiveNavigation = () => {
     setIsLiveNavigating(true);
     setIsMobileSheetOpen(false);
-    if (userLocation && typeof window !== "undefined") {
+    if (typeof window !== "undefined") {
       window.dispatchEvent(
-        new CustomEvent("sigapbumi:map-locate-me", {
-          detail: { lat: userLocation.lat, lng: userLocation.lng },
-        })
+        new CustomEvent("sigapbumi:live-nav-state", { detail: { active: true } })
       );
+      if (userLocation) {
+        window.dispatchEvent(
+          new CustomEvent("sigapbumi:map-locate-me", {
+            detail: { lat: userLocation.lat, lng: userLocation.lng },
+          })
+        );
+      }
     }
   };
 
   // Keluar dari Mode Navigasi Langsung
   const handleExitLiveNavigation = () => {
     setIsLiveNavigating(false);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("sigapbumi:live-nav-state", { detail: { active: false } })
+      );
+    }
   };
 
   const handleClearRoute = () => {
     setActiveRoute(null);
     setIsLiveNavigating(false);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("sigapbumi:live-nav-state", { detail: { active: false } })
+      );
+    }
   };
 
   // Helper render ikon manuver belokan navigasi
@@ -641,8 +659,8 @@ export default function AdminPetaPage() {
         {/* Floating Bottom Sheet (Filter & Info Titik di Bawah Peta Mobile) */}
         {!isLiveNavigating && (
         <div
-          className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 transition-all duration-300 flex flex-col ${
-            isMobileSheetOpen ? "max-h-[85vh]" : "max-h-[74px]"
+          className={`absolute inset-x-0 bottom-16 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 transition-all duration-300 flex flex-col ${
+            isMobileSheetOpen ? "max-h-[calc(85vh-4rem)]" : "max-h-[74px]"
           }`}
         >
           {/* Handle Bar Drag Pill */}
