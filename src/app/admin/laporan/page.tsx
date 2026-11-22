@@ -35,6 +35,7 @@ import {
   parseReportTimestamp,
 } from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
+import DisasterIcon, { getDisasterLabel as getSharedDisasterLabel } from "@/components/common/DisasterIcon";
 
 interface AdminReportRow {
   id: string;
@@ -389,17 +390,7 @@ function LaporanContent() {
   }, [filteredReports, currentPage]);
 
   const getDisasterIcon = (type: DisasterType) => {
-    switch (type) {
-      case "banjir":
-        return <Waves className="w-3.5 h-3.5 text-[#2563EB]" />;
-      case "longsor":
-        return <Mountain className="w-3.5 h-3.5 text-[#D97706]" />;
-      case "kebakaran":
-      case "karhutla":
-        return <Flame className="w-3.5 h-3.5 text-[#EF4444]" />;
-      default:
-        return <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B]" />;
-    }
+    return <DisasterIcon type={type} size={16} />;
   };
 
   const getDisasterLabel = (type: DisasterType) => {

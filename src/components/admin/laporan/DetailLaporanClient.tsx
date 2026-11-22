@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { PriorityBadge } from "@/components/admin/common/PriorityBadge";
 import type { ReportStatus, DisasterType, PriorityLabel } from "@/types";
+import DisasterIcon from "@/components/common/DisasterIcon";
 import {
   fetchLiveReports,
   fetchReportDetail,
@@ -376,16 +377,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
   };
 
   const getDisasterIcon = (type: DisasterType) => {
-    switch (type) {
-      case "banjir":
-        return <Waves className="w-5 h-5 text-info" />;
-      case "longsor":
-        return <Mountain className="w-5 h-5 text-ink" />;
-      case "kebakaran":
-        return <Flame className="w-5 h-5 text-danger" />;
-      default:
-        return <AlertTriangle className="w-5 h-5 text-warning" />;
-    }
+    return <DisasterIcon type={type} size={20} />;
   };
 
   if (isLoading) {

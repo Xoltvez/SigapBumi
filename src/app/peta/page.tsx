@@ -48,6 +48,7 @@ import {
   DEFAULT_MOCK_REPORTS,
 } from "@/lib/services/reports";
 import { fetchLiveSosAlerts } from "@/lib/services/sos";
+import DisasterIcon, { getDisasterLabel } from "@/components/common/DisasterIcon";
 
 // Dynamic import for Leaflet client component (avoid SSR window error)
 const DisasterMap = dynamic(() => import("@/components/peta/DisasterMap"), {
@@ -488,6 +489,18 @@ function PetaContent() {
                   <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
                   <span>{selectedPoint.location_name}</span>
                 </p>
+                {!selectedPoint.is_sos && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-semibold text-slate-700 flex items-center gap-1">
+                      <DisasterIcon type={selectedPoint.disaster_type} size={14} />
+                      <span>{getDisasterLabel(selectedPoint.disaster_type)}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-200 bg-white text-[9px] font-semibold text-slate-700">
+                      <ThumbsUp className="w-2.5 h-2.5 text-orange-500" />
+                      <span>{selectedPoint.confirmation_count} Terkonfirmasi</span>
+                    </span>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex-1 min-w-0">
@@ -869,7 +882,7 @@ function PetaContent() {
                           {/* Badges Info */}
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                             <span
-                              className={`text-[9px] font-bold px-2 py-0.5 rounded ${
+                              className={`text-[9px] font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 ${
                                 pt.is_sos
                                   ? "bg-rose-100 text-rose-700 font-mono"
                                   : isPosko
@@ -879,12 +892,24 @@ function PetaContent() {
                                   : "bg-blue-100 text-blue-700"
                               }`}
                             >
-                              {pt.is_sos
-                                ? "PANGGILAN SOS"
-                                : isPosko
-                                ? "POSKO TERDEKAT"
-                                : pt.disaster_type.toUpperCase()}
+                              {!pt.is_sos && !isPosko && (
+                                <DisasterIcon type={pt.disaster_type} size={12} />
+                              )}
+                              <span>
+                                {pt.is_sos
+                                  ? "PANGGILAN SOS"
+                                  : isPosko
+                                  ? "POSKO TERDEKAT"
+                                  : getDisasterLabel(pt.disaster_type).toUpperCase()}
+                              </span>
                             </span>
+
+                            {!pt.is_sos && !isPosko && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-200 bg-white text-[10px] font-semibold text-slate-700 shadow-2xs">
+                                <ThumbsUp className="w-3 h-3 text-orange-500" />
+                                <span>{pt.confirmation_count} Terkonfirmasi</span>
+                              </span>
+                            )}
 
                             <span className="text-[10px] text-slate-400">
                               •
@@ -939,21 +964,23 @@ function PetaContent() {
                         </div>
 
                         {/* Kanan: Thumbnail Foto */}
-                        <div className="w-18 h-18 rounded-xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center">
+                        <div className="w-18 h-18 rounded-xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center p-1">
                           {isPosko ? (
-                            <div className="w-full h-full bg-emerald-50 flex flex-col items-center justify-center text-emerald-600">
+                            <div className="w-full h-full bg-emerald-50 rounded-lg flex flex-col items-center justify-center text-emerald-600">
                               <Building2 className="w-7 h-7" />
                               <span className="text-[8px] font-bold mt-0.5">POSKO</span>
                             </div>
                           ) : pt.is_sos ? (
-                            <div className="w-full h-full bg-rose-50 flex flex-col items-center justify-center text-rose-600">
+                            <div className="w-full h-full bg-rose-50 rounded-lg flex flex-col items-center justify-center text-rose-600">
                               <Siren className="w-7 h-7 animate-pulse" />
                               <span className="text-[8px] font-bold mt-0.5">SOS</span>
                             </div>
                           ) : (
-                            <div className="w-full h-full bg-blue-50 flex flex-col items-center justify-center text-blue-600">
-                              <Waves className="w-7 h-7" />
-                              <span className="text-[8px] font-bold mt-0.5 capitalize">{pt.disaster_type}</span>
+                            <div className="w-full h-full bg-slate-50 rounded-lg flex flex-col items-center justify-center p-1">
+                              <DisasterIcon type={pt.disaster_type} size={30} />
+                              <span className="text-[8px] font-bold mt-0.5 text-slate-700 capitalize truncate max-w-[60px]">
+                                {getDisasterLabel(pt.disaster_type)}
+                              </span>
                             </div>
                           )}
                         </div>

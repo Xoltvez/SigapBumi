@@ -48,6 +48,7 @@ import {
 } from "@/lib/services/reports";
 import { fetchLiveSosAlerts, updateSosAlertStatus } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
+import DisasterIcon from "@/components/common/DisasterIcon";
 import { useAdmin } from "@/components/layout/AdminShell";
 
 // Dynamic import for Leaflet client component
@@ -332,17 +333,7 @@ export default function AdminPetaPage() {
   const selesaiTotal = basePoints.filter((p) => !p.is_sos && p.status === "selesai").length;
 
   const getDisasterIcon = (type: DisasterType) => {
-    switch (type) {
-      case "banjir":
-        return <Waves className="w-3.5 h-3.5 text-blue-500" />;
-      case "longsor":
-        return <Mountain className="w-3.5 h-3.5 text-amber-500" />;
-      case "kebakaran":
-      case "karhutla":
-        return <Flame className="w-3.5 h-3.5 text-red-500" />;
-      default:
-        return <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />;
-    }
+    return <DisasterIcon type={type} size={16} />;
   };
 
   return (

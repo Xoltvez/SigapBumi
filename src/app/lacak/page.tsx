@@ -28,6 +28,7 @@ import {
 import { TimelineStatus, type TimelineStep } from "@/components/laporan/TimelineStatus";
 import type { DisasterType, ReportStatus, SosAssistanceType } from "@/types";
 import { fetchReportDetail, vouchReportLive, cleanReportDescription, extractPhotoFromDescription } from "@/lib/services/reports";
+import DisasterIcon, { getDisasterLabel } from "@/components/common/DisasterIcon";
 
 interface ReportDetail {
   id?: string;
@@ -289,16 +290,7 @@ function LacakContent() {
   };
 
   const getDisasterIcon = (type: DisasterType) => {
-    switch (type) {
-      case "banjir":
-        return <Waves className="w-5 h-5 text-info" />;
-      case "longsor":
-        return <Mountain className="w-5 h-5 text-ink" />;
-      case "kebakaran":
-        return <Flame className="w-5 h-5 text-danger" />;
-      default:
-        return <AlertTriangle className="w-5 h-5 text-warning" />;
-    }
+    return <DisasterIcon type={type} size={20} />;
   };
 
   const getSosAssistanceInfo = (agency?: SosAssistanceType, title?: string) => {
@@ -549,22 +541,22 @@ function LacakContent() {
                       Kategori & Konfirmasi Warga
                     </span>
                     <div className="flex items-center gap-3">
-                      <span className="capitalize font-medium text-ink flex items-center gap-1">
+                      <span className="capitalize font-medium text-ink flex items-center gap-2">
                         {getDisasterIcon(activeReport.disaster_type)}
-                        {activeReport.disaster_type}
+                        <span>{getDisasterLabel(activeReport.disaster_type)}</span>
                       </span>
                       <button
                         type="button"
                         onClick={handleVouch}
                         disabled={isVouched}
                         title="Konfirmasi bahwa kejadian ini benar terjadi"
-                        className={`text-xs px-2.5 py-1 rounded border transition-colors flex items-center gap-1 font-semibold min-h-[36px] ${
+                        className={`text-xs px-2.5 py-1 rounded border transition-colors flex items-center gap-1.5 font-semibold min-h-[36px] ${
                           isVouched
                             ? "bg-success-soft text-success-text border-success/30"
-                            : "bg-surface border-line text-ink hover:border-primary"
+                            : "bg-surface border-line text-ink hover:border-primary shadow-2xs"
                         }`}
                       >
-                        <ThumbsUp className="w-3.5 h-3.5 text-primary" />
+                        <ThumbsUp className="w-3.5 h-3.5 text-orange-500" />
                         <span>{activeReport.confirmation_count} Terkonfirmasi</span>
                         {isVouched && <span className="text-[10px] text-success font-normal">(Dikonfirmasi Anda)</span>}
                       </button>
