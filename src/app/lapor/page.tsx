@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Waves,
@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Send,
   X,
+  Plus,
   ShieldAlert,
   Loader2,
   LocateFixed,
@@ -30,6 +31,7 @@ import {
   type LiveReportItem,
 } from "@/lib/services/reports";
 import { getCurrentUser } from "@/lib/auth";
+import { WILAYAH_INDONESIA, PROVINSI_INDONESIA } from "@/lib/data/wilayah-indonesia";
 import type { DisasterType } from "@/types";
 
 interface FormData {
@@ -92,6 +94,11 @@ function LaporForm() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFileName, setPhotoFileName] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Bertambah setiap validasi gagal agar scroll tetap jalan walau pesan sama
+  const [errorNonce, setErrorNonce] = useState<number>(0);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const [customNeed, setCustomNeed] = useState<string>("");
+  const [customNeedError, setCustomNeedError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     disaster_type: initialType,
@@ -99,7 +106,7 @@ function LaporForm() {
     description: "",
     address: "",
     province: "DKI Jakarta",
-    regency: "Jakarta Barat",
+    regency: "Kota Jakarta Barat",
     latitude: -6.2088,
     longitude: 106.8456,
     reporter_name: "",
@@ -124,17 +131,8 @@ function LaporForm() {
     "Tenda Darurat / Terpal",
   ];
 
-  const provinceOptions = [
-    "DKI Jakarta",
-    "Jawa Barat",
-    "Banten",
-    "Jawa Tengah",
-    "DI Yogyakarta",
-    "Jawa Timur",
-    "Sumatera Barat",
-    "Bali",
-    "Sulawesi Selatan",
-  ];
+  const provinceOptions = PROVINSI_INDONESIA;
+  const regencyOptions = WILAYAH_INDONESIA[formData.province] ?? [];
 
   // Geolocation handler with user permission request
   const handleGetLocation = () => {
@@ -198,25 +196,72 @@ function LaporForm() {
     });
   };
 
+  const MAX_URGENT_NEEDS = 10;
+  const MAX_CUSTOM_NEED_LENGTH = 40;
+
+  // Tambah kebutuhan custom yang diketik warga
+  const addCustomNeed = () => {
+    const value = customNeed.trim().replace(/\s+/g, " ");
+    if (!value) return;
+
+    const isDuplicate = formData.urgent_needs.some(
+      (n) => n.toLowerCase() === value.toLowerCase()
+    );
+    if (isDuplicate) {
+      setCustomNeedError("Kebutuhan ini sudah ada di daftar.");
+      return;
+    }
+    if (formData.urgent_needs.length >= MAX_URGENT_NEEDS) {
+      setCustomNeedError(`Maksimal ${MAX_URGENT_NEEDS} kebutuhan per laporan.`);
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, urgent_needs: [...prev.urgent_needs, value] }));
+    setCustomNeed("");
+    setCustomNeedError(null);
+  };
+
+  const removeUrgentNeed = (need: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      urgent_needs: prev.urgent_needs.filter((n) => n !== need),
+    }));
+  };
+
   // Step navigation validation (Alur 3 Tahap)
+  const showValidationError = (message: string) => {
+    setErrorMessage(message);
+    setErrorNonce((n) => n + 1);
+  };
+
   const handleNext = () => {
     setErrorMessage(null);
     if (step === 1 && !formData.address.trim()) {
-      setErrorMessage("Silakan isi alamat, nama jalan, atau patokan lokasi kejadian.");
+      showValidationError("Silakan isi alamat, nama jalan, atau patokan lokasi kejadian.");
       return;
     }
     if (step === 2) {
       if (!formData.title.trim()) {
-        setErrorMessage("Judul laporan singkat wajib diisi.");
+        showValidationError("Judul laporan singkat wajib diisi.");
         return;
       }
       if (!formData.description.trim()) {
-        setErrorMessage("Deskripsi kondisi kejadian wajib diisi agar posko dapat menindaklanjuti.");
+        showValidationError("Deskripsi kondisi kejadian wajib diisi agar posko dapat menindaklanjuti.");
         return;
       }
     }
     setStep((prev) => prev + 1);
   };
+
+  // Gulir ke pesan error setiap kali validasi gagal agar langsung terlihat
+  useEffect(() => {
+    if (errorNonce === 0 || !errorRef.current) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    errorRef.current.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "center",
+    });
+  }, [errorNonce]);
 
   const handlePrev = () => {
     setErrorMessage(null);
@@ -374,7 +419,11 @@ function LaporForm() {
       {/* Form Card Content */}
       <div className="bg-surface border border-line rounded-lg p-6 md:p-8 shadow-card">
         {errorMessage && (
-          <div className="mb-6 p-4 rounded-md bg-danger-soft border border-danger/20 text-xs font-semibold text-danger-text flex items-center gap-2">
+          <div
+            key={errorNonce}
+            ref={errorRef}
+            role="alert"
+            className="mb-6 scroll-mt-24 animate-[shake_0.35s_ease-in-out] motion-reduce:animate-none p-4 rounded-md bg-danger-soft border border-danger/20 text-xs font-semibold text-danger-text flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0 text-danger" />
             <span>{errorMessage}</span>
           </div>
@@ -434,9 +483,15 @@ function LaporForm() {
                 </label>
                 <select
                   value={formData.province}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, province: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    const province = e.target.value;
+                    // Reset kota/kabupaten ke pilihan pertama provinsi baru
+                    setFormData((prev) => ({
+                      ...prev,
+                      province,
+                      regency: WILAYAH_INDONESIA[province]?.[0] ?? "",
+                    }));
+                  }}
                   className="w-full h-11 px-3.5 rounded-md border border-line bg-surface text-sm text-ink focus:border-primary focus:outline-none"
                 >
                   {provinceOptions.map((prov) => (
@@ -451,15 +506,19 @@ function LaporForm() {
                 <label className="block text-xs font-semibold text-ink mb-1.5">
                   Kota / Kabupaten <span className="text-danger">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   value={formData.regency}
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, regency: e.target.value }))
                   }
-                  placeholder="Contoh: Jakarta Barat / Kab. Bogor"
                   className="w-full h-11 px-3.5 rounded-md border border-line bg-surface text-sm text-ink focus:border-primary focus:outline-none"
-                />
+                >
+                  {regencyOptions.map((reg) => (
+                    <option key={reg} value={reg}>
+                      {reg}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -609,31 +668,113 @@ function LaporForm() {
               )}
             </div>
 
-            {/* Kebutuhan Mendesak Checklist */}
+            {/* Kebutuhan Mendesak: pilihan cepat + input custom */}
             <div>
-              <label className="block text-xs font-semibold text-ink mb-2">
-                Kebutuhan Mendesak Warga di Lokasi:
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="flex items-baseline justify-between gap-2 mb-1">
+                <label htmlFor="custom-need" className="block text-xs font-semibold text-ink">
+                  Kebutuhan Mendesak Warga di Lokasi (Opsional)
+                </label>
+                <span className="text-[11px] text-ink-muted tabular-nums">
+                  {formData.urgent_needs.length}/{MAX_URGENT_NEEDS}
+                </span>
+              </div>
+              <p className="text-[11px] text-ink-muted mb-2.5">
+                Pilih yang sesuai, atau tulis sendiri jika kebutuhan tidak ada di daftar.
+              </p>
+
+              {/* Pilihan cepat */}
+              <div className="flex flex-wrap gap-2">
                 {urgentOptions.map((opt) => {
                   const isChecked = formData.urgent_needs.includes(opt);
+                  const isFull = !isChecked && formData.urgent_needs.length >= MAX_URGENT_NEEDS;
                   return (
                     <button
                       key={opt}
                       type="button"
                       onClick={() => toggleUrgentNeed(opt)}
-                      className={`min-h-[40px] px-3 py-2 rounded-md border text-xs font-medium text-left flex items-center justify-between transition-colors ${
+                      disabled={isFull}
+                      aria-pressed={isChecked}
+                      className={`min-h-[36px] px-3 py-1.5 rounded-full border text-xs font-medium inline-flex items-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                         isChecked
                           ? "border-primary bg-primary-soft text-primary-hover font-semibold"
                           : "border-line bg-surface text-ink hover:border-line-strong"
                       }`}
                     >
+                      {isChecked ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                      ) : (
+                        <Plus className="w-3.5 h-3.5 text-ink-muted" />
+                      )}
                       <span>{opt}</span>
-                      {isChecked && <CheckCircle2 className="w-4 h-4 text-primary" />}
                     </button>
                   );
                 })}
               </div>
+
+              {/* Input kebutuhan custom */}
+              <div className="mt-3 flex gap-2">
+                <input
+                  id="custom-need"
+                  type="text"
+                  value={customNeed}
+                  maxLength={MAX_CUSTOM_NEED_LENGTH}
+                  onChange={(e) => {
+                    setCustomNeed(e.target.value);
+                    if (customNeedError) setCustomNeedError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault(); // jangan submit form
+                      addCustomNeed();
+                    }
+                  }}
+                  placeholder="Contoh: Popok bayi, Obat asma, Genset"
+                  className="flex-1 min-w-0 h-10 px-3.5 rounded-md border border-line bg-surface text-sm text-ink focus:border-primary focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={addCustomNeed}
+                  disabled={!customNeed.trim() || formData.urgent_needs.length >= MAX_URGENT_NEEDS}
+                  className="h-10 px-4 rounded-md bg-primary-hover hover:bg-primary-active text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Tambah</span>
+                </button>
+              </div>
+              {customNeedError && (
+                <p className="text-[11px] text-danger mt-1.5" role="alert">
+                  {customNeedError}
+                </p>
+              )}
+
+              {/* Kebutuhan custom yang sudah ditambahkan */}
+              {formData.urgent_needs.some((n) => !urgentOptions.includes(n)) && (
+                <div className="mt-3">
+                  <span className="text-[11px] font-semibold text-ink-muted block mb-1.5">
+                    Kebutuhan tambahan:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.urgent_needs
+                      .filter((n) => !urgentOptions.includes(n))
+                      .map((n) => (
+                        <span
+                          key={n}
+                          className="min-h-[32px] pl-3 pr-1 py-1 rounded-full border border-primary bg-primary-soft text-primary-hover text-xs font-semibold inline-flex items-center gap-1"
+                        >
+                          <span className="break-all">{n}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeUrgentNeed(n)}
+                            aria-label={`Hapus kebutuhan ${n}`}
+                            className="p-1 rounded-full hover:bg-primary/15 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -786,12 +927,12 @@ function LaporForm() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Mengirim Laporan Resmi...</span>
+                  <span>Mengirim Laporan...</span>
                 </>
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  <span>Kirim Laporan Resmi</span>
+                  <span>Kirim Laporan</span>
                 </>
               )}
             </button>
