@@ -501,7 +501,7 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
   try {
     const { data, error } = await supabase
       .from("reports")
-      .select("*")
+      .select("*, report_media(*)")
       .order("created_at", { ascending: false });
 
     if (!error && data && data.length > 0) {
@@ -513,7 +513,10 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
           row.priority_score >= 80 ? "tinggi" : row.priority_score >= 30 ? "sedang" : "normal";
 
         const rawDesc = row.description || "";
-        const extractedPhoto = extractPhotoFromDescription(rawDesc) || row.image_url || undefined;
+        const mediaPhoto = Array.isArray(row.report_media) && row.report_media.length > 0
+          ? row.report_media[0].media_url
+          : undefined;
+        const extractedPhoto = extractPhotoFromDescription(rawDesc) || mediaPhoto || row.image_url || undefined;
         const extractedPhone = extractPhoneFromDescription(rawDesc) || row.phone_number || undefined;
         const cleanDesc = cleanReportDescription(rawDesc);
 

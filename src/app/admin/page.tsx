@@ -117,6 +117,7 @@ export default function AdminRingkasanPage() {
               status: r.status,
               priority: pLabel,
               confirmation_count: r.confirmation_count,
+              image_url: r.image_url,
             };
           });
 
@@ -537,6 +538,21 @@ export default function AdminRingkasanPage() {
               </div>
             ) : (
               unitReports.slice(0, 4).map((r, idx) => {
+                const fallbackImg =
+                  r.disaster_type === "kebakaran" || r.disaster_type === "karhutla" || r.target_agency === "damkar"
+                    ? "/thumbnails/fire.jpg"
+                    : r.disaster_type === "gempa" || r.target_agency === "medis"
+                    ? "/thumbnails/quake.jpg"
+                    : r.disaster_type === "longsor"
+                    ? "/thumbnails/landslide.jpg"
+                    : "/thumbnails/flood.jpg";
+
+                const displayImage = r.image_url || fallbackImg;
+                const isBase64OrRemote =
+                  displayImage.startsWith("data:") ||
+                  displayImage.startsWith("http:") ||
+                  displayImage.startsWith("https:");
+
                 const item = {
                   id: r.id,
                   title: r.title,
@@ -547,7 +563,8 @@ export default function AdminRingkasanPage() {
                       : r.status === "selesai"
                       ? "selesai"
                       : "baru",
-                  image: r.image_url || "/thumbnails/flood.jpg",
+                  image: displayImage,
+                  isBase64OrRemote,
                 };
 
                 return (
@@ -562,6 +579,7 @@ export default function AdminRingkasanPage() {
                           src={item.image}
                           alt={item.title}
                           fill
+                          unoptimized={item.isBase64OrRemote}
                           sizes="80px"
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                         />
