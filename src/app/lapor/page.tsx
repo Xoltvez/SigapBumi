@@ -33,10 +33,11 @@ import {
 } from "@/lib/services/reports";
 import { getCurrentUser } from "@/lib/auth";
 import { WILAYAH_INDONESIA, PROVINSI_INDONESIA } from "@/lib/data/wilayah-indonesia";
-import type { DisasterType } from "@/types";
+import type { DisasterType, PriorityLabel } from "@/types";
 
 interface FormData {
   disaster_type: DisasterType;
+  priority: PriorityLabel;
   title: string;
   description: string;
   address: string;
@@ -103,6 +104,7 @@ function LaporForm() {
 
   const [formData, setFormData] = useState<FormData>({
     disaster_type: initialType,
+    priority: "Sedang",
     title: "",
     description: "",
     address: "",
@@ -114,6 +116,53 @@ function LaporForm() {
     reporter_phone: "",
     urgent_needs: [],
   });
+
+  const priorityOptions: {
+    key: PriorityLabel;
+    label: string;
+    dotColor: string;
+    borderActive: string;
+    bgActive: string;
+    textColor: string;
+    desc: string;
+  }[] = [
+    {
+      key: "Kritis",
+      label: "Kritis",
+      dotColor: "bg-rose-500",
+      borderActive: "border-rose-500 ring-2 ring-rose-400/30",
+      bgActive: "bg-rose-50 text-rose-950 font-bold",
+      textColor: "text-rose-600",
+      desc: "Bahaya keselamatan jiwa, warga terisolir/terjebak, butuh evakuasi segera",
+    },
+    {
+      key: "Tinggi",
+      label: "Tinggi",
+      dotColor: "bg-orange-500",
+      borderActive: "border-orange-500 ring-2 ring-orange-400/30",
+      bgActive: "bg-orange-50 text-orange-950 font-bold",
+      textColor: "text-orange-600",
+      desc: "Bencana meluas cepat, kerusakan parah, bantuan logistik & medis mendesak",
+    },
+    {
+      key: "Sedang",
+      label: "Sedang",
+      dotColor: "bg-blue-500",
+      borderActive: "border-blue-500 ring-2 ring-blue-400/30",
+      bgActive: "bg-blue-50 text-blue-950 font-bold",
+      textColor: "text-blue-600",
+      desc: "Dampak terkendali, genangan lokal / penanganan warga berlangsung",
+    },
+    {
+      key: "Rendah",
+      label: "Rendah",
+      dotColor: "bg-emerald-500",
+      borderActive: "border-emerald-500 ring-2 ring-emerald-400/30",
+      bgActive: "bg-emerald-50 text-emerald-950 font-bold",
+      textColor: "text-emerald-600",
+      desc: "Dampak minim, air mulai surut, pemantauan wilayah & pemulihan",
+    },
+  ];
 
   const categories: { key: DisasterType; label: string; icon?: React.ElementType; iconUrl?: string; color: string }[] = [
     { key: "banjir", label: "Tsunami & Banjir", iconUrl: "/icon%20bencana/banjir.png", icon: Waves, color: "text-info" },
@@ -287,6 +336,14 @@ function LaporForm() {
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id)
     );
 
+    const priorityScoreMap: Record<PriorityLabel, number> = {
+      Kritis: 95,
+      Tinggi: 75,
+      Sedang: 50,
+      Rendah: 20,
+    };
+    const calculatedScore = priorityScoreMap[formData.priority] ?? 50;
+
     const localReportItem: LiveReportItem = {
       id: reportId,
       tracking_code: trackingCode,
@@ -300,7 +357,8 @@ function LaporForm() {
       lat: formData.latitude,
       lng: formData.longitude,
       status: "diterima",
-      priority: formData.urgent_needs.length > 0 ? "tinggi" : "normal",
+      priority: formData.priority.toLowerCase() as "kritis" | "tinggi" | "sedang" | "rendah",
+      priority_label: formData.priority,
       confirmation_count: 0,
       created_at: "Baru saja",
       image_url: photoPreview || undefined,
@@ -312,7 +370,7 @@ function LaporForm() {
           status: "diterima",
           label: "Laporan Diterima Sistem",
           timestamp: "Baru saja",
-          note: "Laporan tercatat dalam antrean verifikasi posko penanggulangan bencana.",
+          note: `Laporan tercatat dengan tingkat prioritas ${formData.priority}.`,
         },
       ],
     };
@@ -336,7 +394,7 @@ function LaporForm() {
         regency: formData.regency,
         status: "diterima",
         confirmation_count: 0,
-        priority_score: formData.urgent_needs.length > 0 ? 25 : 10,
+        priority_score: calculatedScore,
       };
 
       if (isUuid && currentUser) {
@@ -598,6 +656,56 @@ function LaporForm() {
               </div>
             </div>
 
+            {/* Tingkat Prioritas Penanganan Bencana */}
+            <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+                <label className="block text-xs font-semibold text-ink">
+                  Tingkat Prioritas Penanganan <span className="text-danger">*</span>
+                </label>
+                <span className="text-[11px] text-ink-muted">
+                  Bantu tim SAR &amp; posko memprioritaskan antrean evakuasi
+                </span>
+              </div>
+
+              {/* Grid 4 Kartu Prioritas dengan Color Dot & Penjelasan */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+                {priorityOptions.map((opt) => {
+                  const isSelected = formData.priority === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({ ...prev, priority: opt.key }))
+                      }
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-2 min-h-[82px] cursor-pointer shadow-2xs ${
+                        isSelected
+                          ? `${opt.borderActive} ${opt.bgActive} shadow-sm`
+                          : "border-line bg-surface hover:border-slate-300 hover:bg-slate-50/50 text-ink"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="flex items-center gap-2 text-xs font-bold">
+                          <span
+                            className={`w-3 h-3 rounded-full ${opt.dotColor} shrink-0 ring-2 ring-white shadow-xs`}
+                          />
+                          <span>{opt.label}</span>
+                        </span>
+                        {isSelected ? (
+                          <CheckCircle2 className={`w-4 h-4 ${opt.textColor} shrink-0`} />
+                        ) : (
+                          <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[10px] text-ink-muted leading-relaxed font-normal">
+                        {opt.desc}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Judul & Deskripsi */}
             <div>
               <label className="block text-xs font-semibold text-ink mb-1.5">
@@ -811,9 +919,35 @@ function LaporForm() {
                   <FileCheck2 className="w-4 h-4 text-primary" />
                   <span>Ringkasan Laporan</span>
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded bg-primary-soft text-primary-hover font-bold capitalize">
-                  {formData.disaster_type}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs px-2.5 py-0.5 rounded bg-primary-soft text-primary-hover font-bold capitalize">
+                    {formData.disaster_type}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${
+                      formData.priority === "Kritis"
+                        ? "bg-rose-50 border-rose-300 text-rose-800"
+                        : formData.priority === "Tinggi"
+                        ? "bg-orange-50 border-orange-300 text-orange-800"
+                        : formData.priority === "Sedang"
+                        ? "bg-blue-50 border-blue-300 text-blue-800"
+                        : "bg-emerald-50 border-emerald-300 text-emerald-800"
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        formData.priority === "Kritis"
+                          ? "bg-rose-500"
+                          : formData.priority === "Tinggi"
+                          ? "bg-orange-500"
+                          : formData.priority === "Sedang"
+                          ? "bg-blue-500"
+                          : "bg-emerald-500"
+                      }`}
+                    />
+                    <span>Prioritas {formData.priority}</span>
+                  </span>
+                </div>
               </div>
 
               <div>

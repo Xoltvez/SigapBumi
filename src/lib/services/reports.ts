@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { parsePostGISPoint } from "@/lib/geo";
-import type { DisasterType, ReportStatus, SosAssistanceType } from "@/types";
+import type { DisasterType, ReportStatus, SosAssistanceType, PriorityLabel } from "@/types";
 import type { MapPoint } from "@/components/peta/DisasterMap";
 import type { TimelineStep } from "@/components/laporan/TimelineStatus";
 import { MASTER_MOCK_REPORTS } from "@/lib/data/mock-reports";
@@ -18,7 +18,8 @@ export interface LiveReportItem {
   lat: number;
   lng: number;
   status: ReportStatus;
-  priority: "tinggi" | "sedang" | "normal";
+  priority: "kritis" | "tinggi" | "sedang" | "rendah" | "normal";
+  priority_label?: PriorityLabel;
   confirmation_count: number;
   created_at: string;
   raw_created_at?: string;
@@ -352,6 +353,21 @@ export async function fetchUserReports(user: { id: string; email: string; phone_
         const imageUrl = extractPhotoFromDescription(row.description) || mediaPhoto || row.image_url || undefined;
         const cleanDescription = cleanReportDescription(row.description);
 
+        const isSosReport = isSos || Boolean(
+          row.title?.toUpperCase().includes("SOS") ||
+          (row.tracking_code || "").toUpperCase().startsWith("SOS-") ||
+          (row.priority_score && row.priority_score >= 95)
+        );
+
+        const calculatedPriority: "kritis" | "tinggi" | "sedang" | "rendah" | "normal" =
+          isSosReport || row.priority_score >= 90
+            ? "kritis"
+            : row.priority_score >= 70
+            ? "tinggi"
+            : row.priority_score >= 35
+            ? "sedang"
+            : "rendah";
+
         result.push({
           id: row.id,
           tracking_code: row.tracking_code,
@@ -363,7 +379,8 @@ export async function fetchUserReports(user: { id: string; email: string; phone_
           lat: coords.lat,
           lng: coords.lng,
           status: row.status as ReportStatus,
-          priority: row.priority_score >= 80 ? "tinggi" : "sedang",
+          priority: calculatedPriority,
+          priority_label: isSosReport || calculatedPriority === "kritis" ? "Kritis" : calculatedPriority === "tinggi" ? "Tinggi" : calculatedPriority === "sedang" ? "Sedang" : "Rendah",
           confirmation_count: row.confirmation_count || 0,
           created_at: formatReportTime(row.created_at),
           image_url: imageUrl,
@@ -509,8 +526,20 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
         const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
         const disaster = row.disaster_type as DisasterType;
         const agency = inferAgencyFromDisaster(disaster);
-        const priority: "tinggi" | "sedang" | "normal" =
-          row.priority_score >= 80 ? "tinggi" : row.priority_score >= 30 ? "sedang" : "normal";
+        const isSosReport = Boolean(
+          row.title?.toUpperCase().includes("SOS") ||
+          (row.tracking_code || "").toUpperCase().startsWith("SOS-") ||
+          (row.priority_score && row.priority_score >= 95)
+        );
+
+        const priority: "kritis" | "tinggi" | "sedang" | "rendah" | "normal" =
+          isSosReport || row.priority_score >= 90
+            ? "kritis"
+            : row.priority_score >= 70
+            ? "tinggi"
+            : row.priority_score >= 35
+            ? "sedang"
+            : "rendah";
 
         const rawDesc = row.description || "";
         const mediaPhoto = Array.isArray(row.report_media) && row.report_media.length > 0
@@ -705,6 +734,12 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
               },
             ];
 
+      const isSosReport = Boolean(
+        data.title?.toUpperCase().includes("SOS") ||
+        (data.tracking_code || "").toUpperCase().startsWith("SOS-") ||
+        (data.priority_score && data.priority_score >= 95)
+      );
+
       return {
         id: data.id,
         tracking_code: data.tracking_code,
@@ -716,7 +751,8 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         lat: coords.lat,
         lng: coords.lng,
         status: data.status as ReportStatus,
-        priority: data.priority_score >= 80 ? "tinggi" : "sedang",
+        priority: isSosReport || data.priority_score >= 90 ? "kritis" : data.priority_score >= 70 ? "tinggi" : data.priority_score >= 35 ? "sedang" : "rendah",
+        priority_label: isSosReport || data.priority_score >= 90 ? "Kritis" : data.priority_score >= 70 ? "Tinggi" : data.priority_score >= 35 ? "Sedang" : "Rendah",
         confirmation_count: data.confirmation_count || 0,
         created_at: formatReportTime(data.created_at),
         timeline,

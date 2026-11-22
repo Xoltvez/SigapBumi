@@ -101,9 +101,31 @@ export default function AdminRingkasanPage() {
         if (isMounted) {
           const formatted: AdminReportItem[] = (live || []).map((r) => {
             let pLabel: PriorityLabel = "Sedang";
-            if (r.priority === "tinggi" || r.confirmation_count >= 20) pLabel = "Kritis";
-            else if (r.confirmation_count >= 10) pLabel = "Tinggi";
-            else if (r.status === "selesai") pLabel = "Rendah";
+            const isSos = Boolean(
+              r.tracking_code?.startsWith("SOS-") ||
+              r.title?.toUpperCase().includes("SOS") ||
+              r.target_agency === "damkar" ||
+              r.target_agency === "medis" ||
+              r.target_agency === "polisi" ||
+              r.target_agency === "bnpb_bpbd"
+            );
+
+            const p = String(r.priority || "").toLowerCase();
+            if (isSos || p === "kritis" || r.priority_label === "Kritis") {
+              pLabel = "Kritis";
+            } else if (p === "tinggi" || r.priority_label === "Tinggi") {
+              pLabel = "Tinggi";
+            } else if (p === "rendah" || r.priority_label === "Rendah") {
+              pLabel = "Rendah";
+            } else if (p === "sedang" || p === "normal" || r.priority_label === "Sedang") {
+              pLabel = "Sedang";
+            } else if (r.confirmation_count >= 20) {
+              pLabel = "Kritis";
+            } else if (r.confirmation_count >= 10) {
+              pLabel = "Tinggi";
+            } else if (r.status === "selesai") {
+              pLabel = "Rendah";
+            }
 
             return {
               id: r.id,

@@ -180,10 +180,31 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
           const detail = await fetchReportDetail(found.tracking_code);
 
           let pLabel: PriorityLabel = "Sedang";
+          const isSos = Boolean(
+            found.tracking_code?.startsWith("SOS-") ||
+            found.title?.toUpperCase().includes("SOS") ||
+            found.target_agency === "damkar" ||
+            found.target_agency === "medis" ||
+            found.target_agency === "polisi" ||
+            found.target_agency === "bnpb_bpbd"
+          );
+
           const p = String(found.priority || "").toLowerCase();
-          if (p === "kritis" || p === "tinggi" || found.confirmation_count >= 20) pLabel = "Kritis";
-          else if (found.confirmation_count >= 10) pLabel = "Tinggi";
-          else if (found.status === "selesai") pLabel = "Rendah";
+          if (isSos || p === "kritis" || found.priority_label === "Kritis") {
+            pLabel = "Kritis";
+          } else if (p === "tinggi" || found.priority_label === "Tinggi") {
+            pLabel = "Tinggi";
+          } else if (p === "rendah" || found.priority_label === "Rendah") {
+            pLabel = "Rendah";
+          } else if (p === "sedang" || p === "normal" || found.priority_label === "Sedang") {
+            pLabel = "Sedang";
+          } else if (found.confirmation_count >= 20) {
+            pLabel = "Kritis";
+          } else if (found.confirmation_count >= 10) {
+            pLabel = "Tinggi";
+          } else if (found.status === "selesai") {
+            pLabel = "Rendah";
+          }
 
           const rawDesc = detail?.description || found.description || "";
           const cleanDesc = cleanReportDescription(rawDesc);
