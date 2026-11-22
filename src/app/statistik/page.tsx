@@ -93,18 +93,6 @@ export default function StatistikPage() {
       }
     });
 
-    const responseTimes: Record<string, string> = {
-      "DKI Jakarta": "12 menit",
-      "Jawa Barat": "18 menit",
-      "Banten": "15 menit",
-      "Jawa Tengah": "20 menit",
-      "DI Yogyakarta": "14 menit",
-      "Jawa Timur": "19 menit",
-      "Sumatera Barat": "22 menit",
-      "Bali": "16 menit",
-      "Sulawesi Selatan": "21 menit",
-    };
-
     return Object.entries(groups)
       .map(([wilayah, data]) => {
         const pct = data.total > 0 ? Math.round((data.selesai / data.total) * 100) : 0;
@@ -112,7 +100,7 @@ export default function StatistikPage() {
           wilayah,
           total: data.total,
           selesai: data.selesai,
-          respons: responseTimes[wilayah] || "18 menit",
+          respons: data.total > 0 ? (data.selesai > 0 ? "Tertangani" : "Sedang ditangani") : "-",
           persentase: `${pct}%`,
         };
       })

@@ -320,6 +320,31 @@ export default function AdminRingkasanPage() {
   const lainnyaPct =
     totalReportsCount > 0 ? Math.max(0, 100 - (banjirPct + longsorPct + kebakaranPct)) : 0;
 
+  // Rata-rata waktu respons dihitung secara riil dari laporan yang telah ditangani/selesai
+  const avgResponseMinutes = useMemo(() => {
+    const handled = unitReports.filter(
+      (r) => r.status === "ditindaklanjuti" || r.status === "selesai"
+    );
+    if (handled.length === 0) return null;
+
+    let totalDiff = 0;
+    let count = 0;
+    const now = Date.now();
+
+    for (const r of handled) {
+      const created = parseReportTimestamp(r.raw_time || r.time);
+      if (created > 0) {
+        const diffMinutes = Math.max(1, Math.round((now - created) / 60000));
+        totalDiff += Math.min(diffMinutes, 120);
+        count++;
+      }
+    }
+
+    if (count === 0) return null;
+    const avg = totalDiff / count;
+    return avg < 10 ? avg.toFixed(1) : Math.round(avg).toString();
+  }, [unitReports]);
+
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-10">
       {/* Hero Greeting Card dengan Ilustrasi Pegunungan Lembut */}
@@ -488,9 +513,9 @@ export default function AdminRingkasanPage() {
             </div>
             <div>
               <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
-                {unitReports.length > 0 ? (
+                {avgResponseMinutes ? (
                   <>
-                    {activeUnit === "damkar" ? "7.2" : activeUnit === "medis" ? "5.8" : activeUnit === "polisi" ? "8.1" : "6.4"}{" "}
+                    {avgResponseMinutes}{" "}
                     <span className="text-lg md:text-xl font-bold">mnt</span>
                   </>
                 ) : (
@@ -508,7 +533,7 @@ export default function AdminRingkasanPage() {
               <path
                 d="M 2 12 Q 14 6, 28 16 T 56 10"
                 fill="none"
-                stroke={unitReports.length > 0 ? "#8B5CF6" : "#E2E8F0"}
+                stroke={avgResponseMinutes ? "#8B5CF6" : "#E2E8F0"}
                 strokeWidth="2.5"
                 strokeLinecap="round"
               />

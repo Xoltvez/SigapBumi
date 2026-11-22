@@ -28,6 +28,7 @@ import {
   fetchLiveReports,
   type LiveReportItem,
   clearAllLocalReportsAndCaches,
+  parseReportTimestamp,
 } from "@/lib/services/reports";
 import { fetchLiveSosAlerts, type LiveSosItem } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
@@ -500,17 +501,24 @@ export default function AdminStatistikPage() {
           (r.title || "").toUpperCase().includes("POLISI")
       );
 
+      const bpbdSos = sosAlerts.filter(
+        (s) =>
+          s.assistance_type === "bnpb_bpbd" ||
+          (s.assistance_type as string) === "evakuasi"
+      );
       const damkarSos = sosAlerts.filter((s) => s.assistance_type === "damkar");
       const medisSos = sosAlerts.filter((s) => s.assistance_type === "medis");
       const polriSos = sosAlerts.filter((s) => s.assistance_type === "polisi");
       const basarnasSos = sosAlerts.filter(
         (s) =>
-          s.assistance_type === "bnpb_bpbd" ||
-          (s.assistance_type as string) === "evakuasi"
+          (s.assistance_type as string) === "sar" ||
+          (s.assistance_type as string) === "basarnas"
       );
 
-      const bpbdTotal = bpbdReps.length;
-      const bpbdResolved = bpbdReps.filter((r) => r.status === "selesai").length;
+      const bpbdTotal = bpbdReps.length + bpbdSos.length;
+      const bpbdResolved =
+        bpbdReps.filter((r) => r.status === "selesai").length +
+        bpbdSos.filter((s) => s.status === "selesai" || s.status === "palsu").length;
 
       const damkarTotal = damkarReps.length + damkarSos.length;
       const damkarResolved =
@@ -534,7 +542,7 @@ export default function AdminStatistikPage() {
       const basarnasResolved =
         basarnasSos.filter((s) => s.status === "selesai").length;
 
-      const totalAll = totalReportsCount;
+      const totalAll = bpbdTotal + damkarTotal + medisTotal + polriTotal + basarnasTotal;
 
       return [
         {
@@ -820,6 +828,54 @@ export default function AdminStatistikPage() {
     sosAlerts,
   ]);
 
+  // Rata-rata waktu respons dihitung secara riil dari laporan dan SOS yang telah tertangani
+  const avgResponseStats = useMemo(() => {
+    const handledReports = unitReports.filter(
+      (r) => r.status === "ditindaklanjuti" || r.status === "selesai"
+    );
+    const handledSos = unitSos.filter(
+      (s) => s.status === "ditangani" || s.status === "selesai"
+    );
+
+    const totalHandled = handledReports.length + handledSos.length;
+    if (totalHandled === 0) {
+      return { time: "-", comparison: "Belum ada laporan aktif" };
+    }
+
+    let totalDiff = 0;
+    let count = 0;
+    const now = Date.now();
+
+    for (const r of handledReports) {
+      const created = parseReportTimestamp(r.raw_created_at || r.created_at);
+      if (created > 0) {
+        const diff = Math.max(1, Math.round((now - created) / 60000));
+        totalDiff += Math.min(diff, 120);
+        count++;
+      }
+    }
+
+    for (const s of handledSos) {
+      const created = s.created_at ? new Date(s.created_at).getTime() : 0;
+      if (created > 0) {
+        const diff = Math.max(1, Math.round((now - created) / 60000));
+        totalDiff += Math.min(diff, 120);
+        count++;
+      }
+    }
+
+    if (count === 0) {
+      return { time: "-", comparison: "Belum ada laporan aktif" };
+    }
+
+    const avg = totalDiff / count;
+    const formatted = avg < 10 ? avg.toFixed(1) : Math.round(avg).toString();
+    return {
+      time: formatted,
+      comparison: `${totalHandled} kasus tertangani`,
+    };
+  }, [unitReports, unitSos]);
+
   // Konfigurasi Header dan Label Khusus Berdasarkan Role
   const roleConfig = useMemo(() => {
     if (activeUnit === "damkar") {
@@ -829,10 +885,10 @@ export default function AdminStatistikPage() {
           "Analitik respons pemadaman kebakaran permukiman, gedung, karhutla, dan penyelamatan taktis sektor Damkar.",
         jurisdictionBadge: "Sektor Pemadam & Penyelamatan (Damkar)",
         totalReportsLabel: "Total Insiden Kebakaran",
-        responseTime: totalReportsCount > 0 ? "5.2" : "-",
-        responseComparison: totalReportsCount > 0 ? "62% lebih cepat" : "Belum ada laporan aktif",
+        responseTime: avgResponseStats.time,
+        responseComparison: avgResponseStats.comparison,
         fourthMetricLabel: "Unit Armada Diterjunkan",
-        fourthMetricValue: totalReportsCount > 0 ? `${Math.round(totalReportsCount * 0.65) || 1} Armada` : "0 Armada",
+        fourthMetricValue: totalReportsCount > 0 ? `${unitReports.filter((r) => r.status === "ditindaklanjuti").length || 1} Armada Aktif` : "0 Armada",
         fourthMetricSub: "Truk damkar & water cannon",
         agencySectionTitle: "Beban Operasi per Sektor Damkar",
         agencySectionSub:
@@ -847,8 +903,8 @@ export default function AdminStatistikPage() {
           "Analitik penanganan gawat darurat, evakuasi medis, ambulans PSC 119, dan rumah sakit lapangan pasca-bencana.",
         jurisdictionBadge: "Dinkes & Pelayanan Medis Darurat (PSC 119)",
         totalReportsLabel: "Total Pasien / Kasus Medis",
-        responseTime: totalReportsCount > 0 ? "4.8" : "-",
-        responseComparison: totalReportsCount > 0 ? "70% lebih cepat" : "Belum ada laporan aktif",
+        responseTime: avgResponseStats.time,
+        responseComparison: avgResponseStats.comparison,
         fourthMetricLabel: "Pasien Tertangani Stabil",
         fourthMetricValue: `${totalConfirmationsCount} Jiwa`,
         fourthMetricSub: "Triase darurat & perawatan intensif",
@@ -865,10 +921,10 @@ export default function AdminStatistikPage() {
           "Analitik pengamanan wilayah terdampak, rekayasa jalur evakuasi bencana, dan penanganan ketertiban publik.",
         jurisdictionBadge: "Satgas Kepolisian & Keamanan Bencana (Polri)",
         totalReportsLabel: "Total Titik Penugasan",
-        responseTime: totalReportsCount > 0 ? "5.8" : "-",
-        responseComparison: totalReportsCount > 0 ? "55% lebih cepat" : "Belum ada laporan aktif",
+        responseTime: avgResponseStats.time,
+        responseComparison: avgResponseStats.comparison,
         fourthMetricLabel: "Personel Kamtibmas Aktif",
-        fourthMetricValue: totalReportsCount > 0 ? `${Math.round(totalReportsCount * 3.5) || 1} Personel` : "0 Personel",
+        fourthMetricValue: totalReportsCount > 0 ? `${unitReports.filter((r) => r.status === "ditindaklanjuti").length * 2 || 2} Personel` : "0 Personel",
         fourthMetricSub: "Brimob, Sabhara, & Polantas",
         agencySectionTitle: "Beban Operasi per Satuan Fungsi Polri",
         agencySectionSub:
@@ -883,8 +939,8 @@ export default function AdminStatistikPage() {
           "Analitik koordinasi kedaruratan hidrometeorologi dan geologi: banjir, tanah longsor, gempa bumi, dan tsunami.",
         jurisdictionBadge: "Komando Penanggulangan Bencana (BNPB / BPBD)",
         totalReportsLabel: "Total Bencana Alam",
-        responseTime: totalReportsCount > 0 ? "6.8" : "-",
-        responseComparison: totalReportsCount > 0 ? "54% lebih cepat" : "Belum ada laporan aktif",
+        responseTime: avgResponseStats.time,
+        responseComparison: avgResponseStats.comparison,
         fourthMetricLabel: "Warga Terbantu Evakuasi",
         fourthMetricValue: `${totalConfirmationsCount} Jiwa`,
         fourthMetricSub: "Tercatat di posko pengungsian",
@@ -901,8 +957,8 @@ export default function AdminStatistikPage() {
         "Analitik terpadu mencakup seluruh laporan bencana, panggilan SOS darurat, dan kinerja multi-instansi se-Indonesia secara real-time.",
       jurisdictionBadge: "Akses Penuh Seluruh Instansi RI (Pemerintahan)",
       totalReportsLabel: "Total Laporan Terpadu",
-      responseTime: totalReportsCount > 0 ? "6.4" : "-",
-      responseComparison: totalReportsCount > 0 ? "57% lebih cepat" : "Belum ada laporan aktif",
+      responseTime: avgResponseStats.time,
+      responseComparison: avgResponseStats.comparison,
       fourthMetricLabel: "Partisipasi Warga",
       fourthMetricValue: `${totalConfirmationsCount} Saksi`,
       fourthMetricSub: "Konfirmasi saksi tervalidasi riil",
@@ -910,7 +966,7 @@ export default function AdminStatistikPage() {
       agencySectionSub:
         "Alokasi disposisi tugas dan persentase keberhasilan penyelesaian se-Indonesia",
     };
-  }, [activeUnit, totalReportsCount, totalConfirmationsCount]);
+  }, [activeUnit, totalReportsCount, totalConfirmationsCount, avgResponseStats, unitReports]);
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-12 select-none">

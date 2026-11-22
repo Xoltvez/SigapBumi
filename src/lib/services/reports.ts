@@ -52,7 +52,18 @@ export function getLocalReports(): LiveReportItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_REPORTS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const items: LiveReportItem[] = JSON.parse(raw);
+    if (!Array.isArray(items)) return [];
+    const deleted = getDeletedReportIds();
+    return items.filter(
+      (r) =>
+        r &&
+        !deleted.has(r.id) &&
+        !deleted.has(r.tracking_code) &&
+        !r.id?.startsWith("rep-mock") &&
+        !r.id?.startsWith("mock-")
+    );
   } catch {
     return [];
   }
@@ -436,16 +447,30 @@ export const DEFAULT_MOCK_REPORTS: LiveReportItem[] = [];
 export const DEFAULT_MOCK_SOS: LiveSosAlertItem[] = [];
 
 /**
- * Menghapus seluruh cache laporan & SOS lokal di browser pengguna
+ * Menghapus seluruh cache laporan, sinyal SOS, dan data sementara lokal di browser pengguna
  */
 export function clearAllLocalReportsAndCaches(): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.removeItem(LOCAL_STORAGE_REPORTS_KEY);
-    localStorage.removeItem(LOCAL_STORAGE_DELETED_KEY);
-    localStorage.removeItem(LOCAL_STORAGE_MY_CODES_KEY);
-    localStorage.removeItem("sigapbumi_sos_alerts_cache");
-    localStorage.removeItem("sigapbumi_deleted_sos");
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (
+        key &&
+        (key.startsWith("sigapbumi_") ||
+          key.includes("sos") ||
+          key.includes("report") ||
+          key.includes("coords"))
+      ) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+
+    try {
+      sessionStorage.clear();
+    } catch {}
+
     window.dispatchEvent(new Event("storage"));
     window.dispatchEvent(new CustomEvent("sigapbumi:sos-updated", { detail: {} }));
     window.dispatchEvent(new CustomEvent("sigapbumi:report-deleted", { detail: {} }));

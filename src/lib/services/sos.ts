@@ -41,7 +41,18 @@ function getLocalSosCache(): LiveSosItem[] {
     const raw = localStorage.getItem(LOCAL_STORAGE_SOS_KEY);
     if (!raw) return [];
     const parsed: LiveSosItem[] = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    const deleted = getDeletedSosIds();
+    return parsed.filter(
+      (s) =>
+        s &&
+        !deleted.has(s.id) &&
+        !s.id.startsWith("sos-10") &&
+        s.id !== "sos-1" &&
+        s.id !== "sos-2" &&
+        s.id !== "sos-sample" &&
+        !s.address?.includes("Citra 2")
+    );
   } catch {
     return [];
   }
@@ -646,7 +657,11 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
   }
 
   const deletedIds = getDeletedSosIds();
-  return deduplicated.filter((item) => !deletedIds.has(item.id));
+  return deduplicated.filter(
+    (item) =>
+      !deletedIds.has(item.id) &&
+      !Array.from(deletedIds).some((delId) => item.note && item.note.includes(delId))
+  );
 }
 
 /**
