@@ -29,6 +29,7 @@ interface DisasterMapProps {
   showLegend?: boolean;
   className?: string;
   disablePopup?: boolean;
+  routeCoords?: [number, number][] | null;
 }
 
 // Validasi keamanan koordinat geospasial agar tidak menyebabkan runtime exception Leaflet NaN
@@ -194,6 +195,7 @@ export default function DisasterMap({
   showLegend = true,
   className = "",
   disablePopup = false,
+  routeCoords = null,
 }: DisasterMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -201,6 +203,8 @@ export default function DisasterMap({
   const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
   const prevSelectedPointIdRef = useRef<string | undefined>(undefined);
+  const routeLayerRef = useRef<L.Polyline | null>(null);
+  const routeCasingLayerRef = useRef<L.Polyline | null>(null);
 
   // Injeksi style animasi ping jika belum ada di document
   useEffect(() => {
@@ -463,6 +467,14 @@ export default function DisasterMap({
         window.removeEventListener("sigapbumi:map-locate", handleLocate);
         window.removeEventListener("sigapbumi:map-focus-indonesia", handleFocusIndonesia);
       }
+      if (routeLayerRef.current) {
+        try { map.removeLayer(routeLayerRef.current); } catch { }
+        routeLayerRef.current = null;
+      }
+      if (routeCasingLayerRef.current) {
+        try { map.removeLayer(routeCasingLayerRef.current); } catch { }
+        routeCasingLayerRef.current = null;
+      }
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -519,6 +531,58 @@ export default function DisasterMap({
       }
     });
   }, [selectedPointId, points]);
+
+  // Render polyline rute navigasi jalan raya riil (OSRM) di peta
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Bersihkan rute lama jika ada
+    if (routeLayerRef.current) {
+      try {
+        map.removeLayer(routeLayerRef.current);
+      } catch { }
+      routeLayerRef.current = null;
+    }
+    if (routeCasingLayerRef.current) {
+      try {
+        map.removeLayer(routeCasingLayerRef.current);
+      } catch { }
+      routeCasingLayerRef.current = null;
+    }
+
+    if (routeCoords && routeCoords.length >= 2) {
+      // 1. Casing luar tebal (Border navy biru tua)
+      const casing = L.polyline(routeCoords, {
+        color: "#1E3A8A",
+        weight: 7,
+        opacity: 0.85,
+        lineCap: "round",
+        lineJoin: "round",
+      }).addTo(map);
+
+      // 2. Garis utama rute (Neon Blue navigasi GPS)
+      const line = L.polyline(routeCoords, {
+        color: "#3B82F6",
+        weight: 4.5,
+        opacity: 1,
+        lineCap: "round",
+        lineJoin: "round",
+      }).addTo(map);
+
+      routeCasingLayerRef.current = casing;
+      routeLayerRef.current = line;
+
+      // Fit bounds agar seluruh rute dari posisi petugas ke lokasi kejadian terlihat utuh
+      try {
+        map.fitBounds(casing.getBounds(), {
+          padding: [60, 60],
+          maxZoom: 16,
+          animate: true,
+        });
+      } catch { }
+    }
+  }, [routeCoords]);
 
   // Update Markers secara cerdas (diffing) saat points berubah: Tanpa glitch, tanpa flicker, dan tidak mereset zoom peta
   useEffect(() => {

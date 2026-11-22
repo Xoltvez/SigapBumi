@@ -31,6 +31,7 @@ import {
   SlidersHorizontal,
   Plus,
   Minus,
+  Route,
 } from "lucide-react";
 import type { MapPoint } from "@/components/peta/DisasterMap";
 import type { DisasterType, ReportStatus } from "@/types";
@@ -41,6 +42,7 @@ import {
   updateReportStatusLive,
 } from "@/lib/services/reports";
 import { fetchLiveSosAlerts, updateSosAlertStatus } from "@/lib/services/sos";
+import { calculateRoute, type RouteResult } from "@/lib/services/routing";
 import { supabase } from "@/lib/supabase/client";
 import DisasterIcon from "@/components/common/DisasterIcon";
 import { useAdmin } from "@/components/layout/AdminShell";
@@ -87,16 +89,83 @@ export default function AdminPetaPage() {
   // State khusus drawer & filter mobile
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
+  // State navigasi rute OSRM langsung di peta
+  const [activeRoute, setActiveRoute] = useState<RouteResult | null>(null);
+  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Pantau lokasi GPS petugas secara real-time di background
+  useEffect(() => {
+    if (typeof window === "undefined" || !navigator.geolocation) return;
+
+    // 1. Baca koordinat tersimpan
+    try {
+      const cached = localStorage.getItem("sigapbumi_user_last_coords");
+      if (cached) {
+        const p = JSON.parse(cached);
+        if (typeof p.lat === "number" && typeof p.lng === "number") {
+          setUserLocation({ lat: p.lat, lng: p.lng });
+        }
+      }
+    } catch { }
+
+    // 2. Watch position GPS real-time
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+      },
+      () => { },
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
   // Handler tutup detail informasi titik & otomatis zoom out fokus ke seluruh Indonesia
   const handleCloseDetail = useCallback((e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
     }
     setSelectedPointId(undefined);
+    setActiveRoute(null);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("sigapbumi:map-focus-indonesia"));
     }
   }, []);
+
+  // Mulai navigasi rute tercepat OSRM dari posisi petugas ke lokasi kejadian
+  const handleStartNavigation = async (destPoint: MapPoint) => {
+    setIsCalculatingRoute(true);
+    try {
+      let startLat = userLocation?.lat || -6.2088;
+      let startLng = userLocation?.lng || 106.8456;
+
+      if (!userLocation && typeof window !== "undefined") {
+        const cached = localStorage.getItem("sigapbumi_user_last_coords");
+        if (cached) {
+          try {
+            const p = JSON.parse(cached);
+            if (p.lat && p.lng) {
+              startLat = p.lat;
+              startLng = p.lng;
+            }
+          } catch { }
+        }
+      }
+
+      const res = await calculateRoute(startLat, startLng, destPoint.lat, destPoint.lng);
+      setActiveRoute(res);
+    } catch (err) {
+      console.warn("Gagal menghitung rute navigasi:", err);
+    } finally {
+      setIsCalculatingRoute(false);
+    }
+  };
+
+  const handleClearRoute = () => {
+    setActiveRoute(null);
+  };
 
   // Helper trigger action peta Leaflet di mobile
   const triggerZoomIn = () => {
@@ -354,6 +423,7 @@ export default function AdminPetaPage() {
             }}
             showLegend={false}
             disablePopup={true}
+            routeCoords={activeRoute?.coordinates || null}
           />
         </div>
 
@@ -579,15 +649,81 @@ export default function AdminPetaPage() {
 
                 {/* Action Buttons Lengkap */}
                 <div className="space-y-2 pt-0.5">
-                  <a
-                    href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-2 shadow-2xs transition-colors"
-                  >
-                    <Navigation className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Buka Rute Navigasi Google Maps</span>
-                  </a>
+                  {/* Widget Rute Navigasi Aktif dengan Estimasi Waktu */}
+                  {activeRoute ? (
+                    <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50/90 rounded-xl border border-blue-200/90 shadow-2xs space-y-2 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold text-blue-800 flex items-center gap-1.5">
+                          <Route className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+                          <span>Navigasi Langsung di Peta</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleClearRoute}
+                          className="text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2 py-0.5 rounded bg-white/90 border border-slate-200 cursor-pointer shadow-2xs"
+                        >
+                          Tutup Rute
+                        </button>
+                      </div>
+
+                      {/* Baris Metrik Jarak & Estimasi Waktu */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-white/95 p-2 rounded-lg border border-blue-100 shadow-2xs">
+                          <span className="text-[9px] text-slate-400 font-medium block">Jarak Tempuh</span>
+                          <span className="text-sm font-extrabold text-blue-900 block mt-0.5 leading-none">
+                            {activeRoute.distanceFormatted}
+                          </span>
+                        </div>
+                        <div className="bg-white/95 p-2 rounded-lg border border-blue-100 shadow-2xs">
+                          <span className="text-[9px] text-slate-400 font-medium block">Estimasi Tiba</span>
+                          <span className="text-sm font-extrabold text-emerald-600 block mt-0.5 leading-none">
+                            {activeRoute.durationFormatted}
+                          </span>
+                        </div>
+                      </div>
+
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${selectedPoint.lat},${selectedPoint.lng}&travelmode=driving`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold inline-flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+                      >
+                        <Navigation className="w-3 h-3 text-white" />
+                        <span>Buka Panduan Suara di Google Maps</span>
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleStartNavigation(selectedPoint)}
+                        disabled={isCalculatingRoute}
+                        className="w-full h-9 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold inline-flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer active:scale-98"
+                      >
+                        {isCalculatingRoute ? (
+                          <>
+                            <RotateCw className="w-3.5 h-3.5 animate-spin text-white" />
+                            <span>Menghitung Rute Tercepat...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Route className="w-3.5 h-3.5 text-white" />
+                            <span>Tampilkan Rute & Estimasi Waktu</span>
+                          </>
+                        )}
+                      </button>
+
+                      <a
+                        href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full h-8 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3 text-slate-400" />
+                        <span>Buka Titik di Google Maps</span>
+                      </a>
+                    </div>
+                  )}
 
                   {selectedPoint.status !== "selesai" && (
                     <div className="grid grid-cols-2 gap-2">
@@ -931,6 +1067,7 @@ export default function AdminPetaPage() {
               onSelectPoint={(pt) => setSelectedPointId(pt.id)}
               showLegend={false}
               disablePopup={true}
+              routeCoords={activeRoute?.coordinates || null}
             />
 
             {/* Hint Terapung jika belum ada titik yang diklik */}
@@ -1030,15 +1167,86 @@ export default function AdminPetaPage() {
 
                 {/* Action Buttons */}
                 <div className="space-y-2 pt-1">
-                  <a
-                    href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-2 shadow-2xs transition-colors"
-                  >
-                    <Navigation className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Buka Rute Navigasi Google Maps</span>
-                  </a>
+                  {/* Widget Rute Navigasi Aktif dengan Estimasi Waktu */}
+                  {activeRoute ? (
+                    <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50/90 rounded-xl border border-blue-200/90 shadow-2xs space-y-2.5 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold text-blue-800 flex items-center gap-1.5">
+                          <Route className="w-4 h-4 text-blue-600 animate-pulse" />
+                          <span>Navigasi Taktis di Peta</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleClearRoute}
+                          className="text-[11px] font-bold text-slate-500 hover:text-slate-800 px-2 py-0.5 rounded bg-white/90 border border-slate-200 cursor-pointer shadow-2xs"
+                        >
+                          Tutup Rute
+                        </button>
+                      </div>
+
+                      {/* Baris Metrik Jarak & Estimasi Waktu */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-white/95 p-2.5 rounded-lg border border-blue-100 shadow-2xs">
+                          <span className="text-[10px] text-slate-400 font-medium block">Jarak Tempuh</span>
+                          <span className="text-base font-extrabold text-blue-900 block mt-0.5 leading-none">
+                            {activeRoute.distanceFormatted}
+                          </span>
+                        </div>
+                        <div className="bg-white/95 p-2.5 rounded-lg border border-blue-100 shadow-2xs">
+                          <span className="text-[10px] text-slate-400 font-medium block">Estimasi Waktu</span>
+                          <span className="text-base font-extrabold text-emerald-600 block mt-0.5 leading-none">
+                            {activeRoute.durationFormatted}
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-blue-800 font-medium flex items-center gap-1.5">
+                        <span>🚗</span>
+                        <span>{activeRoute.summary}</span>
+                      </p>
+
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${selectedPoint.lat},${selectedPoint.lng}&travelmode=driving`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full h-8.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+                      >
+                        <Navigation className="w-3.5 h-3.5 text-white" />
+                        <span>Buka Panduan Suara di Google Maps</span>
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleStartNavigation(selectedPoint)}
+                        disabled={isCalculatingRoute}
+                        className="w-full h-9.5 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold inline-flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer active:scale-98"
+                      >
+                        {isCalculatingRoute ? (
+                          <>
+                            <RotateCw className="w-3.5 h-3.5 animate-spin text-white" />
+                            <span>Menghitung Rute Tercepat...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Route className="w-4 h-4 text-white" />
+                            <span>Tampilkan Rute & Estimasi Waktu</span>
+                          </>
+                        )}
+                      </button>
+
+                      <a
+                        href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full h-8 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Buka Titik di Google Maps</span>
+                      </a>
+                    </div>
+                  )}
 
                   {selectedPoint.status !== "selesai" && (
                     <div className="grid grid-cols-2 gap-2">
