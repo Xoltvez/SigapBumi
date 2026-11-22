@@ -547,6 +547,70 @@ export function parseReportTimestamp(dateStr?: string): number {
 }
 
 /**
+ * Inferensi nama provinsi dan kabupaten/kota dari teks alamat laporan
+ */
+export function inferRegionFromAddress(address?: string): { province?: string; regency?: string } {
+  if (!address) return {};
+  const addr = address.toLowerCase();
+  let province: string | undefined;
+  let regency: string | undefined;
+
+  if (
+    addr.includes("jawa barat") ||
+    addr.includes("bandung") ||
+    addr.includes("sumedang") ||
+    addr.includes("bogor") ||
+    addr.includes("bekasi") ||
+    addr.includes("depok") ||
+    addr.includes("cirebon") ||
+    addr.includes("indramayu")
+  ) {
+    province = "Jawa Barat";
+  } else if (addr.includes("jakarta")) {
+    province = "DKI Jakarta";
+  } else if (
+    addr.includes("yogyakarta") ||
+    addr.includes("jogja") ||
+    addr.includes("bantul") ||
+    addr.includes("sleman") ||
+    addr.includes("kulon progo") ||
+    addr.includes("gunungkidul")
+  ) {
+    province = "DI Yogyakarta";
+  } else if (
+    addr.includes("jawa timur") ||
+    addr.includes("surabaya") ||
+    addr.includes("malang") ||
+    addr.includes("sidoarjo") ||
+    addr.includes("gresik") ||
+    addr.includes("banyuwangi")
+  ) {
+    province = "Jawa Timur";
+  } else if (
+    addr.includes("jawa tengah") ||
+    addr.includes("semarang") ||
+    addr.includes("solo") ||
+    addr.includes("surakarta") ||
+    addr.includes("banyumas") ||
+    addr.includes("cilacap") ||
+    addr.includes("purwokerto")
+  ) {
+    province = "Jawa Tengah";
+  } else if (addr.includes("banten") || addr.includes("tangerang") || addr.includes("serang")) {
+    province = "Banten";
+  } else if (addr.includes("bali") || addr.includes("denpasar")) {
+    province = "Bali";
+  }
+
+  const regencyMatch = address.match(/(Kabupaten\s+[\w\s]+|Kota\s+[\w\s]+|Jakarta\s+\w+)/i);
+  if (regencyMatch) {
+    regency = regencyMatch[1].split(",")[0].trim();
+  }
+
+  return { province, regency };
+}
+
+/**
  * Mengambil daftar laporan: menggabungkan data Supabase live, local cache perangkat, dan data demo
  */
 export async function fetchLiveReports(): Promise<LiveReportItem[]> {
@@ -586,6 +650,7 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
         const extractedPhoto = extractPhotoFromDescription(rawDesc) || mediaPhoto || row.image_url || undefined;
         const extractedPhone = extractPhoneFromDescription(rawDesc) || row.phone_number || undefined;
         const cleanDesc = cleanReportDescription(rawDesc);
+        const { province: inferredProv, regency: inferredReg } = inferRegionFromAddress(row.address);
 
         return {
           id: row.id,
@@ -595,6 +660,8 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
           title: removeEmojis(row.title),
           description: cleanDesc,
           address: removeEmojis(row.address) || "Lokasi Koordinat GPS Terdeteksi",
+          province: row.province || inferredProv,
+          regency: row.regency || inferredReg,
           lat: coords.lat,
           lng: coords.lng,
           status: row.status as ReportStatus,
@@ -783,6 +850,8 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         (data.priority_score && data.priority_score >= 95)
       );
 
+      const { province: inferredProv, regency: inferredReg } = inferRegionFromAddress(data.address);
+
       return {
         id: data.id,
         tracking_code: data.tracking_code,
@@ -791,6 +860,8 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         title: removeEmojis(data.title),
         description: cleanDescription,
         address: removeEmojis(data.address) || "Lokasi Koordinat GPS",
+        province: data.province || inferredProv,
+        regency: data.regency || inferredReg,
         lat: coords.lat,
         lng: coords.lng,
         status: data.status as ReportStatus,
