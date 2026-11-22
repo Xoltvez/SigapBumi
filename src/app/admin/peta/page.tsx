@@ -27,7 +27,6 @@ import {
   Menu,
   Crosshair,
   Maximize2,
-  Sun,
   X,
   SlidersHorizontal,
   Plus,
@@ -87,6 +86,13 @@ export default function AdminPetaPage() {
 
   // State khusus drawer & filter mobile
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+
+  // Otomatis buka bottom sheet ketika ada titik kejadian yang dipilih
+  useEffect(() => {
+    if (selectedPointId) {
+      setIsMobileSheetOpen(true);
+    }
+  }, [selectedPointId]);
 
   // Helper trigger action peta Leaflet di mobile
   const triggerZoomIn = () => {
@@ -410,27 +416,10 @@ export default function AdminPetaPage() {
           </div>
         </div>
 
-        {/* Floating Weather Widget (Kiri Bawah di atas Bottom Sheet) */}
-        <div
-          className={`absolute left-3 z-30 transition-all duration-300 pointer-events-auto ${
-            isMobileSheetOpen ? "bottom-72" : "bottom-20"
-          }`}
-        >
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 px-3.5 shadow-lg border border-slate-200/80 flex flex-col">
-            <div className="flex items-center gap-1.5 text-amber-500 font-extrabold text-sm leading-none">
-              <Sun className="w-4 h-4 text-amber-500 fill-amber-400" />
-              <span className="text-slate-900 font-extrabold">32°C</span>
-            </div>
-            <span className="text-[10px] text-slate-500 font-medium mt-1 leading-none">
-              Cerah Berawan
-            </span>
-          </div>
-        </div>
-
-        {/* Floating Bottom Sheet (Filter & Info Titik di Bawah Peta) */}
+        {/* Floating Bottom Sheet (Filter & Info Titik di Bawah Peta Mobile) */}
         <div
           className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 transition-all duration-300 flex flex-col ${
-            isMobileSheetOpen ? "max-h-[72vh]" : "max-h-[76px]"
+            isMobileSheetOpen ? "max-h-[85vh]" : "max-h-[74px]"
           }`}
         >
           {/* Handle Bar Drag Pill */}
@@ -438,7 +427,7 @@ export default function AdminPetaPage() {
             onClick={() => setIsMobileSheetOpen((prev) => !prev)}
             className="pt-2 pb-1 flex flex-col items-center cursor-pointer select-none"
           >
-            <div className="w-11 h-1.5 bg-slate-300 rounded-full" />
+            <div className="w-12 h-1.5 bg-slate-300 rounded-full" />
           </div>
 
           {/* Header Bottom Sheet */}
@@ -452,22 +441,18 @@ export default function AdminPetaPage() {
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       selectedPoint.is_sos
-                        ? "bg-rose-100 text-rose-700"
+                        ? "bg-rose-100 text-rose-700 font-extrabold"
                         : selectedPoint.status === "selesai"
                         ? "bg-emerald-100 text-emerald-700"
                         : "bg-amber-100 text-amber-700"
                     }`}
                   >
-                    {selectedPoint.is_sos ? "SOS DARURAT" : selectedPoint.status}
+                    {selectedPoint.is_sos ? "SOS DARURAT" : selectedPoint.status.toUpperCase()}
                   </span>
                 </div>
                 <h4 className="text-xs font-bold text-slate-900 truncate">
                   {selectedPoint.title}
                 </h4>
-                <p className="text-[10px] text-slate-500 truncate flex items-center gap-1">
-                  <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
-                  <span>{selectedPoint.location_name}</span>
-                </p>
               </div>
             ) : (
               <div className="flex-1 min-w-0">
@@ -493,7 +478,7 @@ export default function AdminPetaPage() {
                     e.stopPropagation();
                     setSelectedPointId(undefined);
                   }}
-                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
                   title="Tutup Titik Terpilih"
                 >
                   <X className="w-4 h-4" />
@@ -515,130 +500,183 @@ export default function AdminPetaPage() {
           </div>
 
           {/* Body Konten Bottom Sheet (Saat Di-expand) */}
-          <div className={`overflow-y-auto p-4 space-y-3.5 ${isMobileSheetOpen ? "block" : "hidden"}`}>
-            {selectedPoint && (
-              <div className="space-y-2 pb-2 border-b border-slate-100">
-                <a
-                  href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-2xs"
-                >
-                  <Navigation className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Buka Rute Navigasi Google Maps</span>
-                </a>
+          <div className={`overflow-y-auto px-4 py-3 space-y-3.5 ${isMobileSheetOpen ? "block" : "hidden"}`}>
+            {selectedPoint ? (
+              <div className="space-y-3 pb-1">
+                {/* Judul & Lokasi Detail */}
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                    {selectedPoint.title}
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1 flex items-start gap-1.5 leading-relaxed">
+                    <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+                    <span>{selectedPoint.location_name}</span>
+                  </p>
+                </div>
 
-                {selectedPoint.status !== "selesai" && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateStatus("ditindaklanjuti")}
-                      className="h-8.5 px-3 rounded-xl border border-amber-200 bg-[#FFF7ED] text-[#EA580C] text-xs font-bold inline-flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Diproses</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateStatus("selesai")}
-                      className="h-8.5 px-3 rounded-xl bg-emerald-600 text-white text-xs font-bold inline-flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Selesai</span>
-                    </button>
+                {/* Grid Spesifikasi Data (2x2) Lengkap di Mobile */}
+                <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50/90 p-3 rounded-xl border border-slate-100">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-medium">Jenis Bencana</span>
+                    <span className="font-bold text-slate-800 capitalize flex items-center gap-1.5 mt-0.5 text-xs">
+                      {getDisasterIcon(selectedPoint.disaster_type)}
+                      <span>{selectedPoint.disaster_type}</span>
+                    </span>
                   </div>
-                )}
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-medium">Waktu Masuk</span>
+                    <span className="font-bold text-slate-800 mt-0.5 block text-xs">{selectedPoint.created_at}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-medium">Koordinat GPS</span>
+                    <span className="font-mono text-[10px] font-bold text-slate-800 mt-0.5 block">
+                      {selectedPoint.lat.toFixed(4)}, {selectedPoint.lng.toFixed(4)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-medium">Konfirmasi Warga</span>
+                    <span className="font-bold text-amber-600 flex items-center gap-1 mt-0.5 text-xs">
+                      <Shield className="w-3.5 h-3.5 text-amber-500" />
+                      <span>{selectedPoint.confirmation_count} Saksi</span>
+                    </span>
+                  </div>
+                </div>
 
-                <Link
-                  href={selectedPoint.is_sos ? "/admin/sos" : `/admin/laporan/${selectedPoint.id}`}
-                  className="w-full h-8.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5"
+                {/* Action Buttons Lengkap */}
+                <div className="space-y-2 pt-0.5">
+                  <a
+                    href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center justify-center gap-2 shadow-2xs transition-colors"
+                  >
+                    <Navigation className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Buka Rute Navigasi Google Maps</span>
+                  </a>
+
+                  {selectedPoint.status !== "selesai" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateStatus("ditindaklanjuti")}
+                        className="h-8.5 px-3 rounded-xl border border-amber-200 bg-[#FFF7ED] text-[#EA580C] hover:bg-amber-100 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Diproses</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateStatus("selesai")}
+                        className="h-8.5 px-3 rounded-xl bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                        <span>Selesai</span>
+                      </button>
+                    </div>
+                  )}
+
+                  <Link
+                    href={selectedPoint.is_sos ? "/admin/sos" : `/admin/laporan/${selectedPoint.id}`}
+                    className="w-full h-8.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
+                  >
+                    <span>Lihat Lembar Kerja Lengkap</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                  </Link>
+                </div>
+
+                {/* Tombol kembali ke Filter Peta */}
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPointId(undefined)}
+                    className="text-xs text-orange-600 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>← Tutup detail titik & buka filter peta</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Panel Filter Geospasial Mobile (Jika tidak ada titik yang dipilih) */
+              <div className="space-y-2.5 pb-2">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Filter & Pencarian Bencana
+                </span>
+
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Cari lokasi atau kode laporan..."
+                    className="w-full h-8.5 pl-8 pr-3 rounded-xl bg-slate-50 border border-slate-200 text-xs placeholder:text-slate-400 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={selectedDisaster}
+                    onChange={(e) => setSelectedDisaster(e.target.value as DisasterType | "semua")}
+                    className="h-8.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
+                  >
+                    <option value="semua">Semua Bencana</option>
+                    <option value="banjir">Banjir</option>
+                    <option value="longsor">Tanah Longsor</option>
+                    <option value="kebakaran">Kebakaran</option>
+                    <option value="gempa">Gempa Bumi</option>
+                    <option value="karhutla">Karhutla</option>
+                    <option value="lainnya">Lainnya</option>
+                  </select>
+
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value as ReportStatus | "sos" | "semua")}
+                    className="h-8.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
+                  >
+                    <option value="semua">Semua Status</option>
+                    <option value="diterima">Diterima</option>
+                    <option value="ditindaklanjuti">Diproses</option>
+                    <option value="selesai">Selesai</option>
+                    <option value="sos">Khusus SOS</option>
+                  </select>
+                </div>
+
+                <select
+                  value={selectedProvince}
+                  onChange={(e) => setSelectedProvince(e.target.value)}
+                  className="w-full h-8.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
                 >
-                  <span>Lihat Lembar Kerja Lengkap</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                </Link>
+                  {PROVINCE_OPTIONS.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProvince("Semua Provinsi");
+                      setSelectedDisaster("semua");
+                      setSelectedStatus("semua");
+                      setSearchQuery("");
+                    }}
+                    className="text-xs font-bold text-orange-600 hover:underline cursor-pointer"
+                  >
+                    Reset Filter
+                  </button>
+                  <button
+                    type="button"
+                    onClick={loadData}
+                    className="text-xs font-bold text-slate-600 flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 cursor-pointer"
+                  >
+                    <RotateCw className="w-3 h-3" />
+                    <span>Segarkan</span>
+                  </button>
+                </div>
               </div>
             )}
-
-            {/* Panel Filter Geospasial Mobile */}
-            <div className="space-y-2.5">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                Filter & Pencarian Bencana
-              </span>
-
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Cari lokasi atau kode laporan..."
-                  className="w-full h-8.5 pl-8 pr-3 rounded-xl bg-slate-50 border border-slate-200 text-xs placeholder:text-slate-400 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={selectedDisaster}
-                  onChange={(e) => setSelectedDisaster(e.target.value as DisasterType | "semua")}
-                  className="h-8.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
-                >
-                  <option value="semua">Semua Bencana</option>
-                  <option value="banjir">Banjir</option>
-                  <option value="longsor">Tanah Longsor</option>
-                  <option value="kebakaran">Kebakaran</option>
-                  <option value="gempa">Gempa Bumi</option>
-                  <option value="karhutla">Karhutla</option>
-                  <option value="lainnya">Lainnya</option>
-                </select>
-
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value as ReportStatus | "sos" | "semua")}
-                  className="h-8.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
-                >
-                  <option value="semua">Semua Status</option>
-                  <option value="diterima">Diterima</option>
-                  <option value="ditindaklanjuti">Diproses</option>
-                  <option value="selesai">Selesai</option>
-                  <option value="sos">Khusus SOS</option>
-                </select>
-              </div>
-
-              <select
-                value={selectedProvince}
-                onChange={(e) => setSelectedProvince(e.target.value)}
-                className="w-full h-8.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
-              >
-                {PROVINCE_OPTIONS.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-
-              <div className="flex items-center justify-between pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedProvince("Semua Provinsi");
-                    setSelectedDisaster("semua");
-                    setSelectedStatus("semua");
-                    setSearchQuery("");
-                  }}
-                  className="text-xs font-bold text-orange-600 hover:underline cursor-pointer"
-                >
-                  Reset Filter
-                </button>
-                <button
-                  type="button"
-                  onClick={loadData}
-                  className="text-xs font-bold text-slate-600 flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 cursor-pointer"
-                >
-                  <RotateCw className="w-3 h-3" />
-                  <span>Segarkan</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
