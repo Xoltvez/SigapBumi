@@ -284,39 +284,32 @@ function PetaContent() {
     return list;
   }, [filteredPoints, listSearch, listSort]);
 
-  // Data terfilter untuk Mode Desktop Modern (sesuai referensi desain)
+  // Data terfilter untuk Mode Desktop Modern (sinkron dengan filter peta)
   const desktopPoints = useMemo(() => {
-    let list = [...points];
-
-    if (desktopFilterCategory === "sos") {
-      list = list.filter((p) => p.is_sos);
-    } else if (desktopFilterCategory === "posko") {
-      list = list.filter(
-        (p) =>
-          p.title.toLowerCase().includes("posko") ||
-          p.location_name.toLowerCase().includes("balai") ||
-          p.location_name.toLowerCase().includes("gor") ||
-          p.location_name.toLowerCase().includes("masjid") ||
-          p.location_name.toLowerCase().includes("pos") ||
-          p.location_name.toLowerCase().includes("kantor")
-      );
-    } else if (desktopFilterCategory === "laporan") {
-      list = list.filter((p) => !p.is_sos);
-    }
-
-    if (desktopSearch.trim()) {
-      const q = desktopSearch.toLowerCase().trim();
-      list = list.filter(
-        (p) =>
-          p.title?.toLowerCase().includes(q) ||
-          p.location_name?.toLowerCase().includes(q) ||
-          p.tracking_code?.toLowerCase().includes(q) ||
-          p.disaster_type?.toLowerCase().includes(q)
-      );
-    }
-
-    return list;
-  }, [points, desktopFilterCategory, desktopSearch]);
+    return points.filter((pt) => {
+      if (pt.is_sos && !showSos) return false;
+      if (!pt.is_sos) {
+        if (selectedCategory !== "semua" && pt.disaster_type !== selectedCategory) {
+          return false;
+        }
+        if (selectedStatus !== "semua" && pt.status !== selectedStatus) {
+          return false;
+        }
+        if (selectedRegion !== "Semua Wilayah" && pt.province !== selectedRegion) {
+          return false;
+        }
+      }
+      if (desktopSearch.trim()) {
+        const q = desktopSearch.toLowerCase().trim();
+        const matchTitle = pt.title?.toLowerCase().includes(q);
+        const matchLoc = pt.location_name?.toLowerCase().includes(q);
+        const matchCode = pt.tracking_code?.toLowerCase().includes(q);
+        const matchType = pt.disaster_type?.toLowerCase().includes(q);
+        if (!matchTitle && !matchLoc && !matchCode && !matchType) return false;
+      }
+      return true;
+    });
+  }, [points, selectedCategory, selectedStatus, selectedRegion, showSos, desktopSearch]);
 
   // Pada tampilan mobile (< 768px), pastikan selalu menggunakan tampilan peta yang rapi dan interaktif
   useEffect(() => {
@@ -678,13 +671,13 @@ function PetaContent() {
         {/* Kiri Atas: Floating Search Bar & Quick Filter Chips */}
         <div className="absolute top-5 left-6 z-20 space-y-2.5">
           {/* Search Bar Melayang */}
-          <div className="bg-white/95 backdrop-blur-md shadow-lg border border-slate-200/90 rounded-full px-4 py-2.5 flex items-center gap-2.5 w-[380px] lg:w-[420px]">
+          <div className="bg-white/95 backdrop-blur-md shadow-lg border border-slate-200/90 rounded-full px-4 py-2.5 flex items-center gap-2.5 w-[380px] lg:w-[410px]">
             <Search className="w-4 h-4 text-slate-400 shrink-0" />
             <input
               type="text"
               value={desktopSearch}
               onChange={(e) => setDesktopSearch(e.target.value)}
-              placeholder="Cari posko, balai desa, atau jalan di sekitar..."
+              placeholder="Cari titik kejadian, wilayah, atau jalan..."
               className="w-full bg-transparent text-xs lg:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
             />
             {desktopSearch ? (
@@ -700,82 +693,110 @@ function PetaContent() {
             )}
           </div>
 
-          {/* Quick Filter Chips Horizontal */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5 max-w-[420px]">
+          {/* Quick Filter Chips Horizontal (Warna Oranye SigapBumi) */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-0.5 max-w-[410px]">
             <button
               type="button"
-              onClick={() => setDesktopFilterCategory("semua")}
+              onClick={() => {
+                setSelectedCategory("semua");
+                setShowSos(true);
+              }}
               className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                desktopFilterCategory === "semua"
-                  ? "bg-[#1E4D48] text-white ring-2 ring-emerald-600/30"
+                selectedCategory === "semua"
+                  ? "bg-orange-600 text-white ring-2 ring-orange-400/30 shadow-xs"
                   : "bg-white/95 text-slate-700 hover:bg-slate-50 border border-slate-200/80"
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Semua Posko Aktif</span>
+              <span>Semua Kejadian</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setDesktopFilterCategory("posko")}
+              onClick={() => setSelectedCategory("banjir")}
               className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                desktopFilterCategory === "posko"
-                  ? "bg-[#1E4D48] text-white ring-2 ring-emerald-600/30"
+                selectedCategory === "banjir"
+                  ? "bg-orange-600 text-white ring-2 ring-orange-400/30 shadow-xs"
                   : "bg-white/95 text-slate-700 hover:bg-slate-50 border border-slate-200/80"
               }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Posko Saya</span>
+              <DisasterIcon type="banjir" size={14} />
+              <span>Banjir</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setDesktopFilterCategory("laporan")}
+              onClick={() => setSelectedCategory("gempa")}
               className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                desktopFilterCategory === "laporan"
-                  ? "bg-[#1E4D48] text-white ring-2 ring-emerald-600/30"
+                selectedCategory === "gempa"
+                  ? "bg-orange-600 text-white ring-2 ring-orange-400/30 shadow-xs"
                   : "bg-white/95 text-slate-700 hover:bg-slate-50 border border-slate-200/80"
               }`}
             >
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-              <span>Laporan &amp; Genangan</span>
+              <DisasterIcon type="gempa" size={14} />
+              <span>Gempa Bumi</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setDesktopFilterCategory("sos")}
+              onClick={() => setSelectedCategory("kebakaran")}
               className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                desktopFilterCategory === "sos"
-                  ? "bg-rose-600 text-white ring-2 ring-rose-400"
+                selectedCategory === "kebakaran"
+                  ? "bg-orange-600 text-white ring-2 ring-orange-400/30 shadow-xs"
+                  : "bg-white/95 text-slate-700 hover:bg-slate-50 border border-slate-200/80"
+              }`}
+            >
+              <DisasterIcon type="kebakaran" size={14} />
+              <span>Kebakaran</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedCategory("longsor")}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                selectedCategory === "longsor"
+                  ? "bg-orange-600 text-white ring-2 ring-orange-400/30 shadow-xs"
+                  : "bg-white/95 text-slate-700 hover:bg-slate-50 border border-slate-200/80"
+              }`}
+            >
+              <DisasterIcon type="longsor" size={14} />
+              <span>Longsor</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowSos((prev) => !prev)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                showSos
+                  ? "bg-rose-600 text-white ring-2 ring-rose-400 shadow-xs"
                   : "bg-white/95 text-rose-600 hover:bg-rose-50 border border-rose-200"
               }`}
             >
               <Siren className="w-3.5 h-3.5" />
-              <span>Panggilan SOS</span>
+              <span>Sinyal SOS</span>
             </button>
           </div>
         </div>
 
-        {/* Kiri Tengah: Floating Cards Drawer Panel */}
-        <div className="absolute top-28 left-6 z-20 w-[380px] lg:w-[420px] max-h-[calc(100vh-9.5rem)] flex flex-col bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden select-none">
+        {/* Kiri Tengah: Floating Filter Panel Desktop */}
+        <div className="absolute top-28 left-6 z-20 w-[380px] lg:w-[410px] max-h-[calc(100vh-9.5rem)] flex flex-col bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden select-none">
           {/* Header Panel */}
-          <div className="p-3.5 px-4 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
-                <Building2 className="w-4 h-4" />
+          <div className="p-3.5 px-4 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 shadow-2xs">
+                <SlidersHorizontal className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-xs font-extrabold text-slate-900 truncate">
-                  {desktopFilterCategory === "posko"
-                    ? "Posko &amp; Penampungan Siaga"
-                    : desktopFilterCategory === "sos"
-                    ? "Panggilan Darurat SOS Aktif"
-                    : desktopFilterCategory === "laporan"
-                    ? "Laporan Kejadian Bencana"
-                    : `Semua Posko Aktif (${desktopPoints.length})`}
-                </h3>
-                <p className="text-[10px] text-slate-500 truncate">
-                  {desktopPoints.length} titik geospasial terverifikasi
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-extrabold text-slate-900 truncate">
+                    Filter Peta Kejadian
+                  </h3>
+                  <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full shrink-0">
+                    {desktopPoints.length} Titik
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                  Saring sebaran laporan bencana &amp; darurat
                 </p>
               </div>
             </div>
@@ -783,7 +804,7 @@ function PetaContent() {
             <button
               type="button"
               onClick={() => setIsDesktopPanelOpen((prev) => !prev)}
-              className="p-1 rounded-lg hover:bg-slate-200/70 text-slate-500 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-slate-200/70 text-slate-500 transition-colors cursor-pointer"
               title={isDesktopPanelOpen ? "Minimalkan Panel" : "Buka Panel"}
             >
               {isDesktopPanelOpen ? (
@@ -794,15 +815,16 @@ function PetaContent() {
             </button>
           </div>
 
-          {/* Body List Kartu Titik */}
+          {/* Body Konten Filter Desktop */}
           {isDesktopPanelOpen && (
-            <>
+            <div className="overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-14rem)] scrollbar-thin">
               {/* Highlight Titik Terpilih jika ada */}
               {selectedPoint && (
-                <div className="p-3 bg-amber-50/70 border-b border-amber-200/80 space-y-2">
+                <div className="p-3 bg-orange-50/80 rounded-xl border border-orange-200 space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 bg-amber-200/70 px-2 py-0.5 rounded-md">
-                      Titik Sedang Dilihat
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-orange-900 bg-orange-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-orange-600" />
+                      <span>Titik Sedang Dilihat</span>
                     </span>
                     <button
                       type="button"
@@ -810,16 +832,22 @@ function PetaContent() {
                       className="text-[11px] font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
-                      <span>Tutup Fokus</span>
+                      <span>Tutup</span>
                     </button>
                   </div>
                   <h4 className="text-xs font-extrabold text-slate-900 leading-snug">
                     {selectedPoint.title}
                   </h4>
-                  <p className="text-[11px] text-slate-600 flex items-center gap-1 truncate">
-                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span>{selectedPoint.location_name}</span>
-                  </p>
+                  <div className="flex items-center gap-2 text-[10px] text-slate-600">
+                    {!selectedPoint.is_sos && (
+                      <span className="flex items-center gap-1 font-semibold text-slate-800">
+                        <DisasterIcon type={selectedPoint.disaster_type} size={13} />
+                        <span>{getDisasterLabel(selectedPoint.disaster_type)}</span>
+                      </span>
+                    )}
+                    <span>•</span>
+                    <span className="truncate">{selectedPoint.location_name}</span>
+                  </div>
                   <div className="flex items-center gap-2 pt-1">
                     <a
                       href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
@@ -843,160 +871,135 @@ function PetaContent() {
                 </div>
               )}
 
-              {/* Scrollable Items List */}
-              <div className="overflow-y-auto divide-y divide-slate-100 max-h-[50vh] p-1.5 space-y-1 scrollbar-thin">
-                {desktopPoints.length === 0 ? (
-                  <div className="py-12 px-4 text-center text-slate-400">
-                    <MapPin className="w-8 h-8 mx-auto mb-2 opacity-40 text-slate-400" />
-                    <p className="text-xs font-bold text-slate-700">Tidak ada titik ditemukan</p>
-                    <p className="text-[11px] mt-0.5">Coba ubah kata kunci pencarian atau filter Anda.</p>
-                  </div>
-                ) : (
-                  desktopPoints.map((pt) => {
-                    const isSelected = selectedPoint?.id === pt.id;
-                    const isFire =
-                      pt.disaster_type === "kebakaran" ||
-                      pt.disaster_type === "karhutla";
-                    const isPosko =
-                      pt.title.toLowerCase().includes("posko") ||
-                      pt.location_name.toLowerCase().includes("balai") ||
-                      pt.location_name.toLowerCase().includes("gor") ||
-                      pt.location_name.toLowerCase().includes("masjid");
+              {/* 1. Filter Wilayah / Provinsi */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Wilayah / Provinsi
+                </span>
+                <select
+                  value={selectedRegion}
+                  onChange={(e) => setSelectedRegion(e.target.value)}
+                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 cursor-pointer shadow-2xs"
+                >
+                  <option value="Semua Wilayah">Semua Wilayah</option>
+                  <option value="DKI Jakarta">DKI Jakarta</option>
+                  <option value="Jawa Barat">Jawa Barat</option>
+                  <option value="Jawa Tengah">Jawa Tengah</option>
+                  <option value="Jawa Timur">Jawa Timur</option>
+                  <option value="DI Yogyakarta">DI Yogyakarta</option>
+                  <option value="Banten">Banten</option>
+                  <option value="Bali">Bali</option>
+                  <option value="Sumatera Barat">Sumatera Barat</option>
+                  <option value="Sulawesi Selatan">Sulawesi Selatan</option>
+                </select>
+              </div>
 
+              {/* 2. Filter Jenis Bencana (Chips warna oranye saat aktif) */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Jenis Bencana
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { key: "semua", label: "Semua Kategori" },
+                    { key: "banjir", label: "Banjir" },
+                    { key: "gempa", label: "Gempa" },
+                    { key: "kebakaran", label: "Kebakaran" },
+                    { key: "longsor", label: "Longsor" },
+                    { key: "karhutla", label: "Karhutla" },
+                    { key: "lainnya", label: "Lainnya" },
+                  ].map((cat) => {
+                    const isSelected = selectedCategory === cat.key;
                     return (
-                      <div
-                        key={pt.id}
-                        onClick={() => setSelectedPoint(pt)}
-                        className={`p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                      <button
+                        key={cat.key}
+                        type="button"
+                        onClick={() => setSelectedCategory(cat.key as DisasterType | "semua")}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-2xs ${
                           isSelected
-                            ? "bg-orange-50/80 ring-1 ring-orange-400"
-                            : "hover:bg-slate-50"
+                            ? "bg-orange-600 text-white ring-2 ring-orange-300/40 shadow-xs"
+                            : "bg-slate-100 hover:bg-slate-200 text-slate-700"
                         }`}
                       >
-                        {/* Kiri: Detail Informasi Posko / Kejadian */}
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-xs font-bold text-slate-900 truncate leading-snug">
-                            {pt.title}
-                          </h4>
-
-                          {/* Badges Info */}
-                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            <span
-                              className={`text-[9px] font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 ${
-                                pt.is_sos
-                                  ? "bg-rose-100 text-rose-700 font-mono"
-                                  : isPosko
-                                  ? "bg-emerald-100 text-emerald-800"
-                                  : isFire
-                                  ? "bg-red-100 text-red-700"
-                                  : "bg-blue-100 text-blue-700"
-                              }`}
-                            >
-                              {!pt.is_sos && !isPosko && (
-                                <DisasterIcon type={pt.disaster_type} size={12} />
-                              )}
-                              <span>
-                                {pt.is_sos
-                                  ? "PANGGILAN SOS"
-                                  : isPosko
-                                  ? "POSKO TERDEKAT"
-                                  : getDisasterLabel(pt.disaster_type).toUpperCase()}
-                              </span>
-                            </span>
-
-                            {!pt.is_sos && !isPosko && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-200 bg-white text-[10px] font-semibold text-slate-700 shadow-2xs">
-                                <ThumbsUp className="w-3 h-3 text-orange-500" />
-                                <span>{pt.confirmation_count} Terkonfirmasi</span>
-                              </span>
-                            )}
-
-                            <span className="text-[10px] text-slate-400">
-                              •
-                            </span>
-
-                            <span className="text-[10px] text-slate-500 font-medium truncate">
-                              {isPosko ? "Siaga 24 Jam • Kapasitas: 200/450 Jiwa" : pt.created_at}
-                            </span>
-                          </div>
-
-                          {/* Lokasi Alamat & Jarak */}
-                          <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 truncate">
-                            <Navigation className="w-3 h-3 text-slate-400 shrink-0" />
-                            <span className="truncate">{pt.location_name}</span>
-                          </p>
-
-                          {/* Action Buttons Row */}
-                          <div className="flex items-center gap-1.5 mt-2.5">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedPoint(pt);
-                              }}
-                              className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 inline-flex items-center gap-1 transition-colors"
-                            >
-                              <Phone className="w-3 h-3 text-emerald-600" />
-                              <span>Hubungi PJ</span>
-                            </button>
-
-                            <a
-                              href={`https://www.google.com/maps?q=${pt.lat},${pt.lng}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 inline-flex items-center gap-1 transition-colors"
-                            >
-                              <Navigation className="w-3 h-3 text-blue-600" />
-                              <span>Rute</span>
-                            </a>
-
-                            {!pt.is_sos && (
-                              <Link
-                                href={`/lacak?kode=${pt.tracking_code}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="px-2 py-1 rounded-md text-[10px] font-bold text-primary hover:bg-primary-soft transition-colors"
-                              >
-                                <span>Detail</span>
-                              </Link>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Kanan: Thumbnail Foto */}
-                        <div className="w-18 h-18 rounded-xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center p-1">
-                          {isPosko ? (
-                            <div className="w-full h-full bg-emerald-50 rounded-lg flex flex-col items-center justify-center text-emerald-600">
-                              <Building2 className="w-7 h-7" />
-                              <span className="text-[8px] font-bold mt-0.5">POSKO</span>
-                            </div>
-                          ) : pt.is_sos ? (
-                            <div className="w-full h-full bg-rose-50 rounded-lg flex flex-col items-center justify-center text-rose-600">
-                              <Siren className="w-7 h-7 animate-pulse" />
-                              <span className="text-[8px] font-bold mt-0.5">SOS</span>
-                            </div>
-                          ) : (
-                            <div className="w-full h-full bg-slate-50 rounded-lg flex flex-col items-center justify-center p-1">
-                              <DisasterIcon type={pt.disaster_type} size={30} />
-                              <span className="text-[8px] font-bold mt-0.5 text-slate-700 capitalize truncate max-w-[60px]">
-                                {getDisasterLabel(pt.disaster_type)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                        {cat.label}
+                      </button>
                     );
-                  })
-                )}
+                  })}
+                </div>
               </div>
 
-              {/* Footer Panel */}
-              <div className="p-3 bg-slate-50/90 border-t border-slate-100 text-center">
-                <span className="text-[11px] font-bold text-slate-600">
-                  Lihat Posko Lainnya ({desktopPoints.length} Posko Tersedia) →
+              {/* 3. Filter Status Penanganan */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Status Penanganan
                 </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { key: "semua", label: "Semua Status" },
+                    { key: "diterima", label: "Diterima" },
+                    { key: "diverifikasi", label: "Diverifikasi" },
+                    { key: "ditindaklanjuti", label: "Ditindaklanjuti" },
+                    { key: "selesai", label: "Selesai" },
+                  ].map((st) => {
+                    const isSelected = selectedStatus === st.key;
+                    return (
+                      <button
+                        key={st.key}
+                        type="button"
+                        onClick={() => setSelectedStatus(st.key as ReportStatus | "semua")}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                          isSelected
+                            ? "bg-slate-900 text-white ring-2 ring-slate-400/30 shadow-xs"
+                            : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {st.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </>
+
+              {/* 4. Toggle Sinyal SOS Darurat */}
+              <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100/70 border border-slate-200/90 cursor-pointer transition-colors shadow-2xs">
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
+                  <span>Tampilkan Sinyal SOS Darurat</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={showSos}
+                  onChange={(e) => setShowSos(e.target.checked)}
+                  className="w-4 h-4 accent-rose-600 rounded cursor-pointer"
+                />
+              </label>
+
+              {/* 5. Tombol Reset Filter */}
+              {(selectedCategory !== "semua" ||
+                selectedStatus !== "semua" ||
+                selectedRegion !== "Semua Wilayah" ||
+                !showSos ||
+                desktopSearch) && (
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory("semua");
+                      setSelectedStatus("semua");
+                      setSelectedRegion("Semua Wilayah");
+                      setShowSos(true);
+                      setDesktopSearch("");
+                    }}
+                    className="text-xs font-bold text-orange-600 hover:text-orange-700 hover:underline cursor-pointer"
+                  >
+                    Reset Semua Filter
+                  </button>
+                  <span className="text-[11px] font-semibold text-slate-500">
+                    {desktopPoints.length} titik aktif
+                  </span>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
