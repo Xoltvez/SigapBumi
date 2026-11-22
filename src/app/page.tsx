@@ -675,8 +675,14 @@ export default function HomePage() {
                       className="gsap-bento-item group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-7 h-7 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <Flame className="w-3.5 h-3.5" />
+                        <div className="w-7 h-7 rounded-full bg-red-50 border border-red-100/80 p-0.5 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-2xs">
+                          <Image
+                            src="/icon%20bencana/house-fire.png"
+                            alt="Kebakaran"
+                            width={20}
+                            height={20}
+                            className="object-contain w-5 h-5 drop-shadow-2xs"
+                          />
                         </div>
                         <div className="min-w-0 text-left">
                           <p className="text-[11px] font-bold text-slate-900 group-hover:text-red-600 transition-colors truncate">
@@ -696,8 +702,14 @@ export default function HomePage() {
                       className="gsap-bento-item group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <Waves className="w-3.5 h-3.5" />
+                        <div className="w-7 h-7 rounded-full bg-blue-50 border border-blue-100/80 p-0.5 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-2xs">
+                          <Image
+                            src="/icon%20bencana/banjir.png"
+                            alt="Banjir"
+                            width={20}
+                            height={20}
+                            className="object-contain w-5 h-5 drop-shadow-2xs"
+                          />
                         </div>
                         <div className="min-w-0 text-left">
                           <p className="text-[11px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
@@ -717,8 +729,14 @@ export default function HomePage() {
                       className="gsap-bento-item group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <Activity className="w-3.5 h-3.5" />
+                        <div className="w-7 h-7 rounded-full bg-amber-50 border border-amber-100/80 p-0.5 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-2xs">
+                          <Image
+                            src="/icon%20bencana/gempa%20bumi.png"
+                            alt="Gempa Bumi"
+                            width={20}
+                            height={20}
+                            className="object-contain w-5 h-5 drop-shadow-2xs"
+                          />
                         </div>
                         <div className="min-w-0 text-left">
                           <p className="text-[11px] font-bold text-slate-900 group-hover:text-amber-600 transition-colors truncate">
@@ -738,8 +756,14 @@ export default function HomePage() {
                       className="gsap-bento-item group flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <Mountain className="w-3.5 h-3.5" />
+                        <div className="w-7 h-7 rounded-full bg-emerald-50 border border-emerald-100/80 p-0.5 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-2xs">
+                          <Image
+                            src="/icon%20bencana/avalanche.png"
+                            alt="Tanah Longsor"
+                            width={20}
+                            height={20}
+                            className="object-contain w-5 h-5 drop-shadow-2xs"
+                          />
                         </div>
                         <div className="min-w-0 text-left">
                           <p className="text-[11px] font-bold text-slate-900 group-hover:text-emerald-600 transition-colors truncate">
