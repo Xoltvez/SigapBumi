@@ -28,10 +28,6 @@ import {
   Crosshair,
   Maximize2,
   Sun,
-  LayoutDashboard,
-  FileText,
-  Home,
-  BarChart2,
   X,
   SlidersHorizontal,
   Plus,
@@ -433,8 +429,8 @@ export default function AdminPetaPage() {
 
         {/* Floating Bottom Sheet (Filter & Info Titik di Bawah Peta) */}
         <div
-          className={`absolute inset-x-0 bottom-14 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 transition-all duration-300 flex flex-col ${
-            isMobileSheetOpen ? "max-h-[68vh]" : "max-h-[76px]"
+          className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 transition-all duration-300 flex flex-col ${
+            isMobileSheetOpen ? "max-h-[72vh]" : "max-h-[76px]"
           }`}
         >
           {/* Handle Bar Drag Pill */}
@@ -645,53 +641,6 @@ export default function AdminPetaPage() {
             </div>
           </div>
         </div>
-
-        {/* Mobile Bottom Navigation Bar (Fixed 5 Nav Items Sesuai Gambar Referensi) */}
-        <nav className="absolute inset-x-0 bottom-0 h-14 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 flex items-center justify-around shadow-[0_-2px_12px_rgba(0,0,0,0.05)]">
-          <Link
-            href="/admin"
-            className="flex flex-col items-center justify-center text-slate-500 hover:text-slate-800 transition-colors w-14"
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5 font-medium">Dasbor</span>
-          </Link>
-
-          <Link
-            href="/admin/peta"
-            className="flex flex-col items-center justify-center text-emerald-600 font-bold transition-colors w-14 relative"
-          >
-            <MapPin className="w-5 h-5 text-emerald-600" />
-            <span className="text-[10px] mt-0.5 font-bold">Peta SAR</span>
-            <span className="absolute bottom-1 w-1 h-1 rounded-full bg-emerald-600" />
-          </Link>
-
-          <Link
-            href="/admin/laporan"
-            className="flex flex-col items-center justify-center text-slate-500 hover:text-slate-800 transition-colors w-14"
-          >
-            <FileText className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5 font-medium">Triage</span>
-          </Link>
-
-          <Link
-            href="/admin/sos"
-            className="flex flex-col items-center justify-center text-slate-500 hover:text-slate-800 transition-colors w-14 relative"
-          >
-            <Home className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5 font-medium">Posko</span>
-            {activeSosCount > 0 && (
-              <span className="absolute top-1 right-2.5 w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
-            )}
-          </Link>
-
-          <Link
-            href="/admin/statistik"
-            className="flex flex-col items-center justify-center text-slate-500 hover:text-slate-800 transition-colors w-14"
-          >
-            <BarChart2 className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5 font-medium">Telemetri</span>
-          </Link>
-        </nav>
       </div>
 
       {/* ============================================================== */}
