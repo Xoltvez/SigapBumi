@@ -271,7 +271,6 @@ export default function HomePage() {
 
       // 2. Hero Left Headline & Action Elements Stagger Entrance (Dimuat di Awal Saat Buka Web)
       if (heroLeftRef.current) {
-        const badge = heroLeftRef.current.querySelector(".gsap-hero-badge");
         const headline = heroLeftRef.current.querySelector(".gsap-hero-title");
         const desc = heroLeftRef.current.querySelector(".gsap-hero-desc");
         const searchBar = heroLeftRef.current.querySelector(".gsap-hero-search");
@@ -280,16 +279,10 @@ export default function HomePage() {
         const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
         tl.fromTo(
-          badge,
-          { opacity: 0, y: -15, scale: 0.9 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.6 }
+          headline,
+          { opacity: 0, y: 35 },
+          { opacity: 1, y: 0, duration: 0.85 }
         )
-          .fromTo(
-            headline,
-            { opacity: 0, y: 35 },
-            { opacity: 1, y: 0, duration: 0.85 },
-            "-=0.4"
-          )
           .fromTo(
             desc,
             { opacity: 0, y: 25 },
@@ -578,10 +571,6 @@ export default function HomePage() {
           <div ref={heroLeftRef} className="lg:col-span-7 flex flex-col items-start space-y-6">
             {/* Main Headline */}
             <div>
-              <div className="gsap-hero-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100/80 border border-orange-200/80 text-orange-700 text-xs font-bold mb-3 shadow-2xs">
-                <Sparkles className="w-3.5 h-3.5 text-orange-600 animate-pulse" />
-                <span>Platform Tanggap Bencana &amp; Komando Warga 24/7</span>
-              </div>
               <h1 className="gsap-hero-title text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-ink leading-[1.18] tracking-tight">
                 Setiap Detik Berarti. <br className="hidden sm:inline" />
                 <span className="bg-gradient-to-r from-primary via-primary-hover to-amber-600 bg-clip-text text-transparent">
