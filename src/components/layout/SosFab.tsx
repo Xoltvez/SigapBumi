@@ -65,9 +65,18 @@ export function SosFab() {
   // Foto kamera riil berstempel GPS & Waktu
   const [cameraPhotoUrl, setCameraPhotoUrl] = useState<string | null>(null);
   const [isProcessingPhoto, setIsProcessingPhoto] = useState<boolean>(false);
+  const [isVerifyingAi, setIsVerifyingAi] = useState<boolean>(false);
+  const [aiResult, setAiResult] = useState<{
+    status: "lolos_foto" | "perlu_review" | "ditolak";
+    pesan: string;
+    tipe?: string;
+    bukti?: string[];
+    penjelasan?: string;
+  } | null>(null);
   const [isPhotoFullscreen, setIsPhotoFullscreen] = useState<boolean>(false);
   const [photoError, setPhotoError] = useState<string>("");
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const rawPhotoFileRef = useRef<File | null>(null);
 
   // Posisi default & status pelacakan GPS, Kompas, Ketinggian & Alamat
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number }>({
@@ -356,6 +365,9 @@ export function SosFab() {
     hasTriggeredRef.current = false;
     setPhoneError("");
     setPhotoError("");
+    setAiResult(null);
+    setIsVerifyingAi(false);
+    rawPhotoFileRef.current = null;
     setActiveSosId(null);
     activeSosIdRef.current = null;
     setIsLocationRefined(false);
@@ -373,12 +385,60 @@ export function SosFab() {
     startGpsTracking();
   }, [startGpsTracking]);
 
+  // Fungsi Verifikasi Visual Foto Bencana dengan AI (Menolak foto sembarangan / bukan bencana)
+  const verifyDisasterPhotoWithAi = async (photoFile: File, categoryKey: string) => {
+    setIsVerifyingAi(true);
+    setPhotoError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("photo", photoFile);
+      formData.append("category", categoryKey);
+
+      const res = await fetch("/api/verify-disaster", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "Gagal memverifikasi foto.");
+      }
+
+      const data = await res.json();
+      setAiResult({
+        status: data.status,
+        pesan: data.pesan,
+        tipe: data.visual?.tipe,
+        bukti: data.visual?.bukti || [],
+        penjelasan: data.visual?.penjelasan,
+      });
+
+      if (data.status === "ditolak") {
+        setPhotoError(data.pesan);
+      }
+    } catch (err) {
+      console.warn("AI verification error fallback:", err);
+      // Fallback toleransi darurat: jika API offline, tetap teruskan foto berstempel ke posko
+      setAiResult({
+        status: "perlu_review",
+        pesan: "Pemeriksaan AI offline. Foto berstempel GPS diteruskan ke posko terdekat.",
+        tipe: "lainnya",
+        bukti: ["Verifikasi manual petugas posko"],
+      });
+    } finally {
+      setIsVerifyingAi(false);
+    }
+  };
+
   // Handler pengambilan foto langsung dari sensor kamera ponsel
   const handleCaptureCamera = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    rawPhotoFileRef.current = file;
     setPhotoError("");
+    setAiResult(null);
     setIsProcessingPhoto(true);
 
     try {
@@ -411,10 +471,16 @@ export function SosFab() {
       setIsProcessingPhoto(false);
       if (e.target) e.target.value = "";
     }
+
+    // Jalankan verifikasi AI independen (deteksi genangan air/bencana vs foto sembarang)
+    await verifyDisasterPhotoWithAi(file, selectedAssistance || "lainnya");
   };
 
   const handleRetakePhoto = () => {
     setCameraPhotoUrl(null);
+    setAiResult(null);
+    setPhotoError("");
+    rawPhotoFileRef.current = null;
     if (cameraInputRef.current) {
       cameraInputRef.current.click();
     }
@@ -422,7 +488,14 @@ export function SosFab() {
 
   const cleanPhoneDigits = phoneNumber.replace(/\D/g, "");
   const isPhoneValid = cleanPhoneDigits.length >= 10;
-  const isFormValid = isPhoneValid && Boolean(cameraPhotoUrl) && !isProcessingPhoto;
+  // Form hanya valid jika nomor HP valid, foto terisi, tidak sedang diproses, dan TIDAK DITOLAK oleh AI
+  const isFormValid =
+    isPhoneValid &&
+    Boolean(cameraPhotoUrl) &&
+    !isProcessingPhoto &&
+    !isVerifyingAi &&
+    aiResult !== null &&
+    aiResult.status !== "ditolak";
 
   const handleSubmitSos = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -1160,14 +1233,64 @@ export function SosFab() {
                           <span>Layar Penuh</span>
                         </div>
                       </div>
+                      {/* Status Verifikasi AI */}
+                      {isVerifyingAi ? (
+                        <div className="p-3 bg-blue-50/90 border-t border-blue-200 flex items-center gap-2.5 text-xs text-blue-900 animate-pulse">
+                          <RefreshCw className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
+                          <div className="min-w-0">
+                            <span className="font-extrabold block">AI Memeriksa Bukti Visual Bencana...</span>
+                            <span className="text-[10px] text-blue-700">Mendeteksi genangan air, luapan banjir, api, atau kerusakan nyata</span>
+                          </div>
+                        </div>
+                      ) : aiResult ? (
+                        <div
+                          className={`p-3 border-t text-xs ${
+                            aiResult.status === "lolos_foto"
+                              ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
+                              : aiResult.status === "ditolak"
+                              ? "bg-rose-50/95 border-rose-200 text-rose-950"
+                              : "bg-amber-50/90 border-amber-200 text-amber-950"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 font-black mb-1">
+                            {aiResult.status === "lolos_foto" ? (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span className="text-emerald-800">Bukti Visual Valid &amp; Terverifikasi AI</span>
+                              </>
+                            ) : aiResult.status === "ditolak" ? (
+                              <>
+                                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                <span className="text-rose-800">Foto Ditolak oleh AI</span>
+                              </>
+                            ) : (
+                              <>
+                                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                                <span className="text-amber-800">Foto Memerlukan Konfirmasi Posko</span>
+                              </>
+                            )}
+                          </div>
+
+                          <p className="text-[11px] leading-relaxed">
+                            {aiResult.pesan}
+                          </p>
+
+                          {aiResult.bukti && aiResult.bukti.length > 0 && (
+                            <p className="text-[10px] text-slate-600 mt-1">
+                              <strong>Ciri terdeteksi:</strong> {aiResult.bukti.join(", ")}
+                            </p>
+                          )}
+                        </div>
+                      ) : null}
+
                       <div className="p-3 bg-white border-t border-slate-200 flex items-center justify-between gap-2">
                         <button
                           type="button"
                           onClick={() => setIsPhotoFullscreen(true)}
-                          className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 transition-colors cursor-pointer text-left"
+                          className="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-slate-900 transition-colors cursor-pointer text-left"
                         >
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>Foto Kamera Valid • Lihat Detail</span>
+                          <Eye className="w-4 h-4 text-blue-600 shrink-0" />
+                          <span>Lihat Pratinjau Foto</span>
                         </button>
                         <button
                           type="button"
@@ -1223,6 +1346,16 @@ export function SosFab() {
                       <>
                         <RefreshCw className="w-4 h-4 text-white animate-spin" />
                         <span>MEMANCARKAN SINYAL SOS...</span>
+                      </>
+                    ) : isVerifyingAi ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 text-slate-500 animate-spin" />
+                        <span>AI SEDANG MEMERIKSA FOTO...</span>
+                      </>
+                    ) : aiResult?.status === "ditolak" ? (
+                      <>
+                        <AlertCircle className="w-4 h-4 text-slate-400" />
+                        <span>FOTO DITOLAK: AMBIL ULANG FOTO BENCANA</span>
                       </>
                     ) : (
                       <>
