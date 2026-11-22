@@ -49,6 +49,7 @@ interface ReportDetailState {
   version: number;
   reporter_name?: string;
   reporter_phone?: string;
+  image_url?: string;
   timeline: Array<{
     status: ReportStatus;
     label: string;
@@ -80,6 +81,9 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Lightbox foto bukti
+  const [isPhotoOpen, setIsPhotoOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -193,6 +197,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
             version: 1,
             reporter_name: "Warga SigapBumi (Terverifikasi)",
             reporter_phone: "0812-8899-2345",
+            image_url: detail?.image_url || found.image_url,
             timeline: (detail?.timeline && detail.timeline.length > 0) ? detail.timeline : found.timeline || [
               {
                 status: found.status,
@@ -472,13 +477,30 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
               <span>Bukti Visual Kejadian</span>
             </h2>
 
-            <div className="aspect-video w-full rounded-md bg-bg border border-line flex flex-col items-center justify-center text-ink-muted p-6 text-center">
-              <ImageIcon className="w-12 h-12 text-ink-muted mb-2 opacity-50" />
-              <p className="text-xs font-semibold text-ink">Foto Bukti Lapangan Terverifikasi GPS</p>
-              <p className="text-[11px] text-ink-muted mt-0.5">
-                Format citra terenkripsi dan terverifikasi metadata timestamp perangkat pelapor.
-              </p>
-            </div>
+            {report.image_url ? (
+              <button
+                type="button"
+                onClick={() => setIsPhotoOpen(true)}
+                className="group block aspect-video w-full rounded-md bg-black/5 border border-line overflow-hidden cursor-zoom-in"
+                title="Lihat foto ukuran penuh"
+                aria-label="Lihat foto bukti ukuran penuh"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={report.image_url}
+                  alt={`Foto bukti lapangan ${report.tracking_code}`}
+                  className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                />
+              </button>
+            ) : (
+              <div className="aspect-video w-full rounded-md bg-bg border border-line flex flex-col items-center justify-center text-ink-muted p-6 text-center">
+                <ImageIcon className="w-12 h-12 text-ink-muted mb-2 opacity-50" />
+                <p className="text-xs font-semibold text-ink">Belum Ada Foto Bukti Lapangan</p>
+                <p className="text-[11px] text-ink-muted mt-0.5">
+                  Pelapor tidak melampirkan foto pada laporan ini.
+                </p>
+              </div>
+            )}
           </section>
 
           {/* Deskripsi Lengkap Pelapor */}
@@ -785,10 +807,10 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
                 type="button"
                 onClick={handleConfirmStatusChange}
                 disabled={isSubmitting}
-                className={`px-4 py-1.5 rounded-md text-white text-xs font-bold transition-colors ${
+                className={`px-4 py-1.5 rounded-md text-white text-xs font-bold shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                   targetStatus === "ditolak"
-                    ? "bg-danger hover:bg-danger/90"
-                    : "bg-primary-action hover:bg-primary-action-hover"
+                    ? "bg-danger hover:bg-danger-hover"
+                    : "bg-primary-hover hover:bg-primary-active"
                 }`}
               >
                 {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
@@ -799,6 +821,32 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
       )}
 
       {/* Modal Dialog Buka Kontak Pelapor */}
+      {isPhotoOpen && report.image_url && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/85 flex items-center justify-center p-4"
+          onClick={() => setIsPhotoOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Foto bukti lapangan"
+        >
+          <button
+            type="button"
+            onClick={() => setIsPhotoOpen(false)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            aria-label="Tutup foto"
+          >
+            <XCircle className="w-6 h-6" />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={report.image_url}
+            alt={`Foto bukti lapangan ${report.tracking_code}`}
+            className="max-w-full max-h-[90vh] object-contain rounded-md shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       {isRevealModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-surface border border-line rounded-lg p-6 max-w-sm w-full shadow-overlay space-y-4 animate-in fade-in zoom-in-95">
@@ -820,7 +868,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
               <button
                 type="button"
                 onClick={handleRevealContact}
-                className="px-3.5 py-1.5 rounded-md bg-primary-action hover:bg-primary-action-hover text-white text-xs font-bold"
+                className="px-3.5 py-1.5 rounded-md bg-primary-hover hover:bg-primary-active text-white text-xs font-bold shadow-sm transition-colors"
               >
                 Buka Kontak
               </button>
