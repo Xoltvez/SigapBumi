@@ -71,6 +71,75 @@ export function removeEmojis(str: string): string {
 }
 
 /**
+ * Ekstraksi URL atau base64 foto dari teks deskripsi (format: [Foto: <url_atau_base64>])
+ */
+export function extractPhotoFromDescription(rawDesc?: string): string | undefined {
+  if (!rawDesc) return undefined;
+  const match = rawDesc.match(/\[Foto:\s*([\s\S]*?)\]/i);
+  if (match && match[1]) {
+    const val = match[1].trim();
+    return val.length > 0 ? val : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Ekstraksi nomor telepon kontak dari teks deskripsi (format: [Kontak: <nomor>])
+ */
+export function extractPhoneFromDescription(rawDesc?: string): string | undefined {
+  if (!rawDesc) return undefined;
+  const match = rawDesc.match(/\[Kontak:\s*([\s\S]*?)\]/i);
+  if (match && match[1]) {
+    const val = match[1].trim();
+    return val.length > 0 ? val : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Ekstraksi akurasi GPS dari teks deskripsi (format: [Akurasi GPS: <akurasi>])
+ */
+export function extractGpsAccuracyFromDescription(rawDesc?: string): string | undefined {
+  if (!rawDesc) return undefined;
+  const match = rawDesc.match(/\[Akurasi GPS:\s*([\s\S]*?)\]/i);
+  if (match && match[1]) {
+    const val = match[1].trim();
+    return val.length > 0 ? val : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Membersihkan teks deskripsi laporan dari tag teknis [Foto: ...], [Kontak: ...], [Akurasi GPS: ...] serta emoji
+ */
+export function cleanReportDescription(rawDesc?: string): string {
+  if (!rawDesc) return "";
+  let cleaned = rawDesc;
+
+  // Hapus tag [Foto: ...] baik base64 panjang maupun URL (termasuk multiline)
+  cleaned = cleaned.replace(/\[Foto:\s*[\s\S]*?\]/gi, "");
+
+  // Hapus tag [Kontak: ...]
+  cleaned = cleaned.replace(/\[Kontak:\s*[\s\S]*?\]/gi, "");
+
+  // Hapus tag [Akurasi GPS: ...]
+  cleaned = cleaned.replace(/\[Akurasi GPS:\s*[\s\S]*?\]/gi, "");
+
+  // Hapus emoji
+  cleaned = removeEmojis(cleaned);
+
+  // Rapikan spasi
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
+
+  // Jika setelah dibersihkan teksnya kosong (karena hanya berisi tag teknis), beri teks default informatif
+  if (!cleaned) {
+    return "Panggilan Darurat SOS Warga (Realtime)";
+  }
+
+  return cleaned;
+}
+
+/**
  * Menyimpan laporan baru warga ke cache lokal perangkat
  */
 export function saveLocalReport(report: LiveReportItem): void {
@@ -279,11 +348,8 @@ export async function fetchUserReports(user: { id: string; email: string; phone_
         const mediaPhoto = Array.isArray(row.report_media) && row.report_media.length > 0
           ? row.report_media[0].media_url
           : undefined;
-        const photoMatch = row.description ? (row.description as string).match(/\[Foto:\s*([^\]]+)\]/) : null;
-        const imageUrl = mediaPhoto || (photoMatch ? photoMatch[1].trim() : undefined) || row.image_url || undefined;
-
-        let cleanDescription = removeEmojis(row.description || "");
-        cleanDescription = cleanDescription.replace(/\[Foto:\s*[^\]]+\]/g, "").trim();
+        const imageUrl = extractPhotoFromDescription(row.description) || mediaPhoto || row.image_url || undefined;
+        const cleanDescription = cleanReportDescription(row.description);
 
         result.push({
           id: row.id,
@@ -319,9 +385,8 @@ export async function fetchUserReports(user: { id: string; email: string; phone_
     const isMatch = relevantCodes.has(code) || (user?.id && local.reporter_id === user.id) || (user?.email && local.user_email === user.email);
     if (isMatch) {
       seenCodes.add(code);
-      const photoMatch = local.description ? local.description.match(/\[Foto:\s*([^\]]+)\]/) : null;
-      const imageUrl = local.image_url || (photoMatch ? photoMatch[1].trim() : undefined);
-      const cleanDesc = (local.description || "").replace(/\[Foto:\s*[^\]]+\]/g, "").trim();
+      const imageUrl = extractPhotoFromDescription(local.description) || local.image_url;
+      const cleanDesc = cleanReportDescription(local.description);
 
       result.push({
         ...local,
@@ -417,13 +482,18 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
         const priority: "tinggi" | "sedang" | "normal" =
           row.priority_score >= 80 ? "tinggi" : row.priority_score >= 30 ? "sedang" : "normal";
 
+        const rawDesc = row.description || "";
+        const extractedPhoto = extractPhotoFromDescription(rawDesc) || row.image_url || undefined;
+        const extractedPhone = extractPhoneFromDescription(rawDesc) || row.phone_number || undefined;
+        const cleanDesc = cleanReportDescription(rawDesc);
+
         return {
           id: row.id,
           tracking_code: row.tracking_code,
           disaster_type: disaster,
           target_agency: agency,
           title: removeEmojis(row.title),
-          description: removeEmojis(row.description),
+          description: cleanDesc,
           address: removeEmojis(row.address) || "Lokasi Koordinat GPS Terdeteksi",
           lat: coords.lat,
           lng: coords.lng,
@@ -431,6 +501,8 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
           priority,
           confirmation_count: row.confirmation_count || 0,
           created_at: formatReportTime(row.created_at),
+          image_url: extractedPhoto,
+          phone_number: extractedPhone,
           is_demo: false,
         };
       });
@@ -456,8 +528,19 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
 
   // 3. Data lokal perangkat pengguna (laporan baru atau status yang diperbarui)
   localReports.forEach((item) => {
-    mergedMap.set(item.tracking_code, item);
-    mergedMap.set(item.id, item);
+    const rawDesc = item.description || "";
+    const extractedPhoto = extractPhotoFromDescription(rawDesc) || item.image_url;
+    const extractedPhone = extractPhoneFromDescription(rawDesc) || item.phone_number;
+    const cleanDesc = cleanReportDescription(rawDesc);
+
+    const sanitized: LiveReportItem = {
+      ...item,
+      description: cleanDesc,
+      image_url: extractedPhoto,
+      phone_number: extractedPhone,
+    };
+    mergedMap.set(item.tracking_code, sanitized);
+    mergedMap.set(item.id, sanitized);
   });
 
   const deletedIds = getDeletedReportIds();
@@ -536,16 +619,13 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
       const mediaPhoto = Array.isArray(data.report_media) && data.report_media.length > 0
         ? data.report_media[0].media_url
         : undefined;
-      const photoMatch = data.description ? (data.description as string).match(/\[Foto:\s*([^\]]+)\]/) : null;
-      const imageUrl = mediaPhoto || (photoMatch ? photoMatch[1].trim() : undefined) || data.image_url || undefined;
+      const imageUrl = mediaPhoto || extractPhotoFromDescription(data.description) || data.image_url || undefined;
 
       // Ekstraksi kontak jika ada
-      const phoneMatch = data.description ? (data.description as string).match(/\[Kontak:\s*([^\]]+)\]/) : null;
-      const phoneNumber = data.reporter_phone || (phoneMatch ? phoneMatch[1].trim() : undefined) || data.phone_number || undefined;
+      const phoneNumber = data.reporter_phone || extractPhoneFromDescription(data.description) || data.phone_number || undefined;
 
-      // Bersihkan deskripsi dari string base64 / tag foto agar tampilan bersih
-      let cleanDescription = removeEmojis(data.description || "");
-      cleanDescription = cleanDescription.replace(/\[Foto:\s*[^\]]+\]/g, "").trim();
+      // Bersihkan deskripsi dari string base64 / tag foto / metadata teknis
+      const cleanDescription = cleanReportDescription(data.description);
 
       const logs = (data.report_status_logs || []) as Array<{
         status: ReportStatus;
@@ -610,9 +690,8 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
   const localItems = getLocalReports();
   const localFound = localItems.find((r) => r.tracking_code === code);
   if (localFound) {
-    const photoMatch = localFound.description ? localFound.description.match(/\[Foto:\s*([^\]]+)\]/) : null;
-    const imageUrl = localFound.image_url || (photoMatch ? photoMatch[1].trim() : undefined);
-    const cleanDescription = (localFound.description || "").replace(/\[Foto:\s*[^\]]+\]/g, "").trim();
+    const imageUrl = localFound.image_url || extractPhotoFromDescription(localFound.description);
+    const cleanDescription = cleanReportDescription(localFound.description);
 
     return {
       ...localFound,

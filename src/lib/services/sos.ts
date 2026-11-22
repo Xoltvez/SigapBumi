@@ -1,7 +1,13 @@
 import { supabase } from "@/lib/supabase/client";
 import { parsePostGISPoint } from "@/lib/geo";
 import type { SosAssistanceType } from "@/types";
-import { removeEmojis, saveLocalReport, getLocalReports, registerMyReportTrackingCode } from "@/lib/services/reports";
+import {
+  removeEmojis,
+  saveLocalReport,
+  getLocalReports,
+  registerMyReportTrackingCode,
+  cleanReportDescription,
+} from "@/lib/services/reports";
 import { getCurrentUser } from "@/lib/auth";
 
 export interface LiveSosItem {
@@ -249,7 +255,7 @@ export async function sendSosAlert(params: {
         disaster_type: disasterType,
         target_agency: params.assistanceType || "damkar",
         title: `PANGGILAN DARURAT SOS (${(params.assistanceType || "damkar").toUpperCase()})`,
-        description: formattedNote,
+        description: cleanReportDescription(formattedNote),
         address: `Titik Darurat Warga (${params.lat.toFixed(4)}, ${params.lng.toFixed(4)})`,
         lat: params.lat,
         lng: params.lng,

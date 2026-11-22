@@ -28,6 +28,7 @@ import {
 import { getCurrentUser, subscribeToAuth, type UserSession } from "@/lib/auth";
 import {
   fetchUserReports,
+  cleanReportDescription,
   syncLocalReportsToUser,
   type LiveReportItem,
 } from "@/lib/services/reports";
@@ -480,7 +481,7 @@ export default function LaporanSayaPage() {
                   {/* Description snippet if any */}
                   {report.description && (
                     <p className="text-xs text-ink-soft line-clamp-2 leading-relaxed">
-                      {report.description}
+                      {cleanReportDescription(report.description)}
                     </p>
                   )}
 

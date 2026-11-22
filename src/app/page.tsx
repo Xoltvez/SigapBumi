@@ -33,7 +33,7 @@ import {
   Layers,
   Compass,
 } from "lucide-react";
-import { fetchLiveReports, type LiveReportItem } from "@/lib/services/reports";
+import { fetchLiveReports, cleanReportDescription, type LiveReportItem } from "@/lib/services/reports";
 import type { DisasterType } from "@/types";
 import { Interactive3DBag } from "@/components/home/Interactive3DBag";
 
@@ -1052,7 +1052,7 @@ export default function HomePage() {
                   </h3>
 
                   <p className="text-xs text-ink-soft leading-relaxed line-clamp-2">
-                    {report.description}
+                    {cleanReportDescription(report.description)}
                   </p>
                 </div>
 

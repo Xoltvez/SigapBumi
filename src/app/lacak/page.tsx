@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { TimelineStatus, type TimelineStep } from "@/components/laporan/TimelineStatus";
 import type { DisasterType, ReportStatus, SosAssistanceType } from "@/types";
-import { fetchReportDetail, vouchReportLive } from "@/lib/services/reports";
+import { fetchReportDetail, vouchReportLive, cleanReportDescription, extractPhotoFromDescription } from "@/lib/services/reports";
 
 interface ReportDetail {
   id?: string;
@@ -202,9 +202,8 @@ function LacakContent() {
       // 1. Coba ambil dari Supabase atau local cache via service
       const liveData = await fetchReportDetail(cleanCode);
       if (liveData) {
-        const photoMatch = liveData.description ? liveData.description.match(/\[Foto:\s*([^\]]+)\]/) : null;
-        const imageUrl = liveData.image_url || (photoMatch ? photoMatch[1].trim() : undefined);
-        const cleanDesc = (liveData.description || "").replace(/\[Foto:\s*[^\]]+\]/g, "").trim();
+        const imageUrl = liveData.image_url || extractPhotoFromDescription(liveData.description);
+        const cleanDesc = cleanReportDescription(liveData.description);
 
         setActiveReport({
           id: liveData.id,
@@ -620,7 +619,7 @@ function LacakContent() {
             <div className="text-sm text-ink-soft leading-relaxed bg-surface p-4 rounded-md border border-line space-y-2">
               <p>
                 {activeReport.description
-                  ? activeReport.description.replace(/\[Foto:\s*[^\]]+\]/g, "").trim()
+                  ? cleanReportDescription(activeReport.description)
                   : "Tidak ada rincian catatan tambahan dari pelapor."}
               </p>
               {activeReport.phone_number && (

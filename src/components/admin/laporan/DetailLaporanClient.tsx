@@ -30,6 +30,9 @@ import {
   recordAuditLog,
   deleteReportLive,
   removeEmojis,
+  cleanReportDescription,
+  extractPhotoFromDescription,
+  extractPhoneFromDescription,
 } from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 
@@ -181,12 +184,17 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
           else if (found.confirmation_count >= 10) pLabel = "Tinggi";
           else if (found.status === "selesai") pLabel = "Rendah";
 
+          const rawDesc = detail?.description || found.description || "";
+          const cleanDesc = cleanReportDescription(rawDesc);
+          const photoUrl = detail?.image_url || extractPhotoFromDescription(found.description) || found.image_url;
+          const phoneNum = detail?.phone_number || extractPhoneFromDescription(found.description) || found.phone_number || "0812-8899-2345";
+
           setReport({
             id: found.id,
             tracking_code: found.tracking_code,
             disaster_type: found.disaster_type,
             title: removeEmojis(found.title),
-            description: removeEmojis(found.description),
+            description: cleanDesc,
             address: found.address,
             lat: found.lat,
             lng: found.lng,
@@ -196,8 +204,8 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
             created_at: found.created_at,
             version: 1,
             reporter_name: "Warga SigapBumi (Terverifikasi)",
-            reporter_phone: "0812-8899-2345",
-            image_url: detail?.image_url || found.image_url,
+            reporter_phone: phoneNum,
+            image_url: photoUrl,
             timeline: (detail?.timeline && detail.timeline.length > 0) ? detail.timeline : found.timeline || [
               {
                 status: found.status,
@@ -509,7 +517,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
               Deskripsi dari Pelapor
             </h2>
             <p className="text-sm text-ink-soft leading-relaxed p-4 bg-bg rounded-md border border-line">
-              {report.description}
+              {cleanReportDescription(report.description)}
             </p>
           </section>
 
