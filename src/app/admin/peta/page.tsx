@@ -646,7 +646,7 @@ export default function AdminPetaPage() {
       {/* ============================================================== */}
       {/* 2. TAMPILAN DESKTOP (MD KE ATAS): DASHBOARD OPERASIONAL LENGKAP */}
       {/* ============================================================== */}
-      <div className="hidden md:block space-y-6 max-w-[1400px] mx-auto font-sans pb-12 select-none">
+      <div className="hidden md:block space-y-6 w-full max-w-[1400px] mx-auto font-sans pb-12 select-none">
         {/* 1. Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
