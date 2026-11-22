@@ -1283,21 +1283,21 @@ export default function AdminPetaPage() {
                 </div>
 
                 {/* Bottom Center: Tactical Telemetry Dock */}
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[550] bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_16px_45px_rgba(0,0,0,0.18)] p-3.5 px-6 flex items-center gap-6 select-none animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto">
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[550] bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_16px_45px_rgba(0,0,0,0.18)] p-3.5 px-6 flex items-center gap-6 select-none animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto min-w-max whitespace-nowrap">
                   {/* Telemetri Waktu & ETA */}
-                  <div className="flex items-center gap-3 border-r border-slate-200 pr-5">
+                  <div className="flex items-center gap-3 border-r border-slate-200 pr-6 shrink-0">
                     <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
                       <Clock className="w-5 h-5 text-emerald-600" />
                     </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                    <div className="shrink-0">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block whitespace-nowrap">
                         Estimasi Waktu Tiba
                       </span>
-                      <div className="flex items-baseline gap-1.5 mt-0.5">
-                        <span className="text-lg font-black text-emerald-600 leading-none">
+                      <div className="flex items-center gap-2 mt-0.5 whitespace-nowrap">
+                        <span className="text-lg font-black text-emerald-600 leading-none whitespace-nowrap">
                           {activeRoute.durationFormattedShort}
                         </span>
-                        <span className="text-xs font-semibold text-slate-500">
+                        <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
                           ({activeRoute.arrivalTimeFormatted})
                         </span>
                       </div>
@@ -1305,42 +1305,42 @@ export default function AdminPetaPage() {
                   </div>
 
                   {/* Telemetri Jarak & Rute */}
-                  <div className="flex items-center gap-3 border-r border-slate-200 pr-5">
+                  <div className="flex items-center gap-3 border-r border-slate-200 pr-6 shrink-0">
                     <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
                       <Route className="w-5 h-5 text-blue-600" />
                     </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                    <div className="shrink-0">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block whitespace-nowrap">
                         Jarak Tempuh
                       </span>
-                      <span className="text-lg font-black text-slate-900 leading-none block mt-0.5">
+                      <span className="text-lg font-black text-slate-900 leading-none block mt-0.5 whitespace-nowrap">
                         {activeRoute.distanceKm} km
                       </span>
-                      <span className="text-[10px] text-slate-400 font-medium block">
+                      <span className="text-[10px] text-slate-400 font-medium block whitespace-nowrap">
                         Jalur Jalan Arteri
                       </span>
                     </div>
                   </div>
 
                   {/* Tombol Aksi Armada */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={triggerLocate}
-                      className="h-10 px-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                      className="h-10 px-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
                       title="Pusatkan Kamera ke Posisi Armada"
                     >
                       <Crosshair className="w-4 h-4 text-blue-600" />
-                      <span>Fokus Armada</span>
+                      <span className="whitespace-nowrap">Fokus Armada</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={handleExitLiveNavigation}
-                      className="h-10 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs active:scale-95"
+                      className="h-10 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap shrink-0"
                     >
                       <X className="w-4 h-4 text-rose-600 stroke-[2.5]" />
-                      <span>Akhiri Rute</span>
+                      <span className="whitespace-nowrap">Akhiri Rute</span>
                     </button>
                   </div>
                 </div>
