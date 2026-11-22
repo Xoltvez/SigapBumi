@@ -196,16 +196,27 @@ export default function DisasterMap({
       worldCopyJump: false,
     });
 
-    // Ubin peta OpenStreetMap berbasis CDN cepat CartoDB Voyager (merespon instan dalam milidetik)
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-      {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> kontributor, &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
-        subdomains: "abcd",
-        maxZoom: 20,
+    // Ubin peta OpenStreetMap resmi (100% gratis, tanpa API Key, tanpa watermark)
+    const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> kontributor',
+      maxZoom: 19,
+      subdomains: ["a", "b", "c"],
+    });
+
+    osmLayer.on("tileerror", (error: L.TileEvent) => {
+      // Fallback mulus ke mirror OpenStreetMap jika server utama lambat
+      const tileImg = error.tile as HTMLImageElement;
+      if (tileImg && !tileImg.dataset.fallback) {
+        tileImg.dataset.fallback = "1";
+        const coords = error.coords;
+        if (coords) {
+          tileImg.src = `https://a.tile.openstreetmap.fr/osmfr/${coords.z}/${coords.x}/${coords.y}.png`;
+        }
       }
-    ).addTo(map);
+    });
+
+    osmLayer.addTo(map);
 
     const markersGroup = L.layerGroup().addTo(map);
     markersLayerRef.current = markersGroup;
