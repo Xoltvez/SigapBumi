@@ -186,12 +186,15 @@ export default function AdminPetaPage() {
       window.dispatchEvent(
         new CustomEvent("sigapbumi:live-nav-state", { detail: { active: true } })
       );
+      // Pusatkan awal ke lokasi armada saat rute pertama kali dibuka
       if (userLocation) {
         window.dispatchEvent(
-          new CustomEvent("sigapbumi:map-locate-me", {
+          new CustomEvent("sigapbumi:map-locate", {
             detail: { lat: userLocation.lat, lng: userLocation.lng },
           })
         );
+      } else {
+        window.dispatchEvent(new CustomEvent("sigapbumi:map-locate"));
       }
     }
   };
@@ -584,6 +587,26 @@ export default function AdminPetaPage() {
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Floating Zoom Controls Khusus Mode Navigasi (Mobile): Bebas Zoom In & Zoom Out */}
+            <div className="absolute top-36 right-3 z-40 flex flex-col rounded-xl overflow-hidden shadow-lg border border-slate-200/90 bg-white/95 backdrop-blur-md pointer-events-auto">
+              <button
+                type="button"
+                onClick={triggerZoomIn}
+                className="w-10 h-10 flex items-center justify-center text-slate-700 hover:bg-slate-100 border-b border-slate-100 active:scale-95 transition-transform cursor-pointer"
+                title="Perbesar Peta"
+              >
+                <Plus className="w-5 h-5 text-slate-800" />
+              </button>
+              <button
+                type="button"
+                onClick={triggerZoomOut}
+                className="w-10 h-10 flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-transform cursor-pointer"
+                title="Perkecil Peta"
+              >
+                <Minus className="w-5 h-5 text-slate-800" />
+              </button>
             </div>
           </>
         )}
