@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, Suspense } from "react";
+import React, { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import gsap from "gsap";
 import {
   MapPin,
   Layers,
@@ -79,8 +80,163 @@ function PetaContent() {
   const [showSos, setShowSos] = useState<boolean>(true);
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
 
-  // State khusus drawer & filter mobile
+  // State & Ref khusus drawer & filter mobile dengan gestur drag / swipe GSAP
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+  const mobileSheetRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef<number>(0);
+  const touchCurrentY = useRef<number>(0);
+  const isDragging = useRef<boolean>(false);
+
+  // Animasi GSAP pembukaan & penutupan Mobile Bottom Sheet
+  useEffect(() => {
+    if (!mobileSheetRef.current) return;
+    if (isMobileSheetOpen) {
+      gsap.to(mobileSheetRef.current, {
+        height: "68vh",
+        duration: 0.45,
+        ease: "power3.out",
+        overwrite: "auto",
+      });
+
+      const contentEl = mobileSheetRef.current.querySelector(".mobile-sheet-content");
+      if (contentEl) {
+        gsap.fromTo(
+          contentEl,
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, duration: 0.35, delay: 0.1, ease: "power2.out", overwrite: "auto" }
+        );
+      }
+    } else {
+      gsap.to(mobileSheetRef.current, {
+        height: 76,
+        duration: 0.35,
+        ease: "power2.inOut",
+        overwrite: "auto",
+      });
+    }
+  }, [isMobileSheetOpen]);
+
+  // Touch gesture handlers untuk membuka & menutup sheet dengan drag / swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchCurrentY.current = e.touches[0].clientY;
+    isDragging.current = true;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging.current || !mobileSheetRef.current) return;
+    touchCurrentY.current = e.touches[0].clientY;
+    const deltaY = touchCurrentY.current - touchStartY.current;
+
+    // Respon interaktif visual saat ditarik secara realtime
+    if (!isMobileSheetOpen && deltaY < 0) {
+      const targetHeight = Math.min(76 + Math.abs(deltaY) * 0.9, window.innerHeight * 0.68);
+      gsap.set(mobileSheetRef.current, { height: targetHeight });
+    } else if (isMobileSheetOpen && deltaY > 0) {
+      const baseHeight = window.innerHeight * 0.68;
+      const targetHeight = Math.max(76, baseHeight - deltaY * 0.9);
+      gsap.set(mobileSheetRef.current, { height: targetHeight });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    const deltaY = touchCurrentY.current - touchStartY.current;
+
+    if (!isMobileSheetOpen && deltaY < -30) {
+      setIsMobileSheetOpen(true);
+    } else if (isMobileSheetOpen && deltaY > 30) {
+      setIsMobileSheetOpen(false);
+    } else if (mobileSheetRef.current) {
+      gsap.to(mobileSheetRef.current, {
+        height: isMobileSheetOpen ? "68vh" : 76,
+        duration: 0.3,
+        ease: "power2.out",
+      });
+    }
+  };
+
+  // Mouse gesture handlers (untuk testing drag di desktop browser inspect mode)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    touchStartY.current = e.clientY;
+    touchCurrentY.current = e.clientY;
+    isDragging.current = true;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDragging.current || !mobileSheetRef.current) return;
+      touchCurrentY.current = moveEvent.clientY;
+      const deltaY = touchCurrentY.current - touchStartY.current;
+
+      if (!isMobileSheetOpen && deltaY < 0) {
+        const targetHeight = Math.min(76 + Math.abs(deltaY) * 0.9, window.innerHeight * 0.68);
+        gsap.set(mobileSheetRef.current, { height: targetHeight });
+      } else if (isMobileSheetOpen && deltaY > 0) {
+        const baseHeight = window.innerHeight * 0.68;
+        const targetHeight = Math.max(76, baseHeight - deltaY * 0.9);
+        gsap.set(mobileSheetRef.current, { height: targetHeight });
+      }
+    };
+
+    const onMouseUp = () => {
+      isDragging.current = false;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      const deltaY = touchCurrentY.current - touchStartY.current;
+
+      if (!isMobileSheetOpen && deltaY < -30) {
+        setIsMobileSheetOpen(true);
+      } else if (isMobileSheetOpen && deltaY > 30) {
+        setIsMobileSheetOpen(false);
+      } else if (mobileSheetRef.current) {
+        gsap.to(mobileSheetRef.current, {
+          height: isMobileSheetOpen ? "68vh" : 76,
+          duration: 0.3,
+          ease: "power2.out",
+        });
+      }
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
+  // Handler saat konten di-swipe ke bawah ketika scroll berada di paling atas
+  const handleContentTouchStart = (e: React.TouchEvent) => {
+    const el = e.currentTarget;
+    if (el.scrollTop <= 0) {
+      touchStartY.current = e.touches[0].clientY;
+      touchCurrentY.current = e.touches[0].clientY;
+      isDragging.current = true;
+    }
+  };
+
+  const handleContentTouchMove = (e: React.TouchEvent) => {
+    const el = e.currentTarget;
+    if (!isDragging.current || el.scrollTop > 0 || !mobileSheetRef.current) return;
+    touchCurrentY.current = e.touches[0].clientY;
+    const deltaY = touchCurrentY.current - touchStartY.current;
+    if (deltaY > 0) {
+      const baseHeight = window.innerHeight * 0.68;
+      const targetHeight = Math.max(76, baseHeight - deltaY * 0.9);
+      gsap.set(mobileSheetRef.current, { height: targetHeight });
+    }
+  };
+
+  const handleContentTouchEnd = () => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    const deltaY = touchCurrentY.current - touchStartY.current;
+    if (deltaY > 35) {
+      setIsMobileSheetOpen(false);
+    } else if (mobileSheetRef.current) {
+      gsap.to(mobileSheetRef.current, {
+        height: "68vh",
+        duration: 0.3,
+        ease: "power2.out",
+      });
+    }
+  };
 
   // State khusus tampilan desktop modern sesuai referensi
   const [desktopSearch, setDesktopSearch] = useState<string>("");
@@ -441,22 +597,32 @@ function PetaContent() {
           </div>
         </div>
 
-        {/* Floating Bottom Sheet (Filter & Info Titik di Bawah) */}
+        {/* Floating Bottom Sheet (Filter & Info Titik di Bawah dengan Gestur Drag / Swipe GSAP) */}
         <div
-          className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 transition-all duration-300 flex flex-col ${
-            isMobileSheetOpen ? "max-h-[68vh]" : "max-h-[76px]"
-          }`}
+          ref={mobileSheetRef}
+          className="absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 flex flex-col overflow-hidden will-change-[height]"
+          style={{ height: 76 }}
         >
-          {/* Handle Bar Drag Pill */}
+          {/* Handle Bar Drag Area (Mendukung sentuhan / scroll tarik ke atas dan ke bawah) */}
           <div
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
             onClick={() => setIsMobileSheetOpen((prev) => !prev)}
-            className="pt-2 pb-1 flex flex-col items-center cursor-pointer select-none"
+            className="pt-2.5 pb-1 flex flex-col items-center cursor-grab active:cursor-grabbing select-none"
+            title="Geser atau klik untuk membuka / menutup filter"
           >
-            <div className="w-11 h-1.5 bg-slate-300 rounded-full" />
+            <div className="w-12 h-1.5 bg-slate-300 hover:bg-slate-400 rounded-full transition-colors active:scale-95" />
           </div>
 
           {/* Header Bottom Sheet */}
-          <div className="px-4 py-2 flex items-center justify-between gap-3 border-b border-slate-100">
+          <div
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            className="px-4 py-2 flex items-center justify-between gap-3 border-b border-slate-100 select-none cursor-grab active:cursor-grabbing"
+          >
             {selectedPoint ? (
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-0.5">
@@ -540,8 +706,15 @@ function PetaContent() {
             </div>
           </div>
 
-          {/* Body Konten Bottom Sheet (Saat Di-expand) */}
-          <div className={`overflow-y-auto p-4 space-y-3.5 ${isMobileSheetOpen ? "block" : "hidden"}`}>
+          {/* Body Konten Bottom Sheet (Saat Di-expand dengan GSAP & gestur scroll) */}
+          <div
+            onTouchStart={handleContentTouchStart}
+            onTouchMove={handleContentTouchMove}
+            onTouchEnd={handleContentTouchEnd}
+            className={`mobile-sheet-content flex-1 overflow-y-auto p-4 space-y-3.5 pb-24 touch-pan-y ${
+              isMobileSheetOpen ? "block" : "hidden"
+            }`}
+          >
             {selectedPoint && (
               <div className="space-y-2 pb-2 border-b border-slate-100">
                 <a
