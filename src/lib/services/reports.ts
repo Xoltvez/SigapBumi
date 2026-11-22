@@ -21,6 +21,7 @@ export interface LiveReportItem {
   priority: "tinggi" | "sedang" | "normal";
   confirmation_count: number;
   created_at: string;
+  raw_created_at?: string;
   image_url?: string;
   phone_number?: string;
   timeline?: TimelineStep[];
@@ -462,6 +463,35 @@ export function formatReportTime(dateString: string): string {
 }
 
 /**
+ * Mengonversi tanggal/string waktu laporan ke timestamp milidetik untuk pengurutan
+ */
+export function parseReportTimestamp(dateStr?: string): number {
+  if (!dateStr) return 0;
+  if (dateStr === "Baru saja") return Date.now();
+
+  const parsed = Date.parse(dateStr);
+  if (!isNaN(parsed)) return parsed;
+
+  const match = dateStr.match(/(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4}),?\s+(\d{1,2})[.:](\d{2})/);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const monthStr = match[2].toLowerCase();
+    const year = parseInt(match[3], 10);
+    const hour = parseInt(match[4], 10);
+    const minute = parseInt(match[5], 10);
+
+    const monthMap: Record<string, number> = {
+      jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, may: 4, jun: 5,
+      jul: 6, agu: 7, aug: 7, sep: 8, okt: 9, oct: 9, nov: 10, des: 11, dec: 11
+    };
+    const month = monthMap[monthStr] ?? 0;
+    return new Date(year, month, day, hour, minute).getTime();
+  }
+
+  return 0;
+}
+
+/**
  * Mengambil daftar laporan: menggabungkan data Supabase live, local cache perangkat, dan data demo
  */
 export async function fetchLiveReports(): Promise<LiveReportItem[]> {
@@ -501,6 +531,7 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
           priority,
           confirmation_count: row.confirmation_count || 0,
           created_at: formatReportTime(row.created_at),
+          raw_created_at: row.created_at,
           image_url: extractedPhoto,
           phone_number: extractedPhone,
           is_demo: false,
@@ -544,9 +575,18 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
   });
 
   const deletedIds = getDeletedReportIds();
-  return Array.from(new Set(mergedMap.values())).filter(
+  const allReports = Array.from(new Set(mergedMap.values())).filter(
     (item) => !deletedIds.has(item.id) && !deletedIds.has(item.tracking_code)
   );
+
+  // Selalu urutkan daftar laporan dari data yang paling baru ke terlama
+  allReports.sort((a, b) => {
+    const timeA = parseReportTimestamp(a.raw_created_at || a.created_at);
+    const timeB = parseReportTimestamp(b.raw_created_at || b.created_at);
+    return timeB - timeA;
+  });
+
+  return allReports;
 }
 
 /**

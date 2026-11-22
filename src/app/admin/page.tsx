@@ -21,6 +21,7 @@ import {
   updateReportStatusLive,
   DEFAULT_MOCK_REPORTS,
   removeEmojis,
+  parseReportTimestamp,
 } from "@/lib/services/reports";
 import { fetchLiveSosAlerts } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
@@ -33,6 +34,7 @@ interface AdminReportItem {
   title: string;
   location: string;
   time: string;
+  raw_time?: string;
   status: ReportStatus;
   priority: PriorityLabel;
   confirmation_count: number;
@@ -111,11 +113,20 @@ export default function AdminRingkasanPage() {
               title: removeEmojis(r.title),
               location: removeEmojis(r.address),
               time: r.created_at,
+              raw_time: r.raw_created_at || r.created_at,
               status: r.status,
               priority: pLabel,
               confirmation_count: r.confirmation_count,
             };
           });
+
+          // Urutkan laporan dari data yang paling baru ke terlama
+          formatted.sort((a, b) => {
+            const timeA = parseReportTimestamp(a.raw_time || a.time);
+            const timeB = parseReportTimestamp(b.raw_time || b.time);
+            return timeB - timeA;
+          });
+
           setReports(formatted);
           setIsLiveConnected(true);
         }

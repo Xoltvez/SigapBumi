@@ -31,6 +31,7 @@ import {
   deleteReportLive,
   removeEmojis,
   clearAllLocalReportsAndCaches,
+  parseReportTimestamp,
 } from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 
@@ -41,6 +42,7 @@ interface AdminReportRow {
   title: string;
   location: string;
   time: string;
+  raw_time?: string;
   status: ReportStatus;
   priority: PriorityLabel;
   confirmation_count: number;
@@ -272,6 +274,7 @@ function LaporanContent() {
           title: r.title,
           location: r.address,
           time: formatReportTime(r.created_at),
+          raw_time: r.raw_created_at || r.created_at,
           status: r.status,
           priority: pLabel,
           confirmation_count: r.confirmation_count,
@@ -279,19 +282,11 @@ function LaporanContent() {
         };
       });
 
-      // Urutkan default: SOS paling atas -> Kritis -> Tinggi -> Sedang -> Rendah
-      const priorityOrder: Record<PriorityLabel, number> = {
-        Kritis: 4,
-        Tinggi: 3,
-        Sedang: 2,
-        Rendah: 1,
-      };
+      // Urutkan default: data laporan yang terbaru selalu berada di paling atas
       formatted.sort((a, b) => {
-        const aIsSos = a.tracking_code.startsWith("SOS") || a.title.includes("SOS");
-        const bIsSos = b.tracking_code.startsWith("SOS") || b.title.includes("SOS");
-        if (aIsSos && !bIsSos) return -1;
-        if (!aIsSos && bIsSos) return 1;
-        return priorityOrder[b.priority] - priorityOrder[a.priority];
+        const timeA = parseReportTimestamp(a.raw_time || a.time);
+        const timeB = parseReportTimestamp(b.raw_time || b.time);
+        return timeB - timeA;
       });
 
       setReports(formatted);
