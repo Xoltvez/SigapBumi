@@ -63,7 +63,7 @@ function safeNavigateMap(
 
   try {
     try {
-      map.invalidateSize();
+      map.invalidateSize({ pan: false });
     } catch {}
 
     let canFly = false;
@@ -87,8 +87,8 @@ function safeNavigateMap(
 
     if (canFly) {
       map.flyTo([latNum, lngNum], zoom, {
-        duration: 1.2,
-        easeLinearity: 0.25,
+        duration: 1.4,
+        easeLinearity: 0.2,
       });
     } else {
       map.setView([latNum, lngNum], zoom);
@@ -149,6 +149,7 @@ export default function DisasterMap({
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
+  const [isMapReady, setIsMapReady] = React.useState(false);
 
   // Injeksi style animasi ping jika belum ada di document
   useEffect(() => {
@@ -165,12 +166,23 @@ export default function DisasterMap({
           }
         }
         .leaflet-popup-content-wrapper {
-          border-radius: 8px !important;
-          box-shadow: 0 8px 24px rgba(31,41,55,0.15) !important;
+          border-radius: 12px !important;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
           padding: 4px !important;
         }
         .leaflet-control-zoom {
           display: none !important;
+        }
+        .leaflet-container {
+          background-color: #f8fafc !important;
+          outline: none;
+        }
+        .leaflet-tile {
+          transition: opacity 0.25s ease-in-out;
+        }
+        .leaflet-marker-icon {
+          transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease;
+          will-change: transform, opacity;
         }
       `;
       document.head.appendChild(style);
@@ -182,11 +194,18 @@ export default function DisasterMap({
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    // Indonesia archipelago default view
+    // Indonesia archipelago default view dengan animasi mulus (anti-glitch)
     const map = L.map(mapContainerRef.current, {
       center: [-2.5, 118.0],
       zoom: 5,
       zoomControl: false,
+      fadeAnimation: true,
+      zoomAnimation: true,
+      markerZoomAnimation: true,
+      inertia: true,
+      inertiaDeceleration: 3000,
+      easeLinearity: 0.2,
+      worldCopyJump: false,
     });
 
     // Required OpenStreetMap Attribution
@@ -356,11 +375,15 @@ export default function DisasterMap({
       window.addEventListener("sigapbumi:map-locate", handleLocate);
     }
 
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 250);
+    const initTimer = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize({ pan: false });
+        setIsMapReady(true);
+      }
+    }, 120);
 
     return () => {
+      clearTimeout(initTimer);
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:map-zoom-in", handleZoomIn);
         window.removeEventListener("sigapbumi:map-zoom-out", handleZoomOut);
@@ -399,23 +422,28 @@ export default function DisasterMap({
     }
   }, [selectedPointId, points]);
 
-  // Update Markers when points change
+  // Update Markers secara cerdas (diffing) saat points berubah: Tanpa glitch, tanpa flicker, dan tidak mereset zoom peta
   useEffect(() => {
     const map = mapInstanceRef.current;
     const markersGroup = markersLayerRef.current;
     if (!map || !markersGroup) return;
 
-    markersGroup.clearLayers();
-    markersMapRef.current.clear();
-
     const validPoints = points.filter((p) => isValidCoord(p.lat, p.lng));
+    const currentMarkers = markersMapRef.current;
+    const incomingIds = new Set(validPoints.map((p) => p.id));
 
+    // 1. Hapus marker yang sudah tidak ada di data terbaru
+    for (const [id, marker] of currentMarkers.entries()) {
+      if (!incomingIds.has(id)) {
+        markersGroup.removeLayer(marker);
+        currentMarkers.delete(id);
+      }
+    }
+
+    // 2. Tambah atau perbarui marker yang sudah ada secara mulus
     validPoints.forEach((pt) => {
       const latNum = Number(pt.lat);
       const lngNum = Number(pt.lng);
-      const marker = L.marker([latNum, lngNum], {
-        icon: createPinIcon(pt.status, pt.is_sos),
-      });
 
       // Construct popup HTML (tanpa emoji, mematuhi Anti-Slop R-01)
       const popupHtml = `
@@ -447,45 +475,55 @@ export default function DisasterMap({
         </div>
       `;
 
-      marker.bindPopup(popupHtml);
-
-      marker.on("click", () => {
-        if (mapInstanceRef.current && isValidCoord(latNum, lngNum)) {
-          safeNavigateMap(mapInstanceRef.current, latNum, lngNum, 15, true);
+      const existingMarker = currentMarkers.get(pt.id);
+      if (existingMarker) {
+        // Cek update koordinat jika bergeser
+        const curLatLng = existingMarker.getLatLng();
+        if (Math.abs(curLatLng.lat - latNum) > 0.00001 || Math.abs(curLatLng.lng - lngNum) > 0.00001) {
+          existingMarker.setLatLng([latNum, lngNum]);
         }
-        if (onSelectPoint) {
-          onSelectPoint(pt);
-        }
-      });
+        // Perbarui icon jika status/sos berubah
+        existingMarker.setIcon(createPinIcon(pt.status, pt.is_sos));
+        // Perbarui isi popup
+        existingMarker.setPopupContent(popupHtml);
+      } else {
+        // Buat marker baru
+        const marker = L.marker([latNum, lngNum], {
+          icon: createPinIcon(pt.status, pt.is_sos),
+        });
 
-      markersGroup.addLayer(marker);
-      markersMapRef.current.set(pt.id, marker);
+        marker.bindPopup(popupHtml);
+
+        marker.on("click", () => {
+          if (mapInstanceRef.current && isValidCoord(latNum, lngNum)) {
+            safeNavigateMap(mapInstanceRef.current, latNum, lngNum, 15, true);
+          }
+          if (onSelectPoint) {
+            onSelectPoint(pt);
+          }
+        });
+
+        markersGroup.addLayer(marker);
+        currentMarkers.set(pt.id, marker);
+      }
     });
 
-    // Auto-fit bounds jika ada titik dan tidak sedang fokus pada titik tertentu
-    try {
-      if (!selectedPointId && validPoints.length > 0) {
-        const coords = validPoints.map((p) => [Number(p.lat), Number(p.lng)] as [number, number]);
-        if (coords.length > 0) {
-          const bounds = L.latLngBounds(coords);
-          if (bounds.isValid()) {
-            map.fitBounds(bounds, { padding: [35, 35], maxZoom: 12 });
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("fitBounds warning:", err);
-    }
-  }, [points, onSelectPoint, selectedPointId]);
+    // PENTING: map.fitBounds sengaja TIDAK dipanggil saat loading data agar peta tetap tenang dan tidak zoom mendadak / glitch!
+  }, [points, onSelectPoint]);
 
   const sosCount = points.filter((p) => p.is_sos).length;
   const reportCount = points.filter((p) => !p.is_sos).length;
 
   return (
     <div
-      className={`w-full h-full min-h-[500px] md:min-h-[600px] relative rounded-lg overflow-hidden border border-line shadow-card ${className}`}
+      className={`w-full h-full min-h-[500px] md:min-h-[600px] relative rounded-lg overflow-hidden border border-line shadow-card bg-slate-100 ${className}`}
     >
-      <div ref={mapContainerRef} className="w-full h-full min-h-[500px] md:min-h-[600px] z-10" />
+      <div
+        ref={mapContainerRef}
+        className={`w-full h-full min-h-[500px] md:min-h-[600px] z-10 transition-opacity duration-500 ease-out ${
+          isMapReady ? "opacity-100" : "opacity-0"
+        }`}
+      />
 
       {showLegend && (
         <div className="absolute bottom-4 left-4 z-[400] max-w-[280px] bg-surface/95 backdrop-blur-sm border border-line rounded-lg p-3 shadow-card text-xs pointer-events-auto">

@@ -55,10 +55,13 @@ import DisasterIcon, { getDisasterLabel } from "@/components/common/DisasterIcon
 const DisasterMap = dynamic(() => import("@/components/peta/DisasterMap"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-[550px] md:h-[650px] rounded-lg bg-bg border border-line flex flex-col items-center justify-center text-ink-muted animate-pulse">
-      <MapPin className="w-8 h-8 mb-2 text-primary" />
-      <p className="text-sm font-semibold text-ink">Memuat Peta Kejadian Bencana...</p>
-      <p className="text-xs text-ink-muted mt-1">Mengunduh data geospasial OpenStreetMap</p>
+    <div className="w-full h-full min-h-[500px] md:min-h-[600px] rounded-lg bg-slate-900/10 dark:bg-slate-900 border border-line/60 flex flex-col items-center justify-center text-slate-500 backdrop-blur-xs select-none">
+      <div className="relative mb-3 flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+        <MapPin className="w-5 h-5 text-primary absolute" />
+      </div>
+      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Menyiapkan Peta Kejadian...</p>
+      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Memuat geospasial & sinkronisasi koordinat</p>
     </div>
   ),
 });
