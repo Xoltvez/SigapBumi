@@ -3,7 +3,6 @@ import { fileTypeFromBuffer } from "file-type";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-export const runtime = "nodejs";
 
 // Batas ukuran maksimal file (3.5 MB) agar tetap di bawah limit serverless payload
 const MAX_BYTES = 3.5 * 1024 * 1024;
