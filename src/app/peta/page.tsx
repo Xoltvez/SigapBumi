@@ -26,9 +26,10 @@ import {
   SlidersHorizontal,
   Plus,
   Minus,
-  Sun,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   X,
   RotateCw,
   CheckCircle2,
@@ -241,7 +242,7 @@ function PetaContent() {
   // State khusus tampilan desktop modern sesuai referensi
   const [desktopSearch, setDesktopSearch] = useState<string>("");
   const [desktopFilterCategory, setDesktopFilterCategory] = useState<"semua" | "posko" | "laporan" | "sos">("semua");
-  const [isDesktopPanelOpen, setIsDesktopPanelOpen] = useState<boolean>(true);
+  const [isDesktopPanelOpen, setIsDesktopPanelOpen] = useState<boolean>(false);
 
   // Helper trigger action peta Leaflet di mobile / desktop
   const triggerZoomIn = () => {
@@ -577,23 +578,6 @@ function PetaContent() {
             >
               <Minus className="w-5 h-5" />
             </button>
-          </div>
-        </div>
-
-        {/* Floating Weather Widget (Kiri Bawah di atas Bottom Sheet) */}
-        <div
-          className={`absolute left-3 z-30 transition-all duration-300 pointer-events-auto ${
-            isMobileSheetOpen ? "bottom-72" : "bottom-24"
-          }`}
-        >
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 px-3.5 shadow-lg border border-slate-200/80 flex flex-col">
-            <div className="flex items-center gap-1.5 text-amber-500 font-extrabold text-sm leading-none">
-              <Sun className="w-4 h-4 text-amber-500 fill-amber-400" />
-              <span className="text-slate-900 font-extrabold">32°C</span>
-            </div>
-            <span className="text-[10px] text-slate-500 font-medium mt-1 leading-none">
-              Cerah Berawan
-            </span>
           </div>
         </div>
 
@@ -951,46 +935,69 @@ function PetaContent() {
           </div>
         </div>
 
-        {/* Kiri Tengah: Floating Filter Panel Desktop */}
-        <div className="absolute top-28 left-6 z-20 w-[380px] lg:w-[410px] max-h-[calc(100vh-9.5rem)] flex flex-col bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden select-none">
-          {/* Header Panel */}
-          <div className="p-3.5 px-4 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 shadow-2xs">
+        {/* Kiri Tengah: Floating Filter Panel Desktop (Minimized / Maximized) */}
+        <div className="absolute top-28 left-6 z-20">
+          {!isDesktopPanelOpen ? (
+            <button
+              type="button"
+              onClick={() => setIsDesktopPanelOpen(true)}
+              className="group bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/90 rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-all duration-300 text-slate-800 cursor-pointer animate-in fade-in slide-in-from-left-4 hover:shadow-2xl"
+              title="Buka / Maksimalkan Filter Peta Kejadian"
+            >
+              <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
                 <SlidersHorizontal className="w-4 h-4" />
               </div>
-              <div className="min-w-0">
+              <div className="text-left">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-extrabold text-slate-900 truncate">
+                  <span className="text-xs font-extrabold text-slate-900">
                     Filter Peta Kejadian
-                  </h3>
-                  <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full shrink-0">
+                  </span>
+                  <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
                     {desktopPoints.length} Titik
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                  Saring sebaran laporan bencana &amp; darurat
-                </p>
+                <p className="text-[10px] text-slate-400">Klik untuk membuka filter</p>
               </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsDesktopPanelOpen((prev) => !prev)}
-              className="p-1.5 rounded-lg hover:bg-slate-200/70 text-slate-500 transition-colors cursor-pointer"
-              title={isDesktopPanelOpen ? "Minimalkan Panel" : "Buka Panel"}
-            >
-              {isDesktopPanelOpen ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
+              <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-orange-50 text-slate-400 group-hover:text-orange-600 flex items-center justify-center transition-colors shrink-0 ml-1">
+                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              </div>
             </button>
-          </div>
+          ) : (
+            <div className="w-[380px] lg:w-[410px] max-h-[calc(100vh-9.5rem)] flex flex-col bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden select-none animate-in fade-in slide-in-from-left duration-300">
+              {/* Header Panel */}
+              <div className="p-3.5 px-4 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 shadow-2xs">
+                    <SlidersHorizontal className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-extrabold text-slate-900 truncate">
+                        Filter Peta Kejadian
+                      </h3>
+                      <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full shrink-0">
+                        {desktopPoints.length} Titik
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                      Saring sebaran laporan bencana &amp; darurat
+                    </p>
+                  </div>
+                </div>
 
-          {/* Body Konten Filter Desktop */}
-          {isDesktopPanelOpen && (
-            <div className="overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-14rem)] scrollbar-thin">
+                <button
+                  type="button"
+                  onClick={() => setIsDesktopPanelOpen(false)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                  title="Kecilkan / Minimize Panel"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="text-[11px]">Minimize</span>
+                </button>
+              </div>
+
+              {/* Body Konten Filter Desktop */}
+              <div className="overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-14rem)] scrollbar-thin">
               {/* Highlight Titik Terpilih jika ada */}
               {selectedPoint && (
                 <div className="p-3 bg-orange-50/80 rounded-xl border border-orange-200 space-y-2">
@@ -1173,67 +1180,59 @@ function PetaContent() {
                 </div>
               )}
             </div>
-          )}
-        </div>
-
-        {/* Kanan Atas: Widget Cuaca Mengambang */}
-        <div className="absolute top-5 right-6 z-20">
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl p-3 px-4 shadow-lg border border-slate-200/90 flex flex-col items-center">
-            <div className="flex items-center gap-1.5 text-amber-500 font-extrabold text-base leading-none">
-              <Sun className="w-5 h-5 text-amber-500 fill-amber-400" />
-              <span className="text-slate-900 font-extrabold text-lg">32°C</span>
-            </div>
-            <span className="text-[11px] text-slate-500 font-medium mt-1 leading-none">
-              Cerah Berawan
-            </span>
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Kanan Bawah: Stack Floating Action Controls (Kompas, Lokasi Saya, Layers, Zoom) */}
-        <div className="absolute bottom-8 right-6 z-20 flex flex-col items-center gap-2">
-          {/* Kompas */}
-          <button
-            type="button"
-            onClick={triggerCompass}
-            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer hover:bg-slate-50"
-            title="Reset Arah Kompas &amp; Tampilan"
-          >
-            <Compass className="w-5 h-5 text-red-500" />
-          </button>
+      {/* Kanan Bawah: Stack Floating Action Controls (Kompas, Lokasi Saya, Layers, Zoom) - dinaikkan agar tidak menabrak SOS */}
+      <div className="absolute bottom-28 right-6 z-20 flex flex-col items-center gap-2">
+        {/* Kompas */}
+        <button
+          type="button"
+          onClick={triggerCompass}
+          className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer hover:bg-slate-50"
+          title="Reset Arah Kompas &amp; Tampilan"
+        >
+          <Compass className="w-5 h-5 text-red-500" />
+        </button>
 
-          {/* Lokasi Saya */}
-          <button
-            type="button"
-            onClick={triggerLocate}
-            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer hover:bg-slate-50"
-            title="Pusatkan ke Lokasi Saya"
-          >
-            <Crosshair className="w-5 h-5 text-blue-600" />
-          </button>
+        {/* Lokasi Saya */}
+        <button
+          type="button"
+          onClick={triggerLocate}
+          className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer hover:bg-slate-50"
+          title="Pusatkan ke Lokasi Saya"
+        >
+          <Crosshair className="w-5 h-5 text-blue-600" />
+        </button>
 
-          {/* Pin Marker Toggle */}
-          <button
-            type="button"
-            onClick={() => {
-              if (desktopPoints.length > 0) {
-                setSelectedPoint(desktopPoints[0]);
-              }
-            }}
-            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer hover:bg-slate-50"
-            title="Fokus Titik Terdekat"
-          >
-            <MapPin className="w-5 h-5 text-emerald-600" />
-          </button>
+        {/* Pin Marker Toggle */}
+        <button
+          type="button"
+          onClick={() => {
+            if (desktopPoints.length > 0) {
+              setSelectedPoint(desktopPoints[0]);
+            }
+          }}
+          className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer hover:bg-slate-50"
+          title="Fokus Titik Terdekat"
+        >
+          <MapPin className="w-5 h-5 text-emerald-600" />
+        </button>
 
-          {/* Toggle Panel Kiri */}
-          <button
-            type="button"
-            onClick={() => setIsDesktopPanelOpen((prev) => !prev)}
-            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer hover:bg-slate-50"
-            title="Buka / Tutup Panel Titik"
-          >
-            <Layers className="w-5 h-5 text-slate-700" />
-          </button>
+        {/* Toggle Panel Kiri (Buka / Tutup Filter) */}
+        <button
+          type="button"
+          onClick={() => setIsDesktopPanelOpen((prev) => !prev)}
+          className={`w-10 h-10 rounded-full backdrop-blur-xs shadow-md border flex items-center justify-center active:scale-95 transition-transform cursor-pointer ${
+            isDesktopPanelOpen
+              ? "bg-orange-600 text-white border-orange-500 shadow-orange-500/20"
+              : "bg-white/95 text-slate-700 border-slate-200/90 hover:bg-slate-50"
+          }`}
+          title={isDesktopPanelOpen ? "Tutup / Minimize Filter" : "Buka / Maximize Filter"}
+        >
+          <SlidersHorizontal className="w-4.5 h-4.5" />
+        </button>
 
           {/* Zoom In & Zoom Out Stack */}
           <div className="flex flex-col rounded-xl overflow-hidden shadow-md border border-slate-200/90 bg-white/95 backdrop-blur-xs">
