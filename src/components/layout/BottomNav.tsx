@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, MapPin, Plus, Search, BookOpen } from "lucide-react";
+import { Home, MapPin, FileText, BookOpen } from "lucide-react";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -15,11 +15,17 @@ export function BottomNav() {
   const isHome = pathname === "/";
   const isPeta = pathname.startsWith("/peta");
   const isLapor = pathname.startsWith("/lapor");
-  const isLacak = pathname.startsWith("/lacak");
   const isEdukasi = pathname.startsWith("/edukasi");
+
+  const handleOpenSos = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sigapbumi:open-sos"));
+    }
+  };
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 h-16 bg-surface border-t border-line px-2 flex items-center justify-around shadow-overlay">
+      {/* 1. Beranda */}
       <Link
         href="/"
         className={`flex flex-col items-center justify-center w-14 h-full text-xs transition-colors ${
@@ -31,6 +37,7 @@ export function BottomNav() {
         {isHome && <span className="w-1 h-1 rounded-full bg-primary mt-0.5" />}
       </Link>
 
+      {/* 2. Peta */}
       <Link
         href="/peta"
         className={`flex flex-col items-center justify-center w-14 h-full text-xs transition-colors ${
@@ -42,39 +49,35 @@ export function BottomNav() {
         {isPeta && <span className="w-1 h-1 rounded-full bg-primary mt-0.5" />}
       </Link>
 
-      {/* Center prominent Lapor button */}
+      {/* 3. SOS Darurat (Center Prominent Button) */}
+      <button
+        type="button"
+        onClick={handleOpenSos}
+        aria-label="Panggilan Darurat SOS Warga"
+        className="flex flex-col items-center justify-center -mt-5 cursor-pointer select-none group"
+      >
+        <div className="relative w-14 h-14 rounded-full bg-[#EF4444] text-white flex items-center justify-center shadow-[0_4px_16px_rgba(239,68,68,0.5)] border-2 border-white transition-transform group-hover:scale-105 group-active:scale-95">
+          <span className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-35 pointer-events-none" />
+          <span className="font-black text-sm tracking-wider font-mono">SOS</span>
+        </div>
+        <span className="text-[11px] mt-1 font-black text-red-600 tracking-wider">
+          SOS
+        </span>
+      </button>
+
+      {/* 4. Lapor (Menggantikan menu Lacak di Mobile) */}
       <Link
         href="/lapor"
-        aria-label="Lapor Kejadian Bencana"
-        className="flex flex-col items-center justify-center -mt-5"
-      >
-        <div
-          className={`w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center shadow-overlay transition-transform hover:scale-105 active:scale-95 ${
-            isLapor ? "ring-4 ring-primary-soft scale-105" : ""
-          }`}
-        >
-          <Plus className="w-7 h-7 stroke-[2.5]" />
-        </div>
-        <span
-          className={`text-[11px] mt-1 font-semibold ${
-            isLapor ? "text-primary font-bold" : "text-ink"
-          }`}
-        >
-          Lapor
-        </span>
-      </Link>
-
-      <Link
-        href="/lacak"
         className={`flex flex-col items-center justify-center w-14 h-full text-xs transition-colors ${
-          isLacak ? "text-primary font-bold" : "text-ink-soft hover:text-ink font-medium"
+          isLapor ? "text-primary font-bold" : "text-ink-soft hover:text-ink font-medium"
         }`}
       >
-        <Search className="w-5 h-5 mb-0.5" />
-        <span>Lacak</span>
-        {isLacak && <span className="w-1 h-1 rounded-full bg-primary mt-0.5" />}
+        <FileText className="w-5 h-5 mb-0.5" />
+        <span>Lapor</span>
+        {isLapor && <span className="w-1 h-1 rounded-full bg-primary mt-0.5" />}
       </Link>
 
+      {/* 5. Edukasi */}
       <Link
         href="/edukasi"
         className={`flex flex-col items-center justify-center w-14 h-full text-xs transition-colors ${

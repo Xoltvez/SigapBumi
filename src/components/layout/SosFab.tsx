@@ -566,13 +566,13 @@ export function SosFab() {
 
   return (
     <>
-      {/* 1. Tombol Mengambang (FAB) SOS di Pojok Kanan Bawah */}
+      {/* 1. Tombol Mengambang (FAB) SOS di Pojok Kanan Bawah (Khusus Desktop, karena Mobile sudah terintegrasi di BottomNav) */}
       {!isOpen && !countdown && (
         <button
           type="button"
           onClick={handleStartSos}
           aria-label="Panggilan Darurat SOS"
-          className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 w-13 h-13 md:w-14 md:h-14 rounded-full bg-[#EF4444] text-white font-black text-sm tracking-wider flex items-center justify-center shadow-2xl border-2 border-white hover:bg-red-700 hover:scale-105 active:scale-95 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 cursor-pointer animate-pulse"
+          className="hidden md:flex fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-[#EF4444] text-white font-black text-sm tracking-wider items-center justify-center shadow-2xl border-2 border-white hover:bg-red-700 hover:scale-105 active:scale-95 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 cursor-pointer animate-pulse"
         >
           SOS
         </button>
