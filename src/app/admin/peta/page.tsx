@@ -25,7 +25,6 @@ import {
   Activity,
   ArrowRight,
   Menu,
-  Compass,
   Crosshair,
   Maximize2,
   Sun,
@@ -107,11 +106,6 @@ export default function AdminPetaPage() {
   const triggerLocate = () => {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("sigapbumi:map-locate"));
-    }
-  };
-  const triggerCompass = () => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("sigapbumi:map-reset-view"));
     }
   };
 
@@ -373,18 +367,8 @@ export default function AdminPetaPage() {
           </div>
         </div>
 
-        {/* Floating Action Controls Stack di Sisi Kanan (Kompas, Lokasi Saya, Filter, Zoom) */}
+        {/* Floating Action Controls Stack di Sisi Kanan (Lokasi Saya, Filter, Zoom) */}
         <div className="absolute top-3 right-3 z-30 flex flex-col items-center gap-2 pointer-events-auto">
-          {/* Kompas */}
-          <button
-            type="button"
-            onClick={triggerCompass}
-            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
-            title="Reset Arah Kompas & Tampilan"
-          >
-            <Compass className="w-5 h-5 text-red-500" />
-          </button>
-
           {/* Lokasi Saya */}
           <button
             type="button"
