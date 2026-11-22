@@ -32,6 +32,10 @@ import {
   Plus,
   Minus,
   Route,
+  ArrowUp,
+  CornerUpLeft,
+  CornerUpRight,
+  RotateCcw,
 } from "lucide-react";
 import type { MapPoint } from "@/components/peta/DisasterMap";
 import type { DisasterType, ReportStatus } from "@/types";
@@ -89,10 +93,11 @@ export default function AdminPetaPage() {
   // State khusus drawer & filter mobile
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
-  // State navigasi rute OSRM langsung di peta
+  // State navigasi rute OSRM & mode kemudi langsung di peta
   const [activeRoute, setActiveRoute] = useState<RouteResult | null>(null);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLiveNavigating, setIsLiveNavigating] = useState(false);
 
   // Pantau lokasi GPS petugas secara real-time di background
   useEffect(() => {
@@ -129,6 +134,7 @@ export default function AdminPetaPage() {
     }
     setSelectedPointId(undefined);
     setActiveRoute(null);
+    setIsLiveNavigating(false);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("sigapbumi:map-focus-indonesia"));
     }
@@ -163,8 +169,42 @@ export default function AdminPetaPage() {
     }
   };
 
+  // Masuk ke Mode Navigasi Langsung di Peta (seperti Google Maps In-App Driving)
+  const handleStartLiveNavigation = () => {
+    setIsLiveNavigating(true);
+    setIsMobileSheetOpen(false);
+    if (userLocation && typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("sigapbumi:map-locate-me", {
+          detail: { lat: userLocation.lat, lng: userLocation.lng },
+        })
+      );
+    }
+  };
+
+  // Keluar dari Mode Navigasi Langsung
+  const handleExitLiveNavigation = () => {
+    setIsLiveNavigating(false);
+  };
+
   const handleClearRoute = () => {
     setActiveRoute(null);
+    setIsLiveNavigating(false);
+  };
+
+  // Helper render ikon manuver belokan navigasi
+  const renderManeuverIcon = (modifier?: string) => {
+    const mod = (modifier || "").toLowerCase();
+    if (mod.includes("sharp left") || mod.includes("slight left") || mod.includes("left")) {
+      return <CornerUpLeft className="w-6 h-6 text-white stroke-[2.5]" />;
+    }
+    if (mod.includes("sharp right") || mod.includes("slight right") || mod.includes("right")) {
+      return <CornerUpRight className="w-6 h-6 text-white stroke-[2.5]" />;
+    }
+    if (mod.includes("uturn")) {
+      return <RotateCcw className="w-6 h-6 text-white stroke-[2.5]" />;
+    }
+    return <ArrowUp className="w-6 h-6 text-white stroke-[2.5]" />;
   };
 
   // Helper trigger action peta Leaflet di mobile
@@ -424,74 +464,129 @@ export default function AdminPetaPage() {
             showLegend={false}
             disablePopup={true}
             routeCoords={activeRoute?.coordinates || null}
+            isLiveNavigating={isLiveNavigating}
+            userLocationCoords={userLocation ? [userLocation.lat, userLocation.lng] : null}
           />
         </div>
 
-        {/* Floating Top Controls: Menu Drawer Hamburger & Badge Yurisdiksi */}
-        <div className="absolute top-3 left-3 z-30 flex items-center gap-2 pointer-events-auto">
-          <button
-            type="button"
-            onClick={toggleMobileSidebar}
-            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-800 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
-            title="Buka Navigasi Menu Admin"
-          >
-            <Menu className="w-5 h-5 text-slate-700" />
-          </button>
-
-          <div className="px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-xs text-slate-800 text-[11px] font-bold shadow-md border border-slate-200/90 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shrink-0" />
-            <span className="max-w-[120px] truncate">{activeUnitName}</span>
+        {/* ============================================================== */}
+        {/* BANNER NAVIGASI BELOKAN HIJAU (MOBILE IN-APP GPS DRIVING)      */}
+        {/* ============================================================== */}
+        {isLiveNavigating && activeRoute && (
+          <div className="absolute top-4 left-3 right-3 z-40 bg-[#1e5346] text-white rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.35)] p-3.5 flex items-center gap-3.5 border border-emerald-500/40 animate-in slide-in-from-top-4 duration-300 pointer-events-auto">
+            <div className="w-12 h-12 rounded-full bg-emerald-800/90 border border-emerald-400/50 flex items-center justify-center shrink-0 shadow-inner">
+              {renderManeuverIcon(activeRoute.steps?.[0]?.modifier)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xl font-black text-white leading-tight tracking-tight">
+                {activeRoute.steps?.[0]?.distanceFormatted || activeRoute.distanceFormatted}
+              </div>
+              <div className="text-xs font-semibold text-emerald-100/95 truncate mt-0.5">
+                {activeRoute.steps?.[0]?.instruction || `Menuju ${selectedPoint?.location_name || "Lokasi Kejadian"}`}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Floating Action Controls Stack di Sisi Kanan (Lokasi Saya, Filter, Zoom) */}
-        <div className="absolute top-3 right-3 z-30 flex flex-col items-center gap-2 pointer-events-auto">
-          {/* Lokasi Saya */}
-          <button
-            type="button"
-            onClick={triggerLocate}
-            className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
-            title="Pusatkan ke Lokasi Saya"
-          >
-            <Crosshair className="w-5 h-5 text-blue-600" />
-          </button>
+        {/* ============================================================== */}
+        {/* FLOATING BOTTOM BAR NAVIGASI (MOBILE IN-APP GPS DRIVING)       */}
+        {/* ============================================================== */}
+        {isLiveNavigating && activeRoute && (
+          <div className="absolute bottom-6 left-4 right-4 z-40 flex justify-center pointer-events-none">
+            <div className="bg-white rounded-full shadow-[0_12px_36px_rgba(0,0,0,0.25)] border border-slate-100 px-5 py-2.5 flex items-center justify-between gap-4 w-full max-w-sm select-none animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto">
+              <div className="flex flex-col items-start min-w-[120px]">
+                <div className="text-base font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+                  <span className="text-emerald-700 font-extrabold">{activeRoute.durationFormattedShort} mnt</span>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-slate-800 font-bold">{activeRoute.distanceKm} km</span>
+                </div>
+                <div className="text-[11px] font-semibold text-slate-400">
+                  {activeRoute.arrivalTimeFormatted}
+                </div>
+              </div>
 
-          {/* Toggle Filter Bottom Sheet */}
-          <button
-            type="button"
-            onClick={() => setIsMobileSheetOpen((prev) => !prev)}
-            className={`w-10 h-10 rounded-full shadow-md border flex items-center justify-center active:scale-95 transition-transform cursor-pointer ${
-              selectedDisaster !== "semua" || selectedProvince !== "Semua Provinsi" || searchQuery.trim() !== ""
-                ? "bg-orange-500 text-white border-orange-600"
-                : "bg-white/95 backdrop-blur-xs text-slate-700 border-slate-200/90"
-            }`}
-            title="Buka / Tutup Filter Peta"
-          >
-            <SlidersHorizontal className="w-4.5 h-4.5" />
-          </button>
+              <button
+                type="button"
+                onClick={handleExitLiveNavigation}
+                className="px-3.5 py-1.5 rounded-full border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+              >
+                <X className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
+                <span>Keluar</span>
+              </button>
+            </div>
+          </div>
+        )}
 
-          {/* Zoom In & Zoom Out Stack */}
-          <div className="flex flex-col rounded-xl overflow-hidden shadow-md border border-slate-200/90 bg-white/95 backdrop-blur-xs">
+        {/* Floating Top Controls: Hanya tampil jika TIDAK sedang live navigasi */}
+        {!isLiveNavigating && (
+          <div className="absolute top-3 left-3 z-30 flex items-center gap-2 pointer-events-auto">
             <button
               type="button"
-              onClick={triggerZoomIn}
-              className="w-10 h-10 flex items-center justify-center text-slate-700 hover:bg-slate-50 border-b border-slate-100 active:scale-95 transition-transform cursor-pointer"
-              title="Perbesar Peta"
+              onClick={toggleMobileSidebar}
+              className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-800 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
+              title="Buka Navigasi Menu Admin"
             >
-              <Plus className="w-5 h-5" />
+              <Menu className="w-5 h-5 text-slate-700" />
             </button>
+
+            <div className="px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-xs text-slate-800 text-[11px] font-bold shadow-md border border-slate-200/90 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shrink-0" />
+              <span className="max-w-[120px] truncate">{activeUnitName}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Floating Action Controls Stack di Sisi Kanan: Hanya tampil jika TIDAK sedang live navigasi */}
+        {!isLiveNavigating && (
+          <div className="absolute top-3 right-3 z-30 flex flex-col items-center gap-2 pointer-events-auto">
+            {/* Lokasi Saya */}
             <button
               type="button"
-              onClick={triggerZoomOut}
-              className="w-10 h-10 flex items-center justify-center text-slate-700 hover:bg-slate-50 active:scale-95 transition-transform cursor-pointer"
-              title="Perkecil Peta"
+              onClick={triggerLocate}
+              className="w-10 h-10 rounded-full bg-white/95 backdrop-blur-xs text-slate-700 shadow-md border border-slate-200/90 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
+              title="Pusatkan ke Lokasi Saya"
             >
-              <Minus className="w-5 h-5" />
+              <Crosshair className="w-5 h-5 text-blue-600" />
             </button>
+
+            {/* Toggle Filter Bottom Sheet */}
+            <button
+              type="button"
+              onClick={() => setIsMobileSheetOpen((prev) => !prev)}
+              className={`w-10 h-10 rounded-full shadow-md border flex items-center justify-center active:scale-95 transition-transform cursor-pointer ${
+                selectedDisaster !== "semua" || selectedProvince !== "Semua Provinsi" || searchQuery.trim() !== ""
+                  ? "bg-orange-500 text-white border-orange-600"
+                  : "bg-white/95 backdrop-blur-xs text-slate-700 border-slate-200/90"
+              }`}
+              title="Buka / Tutup Filter Peta"
+            >
+              <SlidersHorizontal className="w-4.5 h-4.5" />
+            </button>
+
+            {/* Zoom In & Zoom Out Stack */}
+            <div className="flex flex-col rounded-xl overflow-hidden shadow-md border border-slate-200/90 bg-white/95 backdrop-blur-xs">
+              <button
+                type="button"
+                onClick={triggerZoomIn}
+                className="w-10 h-10 flex items-center justify-center text-slate-700 hover:bg-slate-50 border-b border-slate-100 active:scale-95 transition-transform cursor-pointer"
+                title="Perbesar Peta"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={triggerZoomOut}
+                className="w-10 h-10 flex items-center justify-center text-slate-700 hover:bg-slate-50 active:scale-95 transition-transform cursor-pointer"
+                title="Perkecil Peta"
+              >
+                <Minus className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Floating Bottom Sheet (Filter & Info Titik di Bawah Peta Mobile) */}
+        {!isLiveNavigating && (
         <div
           className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 transition-all duration-300 flex flex-col ${
             isMobileSheetOpen ? "max-h-[85vh]" : "max-h-[74px]"
@@ -682,14 +777,23 @@ export default function AdminPetaPage() {
                         </div>
                       </div>
 
+                      <button
+                        type="button"
+                        onClick={handleStartLiveNavigation}
+                        className="w-full h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold inline-flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer active:scale-98"
+                      >
+                        <Navigation className="w-3.5 h-3.5 text-white fill-white" />
+                        <span>Mulai Rute</span>
+                      </button>
+
                       <a
                         href={`https://www.google.com/maps/dir/?api=1&destination=${selectedPoint.lat},${selectedPoint.lng}&travelmode=driving`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-full h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold inline-flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+                        className="text-[10px] text-slate-400 hover:text-slate-600 font-medium inline-flex items-center justify-center gap-1 text-center w-full pt-0.5"
                       >
-                        <Navigation className="w-3 h-3 text-white" />
-                        <span>Buka Panduan Suara di Google Maps</span>
+                        <span>Buka panduan eksternal Google Maps</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
                       </a>
                     </div>
                   ) : (
@@ -850,6 +954,7 @@ export default function AdminPetaPage() {
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* ============================================================== */}
@@ -1068,10 +1173,58 @@ export default function AdminPetaPage() {
               showLegend={false}
               disablePopup={true}
               routeCoords={activeRoute?.coordinates || null}
+              isLiveNavigating={isLiveNavigating}
+              userLocationCoords={userLocation ? [userLocation.lat, userLocation.lng] : null}
             />
 
+            {/* ============================================================== */}
+            {/* BANNER NAVIGASI BELOKAN HIJAU (DESKTOP IN-APP GPS DRIVING)     */}
+            {/* ============================================================== */}
+            {isLiveNavigating && activeRoute && (
+              <div className="absolute top-4 left-4 z-[550] bg-[#1e5346] text-white rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.35)] p-4 flex items-center gap-4 border border-emerald-500/40 max-w-[380px] animate-in slide-in-from-top-4 duration-300 pointer-events-auto select-none">
+                <div className="w-13 h-13 rounded-full bg-emerald-800/90 border border-emerald-400/50 flex items-center justify-center shrink-0 shadow-inner">
+                  {renderManeuverIcon(activeRoute.steps?.[0]?.modifier)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-2xl font-black text-white leading-tight tracking-tight">
+                    {activeRoute.steps?.[0]?.distanceFormatted || activeRoute.distanceFormatted}
+                  </div>
+                  <div className="text-xs font-semibold text-emerald-100/95 truncate mt-0.5">
+                    {activeRoute.steps?.[0]?.instruction || `Menuju ${selectedPoint?.location_name || "Lokasi Kejadian"}`}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ============================================================== */}
+            {/* FLOATING BOTTOM BAR NAVIGASI (DESKTOP IN-APP GPS DRIVING)      */}
+            {/* ============================================================== */}
+            {isLiveNavigating && activeRoute && (
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[550] bg-white rounded-full shadow-[0_12px_36px_rgba(0,0,0,0.22)] border border-slate-100 px-7 py-3 flex items-center gap-8 select-none animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto">
+                <div className="flex flex-col items-start min-w-[140px]">
+                  <div className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+                    <span className="text-emerald-700 font-extrabold">{activeRoute.durationFormattedShort} mnt</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-slate-800 font-bold">{activeRoute.distanceKm} km</span>
+                  </div>
+                  <div className="text-xs font-semibold text-slate-400">
+                    {activeRoute.arrivalTimeFormatted}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleExitLiveNavigation}
+                  className="px-4 py-1.5 rounded-full border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+                >
+                  <X className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
+                  <span>Keluar</span>
+                </button>
+              </div>
+            )}
+
             {/* Hint Terapung jika belum ada titik yang diklik */}
-            {!selectedPoint && (
+            {!selectedPoint && !isLiveNavigating && (
               <div className="absolute top-3.5 left-3.5 z-20 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-200/90 shadow-sm text-xs font-semibold text-slate-700 flex items-center gap-2 pointer-events-none animate-in fade-in duration-200">
                 <MapPin className="w-4 h-4 text-orange-500" />
                 <span>Klik pin bencana pada peta untuk menampilkan lembar kerja taktis</span>
@@ -1079,7 +1232,7 @@ export default function AdminPetaPage() {
             )}
 
             {/* Floating Tactical Overlay Card (Menimpa di Atas Peta Sisi Kanan) */}
-            {selectedPoint && (
+            {selectedPoint && !isLiveNavigating && (
               <div className="absolute top-3.5 right-3.5 z-[500] w-[calc(100%-1.75rem)] sm:w-[380px] max-w-[420px] bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-[0_12px_36px_rgba(0,0,0,0.18)] space-y-4 animate-in fade-in zoom-in-95 duration-200 max-h-[calc(100%-1.75rem)] overflow-y-auto">
                 <div className="flex items-start justify-between pb-3 border-b border-slate-100">
                   <div>
@@ -1205,14 +1358,23 @@ export default function AdminPetaPage() {
                         <span>{activeRoute.summary}</span>
                       </p>
 
+                      <button
+                        type="button"
+                        onClick={handleStartLiveNavigation}
+                        className="w-full h-9.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold inline-flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer active:scale-98"
+                      >
+                        <Navigation className="w-4 h-4 text-white fill-white" />
+                        <span>Mulai Rute</span>
+                      </button>
+
                       <a
                         href={`https://www.google.com/maps/dir/?api=1&destination=${selectedPoint.lat},${selectedPoint.lng}&travelmode=driving`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-full h-8.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+                        className="text-[10px] text-slate-400 hover:text-slate-600 font-medium inline-flex items-center justify-center gap-1 text-center w-full pt-0.5"
                       >
-                        <Navigation className="w-3.5 h-3.5 text-white" />
-                        <span>Buka Panduan Suara di Google Maps</span>
+                        <span>Buka panduan eksternal Google Maps</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
                       </a>
                     </div>
                   ) : (

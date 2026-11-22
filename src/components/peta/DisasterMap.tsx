@@ -30,6 +30,8 @@ interface DisasterMapProps {
   className?: string;
   disablePopup?: boolean;
   routeCoords?: [number, number][] | null;
+  isLiveNavigating?: boolean;
+  userLocationCoords?: [number, number] | null;
 }
 
 // Validasi keamanan koordinat geospasial agar tidak menyebabkan runtime exception Leaflet NaN
@@ -196,6 +198,8 @@ export default function DisasterMap({
   className = "",
   disablePopup = false,
   routeCoords = null,
+  isLiveNavigating = false,
+  userLocationCoords = null,
 }: DisasterMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -573,16 +577,28 @@ export default function DisasterMap({
       routeCasingLayerRef.current = casing;
       routeLayerRef.current = line;
 
-      // Fit bounds agar seluruh rute dari posisi petugas ke lokasi kejadian terlihat utuh
-      try {
-        map.fitBounds(casing.getBounds(), {
-          padding: [60, 60],
-          maxZoom: 16,
-          animate: true,
-        });
-      } catch { }
+      // Fit bounds agar seluruh rute dari posisi petugas ke lokasi kejadian terlihat utuh (hanya jika tidak sedang dalam mode live navigation panduan belokan)
+      if (!isLiveNavigating) {
+        try {
+          map.fitBounds(casing.getBounds(), {
+            padding: [60, 60],
+            maxZoom: 16,
+            animate: true,
+          });
+        } catch { }
+      }
     }
-  }, [routeCoords]);
+  }, [routeCoords, isLiveNavigating]);
+
+  // Efek Kamera Navigasi Langsung (Auto-Follow posisi pengemudi / petugas saat mode rute aktif)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !isLiveNavigating) return;
+
+    if (userLocationCoords && isValidCoord(userLocationCoords[0], userLocationCoords[1])) {
+      safeNavigateMap(map, userLocationCoords[0], userLocationCoords[1], 17, true);
+    }
+  }, [isLiveNavigating, userLocationCoords]);
 
   // Update Markers secara cerdas (diffing) saat points berubah: Tanpa glitch, tanpa flicker, dan tidak mereset zoom peta
   useEffect(() => {
