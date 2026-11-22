@@ -28,6 +28,7 @@ interface DisasterMapProps {
   onSelectPoint?: (point: MapPoint) => void;
   showLegend?: boolean;
   className?: string;
+  disablePopup?: boolean;
 }
 
 // Validasi keamanan koordinat geospasial agar tidak menyebabkan runtime exception Leaflet NaN
@@ -143,6 +144,7 @@ export default function DisasterMap({
   onSelectPoint,
   showLegend = true,
   className = "",
+  disablePopup = false,
 }: DisasterMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -422,14 +424,16 @@ export default function DisasterMap({
         if (!mapInstanceRef.current) return;
         safeNavigateMap(mapInstanceRef.current, latNum, lngNum, 15, true);
 
-        // Buka popup titik kejadian secara otomatis
-        const marker = markersMapRef.current.get(pt.id);
-        if (marker) {
-          setTimeout(() => {
-            try {
-              marker.openPopup();
-            } catch { }
-          }, 350);
+        // Buka popup titik kejadian secara otomatis jika tidak di-disable
+        if (!disablePopup) {
+          const marker = markersMapRef.current.get(pt.id);
+          if (marker) {
+            setTimeout(() => {
+              try {
+                marker.openPopup();
+              } catch { }
+            }, 350);
+          }
         }
       }, 50);
 
@@ -496,15 +500,19 @@ export default function DisasterMap({
         }
         // Perbarui icon jika status/sos berubah
         existingMarker.setIcon(createPinIcon(pt.status, pt.is_sos));
-        // Perbarui isi popup
-        existingMarker.setPopupContent(popupHtml);
+        // Perbarui isi popup jika popup diaktifkan
+        if (!disablePopup) {
+          existingMarker.setPopupContent(popupHtml);
+        }
       } else {
         // Buat marker baru
         const marker = L.marker([latNum, lngNum], {
           icon: createPinIcon(pt.status, pt.is_sos),
         });
 
-        marker.bindPopup(popupHtml);
+        if (!disablePopup) {
+          marker.bindPopup(popupHtml);
+        }
 
         marker.on("click", () => {
           if (mapInstanceRef.current && isValidCoord(latNum, lngNum)) {

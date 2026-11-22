@@ -349,6 +349,7 @@ export default function AdminPetaPage() {
               setIsMobileSheetOpen(true);
             }}
             showLegend={false}
+            disablePopup={true}
           />
         </div>
 
@@ -450,9 +451,11 @@ export default function AdminPetaPage() {
                     {selectedPoint.is_sos ? "SOS DARURAT" : selectedPoint.status.toUpperCase()}
                   </span>
                 </div>
-                <h4 className="text-xs font-bold text-slate-900 truncate">
-                  {selectedPoint.title}
-                </h4>
+                {!isMobileSheetOpen && (
+                  <h4 className="text-xs font-bold text-slate-900 truncate">
+                    {selectedPoint.title}
+                  </h4>
+                )}
               </div>
             ) : (
               <div className="flex-1 min-w-0">
@@ -895,6 +898,7 @@ export default function AdminPetaPage() {
               selectedPointId={selectedPointId}
               onSelectPoint={(pt) => setSelectedPointId(pt.id)}
               showLegend={false}
+              disablePopup={true}
             />
 
             {/* Hint Terapung jika belum ada titik yang diklik */}
