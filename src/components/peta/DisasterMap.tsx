@@ -600,6 +600,70 @@ export default function DisasterMap({
     }
   }, [isLiveNavigating, userLocationCoords]);
 
+  // Render polyline rute navigasi jalan raya riil (OSRM) di peta
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Bersihkan rute lama jika ada
+    if (routeLayerRef.current) {
+      try {
+        map.removeLayer(routeLayerRef.current);
+      } catch { }
+      routeLayerRef.current = null;
+    }
+    if (routeCasingLayerRef.current) {
+      try {
+        map.removeLayer(routeCasingLayerRef.current);
+      } catch { }
+      routeCasingLayerRef.current = null;
+    }
+
+    if (routeCoords && routeCoords.length >= 2) {
+      // 1. Casing luar tebal (Border navy biru tua)
+      const casing = L.polyline(routeCoords, {
+        color: "#1E3A8A",
+        weight: 7,
+        opacity: 0.85,
+        lineCap: "round",
+        lineJoin: "round",
+      }).addTo(map);
+
+      // 2. Garis utama rute (Neon Blue navigasi GPS)
+      const line = L.polyline(routeCoords, {
+        color: "#3B82F6",
+        weight: 4.5,
+        opacity: 1,
+        lineCap: "round",
+        lineJoin: "round",
+      }).addTo(map);
+
+      routeCasingLayerRef.current = casing;
+      routeLayerRef.current = line;
+
+      // Fit bounds agar seluruh rute dari posisi petugas ke lokasi kejadian terlihat utuh (hanya jika tidak sedang dalam mode live navigation panduan belokan)
+      if (!isLiveNavigating) {
+        try {
+          map.fitBounds(casing.getBounds(), {
+            padding: [60, 60],
+            maxZoom: 16,
+            animate: true,
+          });
+        } catch { }
+      }
+    }
+  }, [routeCoords, isLiveNavigating]);
+
+  // Efek Kamera Navigasi Langsung (Auto-Follow posisi pengemudi / petugas saat mode rute aktif)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !isLiveNavigating) return;
+
+    if (userLocationCoords && isValidCoord(userLocationCoords[0], userLocationCoords[1])) {
+      safeNavigateMap(map, userLocationCoords[0], userLocationCoords[1], 17, true);
+    }
+  }, [isLiveNavigating, userLocationCoords]);
+
   // Update Markers secara cerdas (diffing) saat points berubah: Tanpa glitch, tanpa flicker, dan tidak mereset zoom peta
   useEffect(() => {
     const map = mapInstanceRef.current;
