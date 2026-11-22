@@ -66,6 +66,7 @@ export function Header() {
     { href: "/lacak", label: "Lacak Laporan" },
     { href: "/statistik", label: "Statistik" },
     { href: "/edukasi", label: "Edukasi" },
+    { href: "/tentang", label: "Tentang" },
   ];
 
   const isNotifActive = pathname.startsWith("/notifikasi");
