@@ -30,6 +30,25 @@ interface DisasterMapProps {
   className?: string;
 }
 
+// Validasi keamanan koordinat geospasial agar tidak menyebabkan runtime exception Leaflet NaN
+function isValidCoord(lat: unknown, lng: unknown): boolean {
+  if (lat === null || lat === undefined || lng === null || lng === undefined) return false;
+  const nLat = Number(lat);
+  const nLng = Number(lng);
+  return (
+    typeof nLat === "number" &&
+    typeof nLng === "number" &&
+    !isNaN(nLat) &&
+    !isNaN(nLng) &&
+    isFinite(nLat) &&
+    isFinite(nLng) &&
+    nLat >= -90 &&
+    nLat <= 90 &&
+    nLng >= -180 &&
+    nLng <= 180
+  );
+}
+
 // Generate custom DivIcon based on status and emergency SOS
 function createPinIcon(status: ReportStatus, isSos: boolean = false) {
   if (isSos) {
@@ -131,12 +150,16 @@ export default function DisasterMap({
     // Helper merender titik marker GPS Lokasi Saya (titik biru berdenyut khas Google Maps dengan label Lokasi Anda)
     const renderUserLocation = (lat: number, lng: number, flyTo: boolean = false, openPopup: boolean = false) => {
       if (!mapInstanceRef.current) return;
+      if (!isValidCoord(lat, lng)) return;
+      const latNum = Number(lat);
+      const lngNum = Number(lng);
+
       if (flyTo) {
-        mapInstanceRef.current.flyTo([lat, lng], 15, { duration: 1.2, easeLinearity: 0.25 });
+        mapInstanceRef.current.flyTo([latNum, lngNum], 15, { duration: 1.2, easeLinearity: 0.25 });
       }
 
       if (userLocationMarkerRef.current) {
-        userLocationMarkerRef.current.setLatLng([lat, lng]);
+        userLocationMarkerRef.current.setLatLng([latNum, lngNum]);
       } else {
         const userIcon = L.divIcon({
           className: "custom-user-gps-pin",
@@ -159,7 +182,7 @@ export default function DisasterMap({
           popupAnchor: [0, -52],
         });
 
-        const marker = L.marker([lat, lng], {
+        const marker = L.marker([latNum, lngNum], {
           icon: userIcon,
           zIndexOffset: 1200,
         }).addTo(mapInstanceRef.current);
@@ -299,8 +322,10 @@ export default function DisasterMap({
   useEffect(() => {
     if (!selectedPointId || !mapInstanceRef.current) return;
     const pt = points.find((p) => p.id === selectedPointId);
-    if (pt) {
-      mapInstanceRef.current.flyTo([pt.lat, pt.lng], 15, {
+    if (pt && isValidCoord(pt.lat, pt.lng)) {
+      const latNum = Number(pt.lat);
+      const lngNum = Number(pt.lng);
+      mapInstanceRef.current.flyTo([latNum, lngNum], 15, {
         duration: 1.2,
         easeLinearity: 0.25,
       });
@@ -323,8 +348,12 @@ export default function DisasterMap({
     markersGroup.clearLayers();
     markersMapRef.current.clear();
 
-    points.forEach((pt) => {
-      const marker = L.marker([pt.lat, pt.lng], {
+    const validPoints = points.filter((p) => isValidCoord(p.lat, p.lng));
+
+    validPoints.forEach((pt) => {
+      const latNum = Number(pt.lat);
+      const lngNum = Number(pt.lng);
+      const marker = L.marker([latNum, lngNum], {
         icon: createPinIcon(pt.status, pt.is_sos),
       });
 
@@ -361,8 +390,8 @@ export default function DisasterMap({
       marker.bindPopup(popupHtml);
 
       marker.on("click", () => {
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.flyTo([pt.lat, pt.lng], 15, {
+        if (mapInstanceRef.current && isValidCoord(latNum, lngNum)) {
+          mapInstanceRef.current.flyTo([latNum, lngNum], 15, {
             duration: 1.2,
             easeLinearity: 0.25,
           });
@@ -377,8 +406,8 @@ export default function DisasterMap({
     });
 
     // Auto-fit bounds jika ada titik dan tidak sedang fokus pada titik tertentu
-    if (!selectedPointId && points.length > 0) {
-      const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
+    if (!selectedPointId && validPoints.length > 0) {
+      const bounds = L.latLngBounds(validPoints.map((p) => [Number(p.lat), Number(p.lng)]));
       if (bounds.isValid()) {
         map.fitBounds(bounds, { padding: [35, 35], maxZoom: 12 });
       }

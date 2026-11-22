@@ -418,21 +418,28 @@ function PetaContent() {
         // Map live SOS alerts into MapPoints
         const activeSos: MapPoint[] = (liveSos || [])
           .filter((s) => s.status === "aktif")
-          .map((s) => ({
-            id: s.id,
-            tracking_code: s.id.startsWith("SOS") ? s.id : `SOS-${s.id.slice(0, 4).toUpperCase()}`,
-            disaster_type: (s.assistance_type === "damkar" ? "kebakaran" : "lainnya") as DisasterType,
-            title: `Panggilan Darurat: Bantuan ${s.assistance_type.toUpperCase()}`,
-            location_name: s.address,
-            lat: s.lat,
-            lng: s.lng,
-            status: "ditindaklanjuti" as ReportStatus,
-            created_at: s.time_ago || "Baru saja",
-            confirmation_count: 1,
-            is_sos: true,
-            is_demo: false,
-            province: s.address.includes("Jakarta") ? "DKI Jakarta" : "Jawa Barat",
-          }));
+          .map((s) => {
+            const rawLat = Number(s.lat);
+            const rawLng = Number(s.lng);
+            const validLat = !isNaN(rawLat) && isFinite(rawLat) ? rawLat : -6.3276;
+            const validLng = !isNaN(rawLng) && isFinite(rawLng) ? rawLng : 108.3249;
+
+            return {
+              id: s.id,
+              tracking_code: s.id.startsWith("SOS") ? s.id : `SOS-${s.id.slice(0, 4).toUpperCase()}`,
+              disaster_type: (s.assistance_type === "damkar" ? "kebakaran" : "lainnya") as DisasterType,
+              title: `Panggilan Darurat: Bantuan ${s.assistance_type.toUpperCase()}`,
+              location_name: s.address,
+              lat: validLat,
+              lng: validLng,
+              status: "ditindaklanjuti" as ReportStatus,
+              created_at: s.time_ago || "Baru saja",
+              confirmation_count: 1,
+              is_sos: true,
+              is_demo: false,
+              province: s.address.includes("Jakarta") ? "DKI Jakarta" : "Jawa Barat",
+            };
+          });
 
         // Gabungkan tanpa duplikasi ID atau tracking code
         const merged: MapPoint[] = [...activeSos];
@@ -442,8 +449,18 @@ function PetaContent() {
           }
         }
 
+        const safePoints = merged.filter(
+          (p) =>
+            typeof p.lat === "number" &&
+            !isNaN(p.lat) &&
+            isFinite(p.lat) &&
+            typeof p.lng === "number" &&
+            !isNaN(p.lng) &&
+            isFinite(p.lng)
+        );
+
         if (isMounted) {
-          setPoints(merged);
+          setPoints(safePoints);
           setIsLiveConnected(true);
         }
       } catch (err) {

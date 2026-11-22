@@ -22,8 +22,13 @@ export function parsePostGISPoint(location: unknown): LatLng | null {
     "lat" in location &&
     "lng" in location
   ) {
-    const obj = location as { lat: number; lng: number };
-    return { lat: Number(obj.lat), lng: Number(obj.lng) };
+    const obj = location as { lat: unknown; lng: unknown };
+    const lat = Number(obj.lat);
+    const lng = Number(obj.lng);
+    if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+      return { lat, lng };
+    }
+    return null;
   }
 
   // Jika berupa GeoJSON Point { type: "Point", coordinates: [lng, lat] }
@@ -33,9 +38,14 @@ export function parsePostGISPoint(location: unknown): LatLng | null {
     "coordinates" in location &&
     Array.isArray((location as { coordinates: unknown[] }).coordinates)
   ) {
-    const coords = (location as { coordinates: number[] }).coordinates;
+    const coords = (location as { coordinates: unknown[] }).coordinates;
     if (coords.length >= 2) {
-      return { lng: coords[0], lat: coords[1] };
+      const lng = Number(coords[0]);
+      const lat = Number(coords[1]);
+      if (!isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng)) {
+        return { lat, lng };
+      }
+      return null;
     }
   }
 

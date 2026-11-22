@@ -631,14 +631,19 @@ export function reportsToMapPoints(reports: LiveReportItem[]): MapPoint[] {
       r.title?.toUpperCase().includes("SOS") ||
       r.description?.toUpperCase().includes("SOS")
     );
+    const rawLat = Number(r.lat);
+    const rawLng = Number(r.lng);
+    const lat = !isNaN(rawLat) && isFinite(rawLat) ? rawLat : -6.2088;
+    const lng = !isNaN(rawLng) && isFinite(rawLng) ? rawLng : 106.8456;
+
     return {
       id: r.id,
       tracking_code: r.tracking_code,
       disaster_type: r.disaster_type,
       title: r.title,
       location_name: r.address,
-      lat: r.lat,
-      lng: r.lng,
+      lat,
+      lng,
       status: r.status,
       created_at: r.created_at,
       confirmation_count: r.confirmation_count,
