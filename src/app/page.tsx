@@ -644,9 +644,6 @@ export default function HomePage() {
             <div className="gsap-bento-box bg-[#111622] border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl shadow-black/40 space-y-3 text-white">
               {/* Header Headline */}
               <div>
-                <span className="text-[9px] font-extrabold uppercase tracking-wider text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full inline-block mb-1.5">
-                  Lapor Cepat 1-Klik
-                </span>
                 <h2 className="text-sm sm:text-base font-bold text-white tracking-tight leading-snug">
                   Laporkan kejadian darurat di sekitar Anda sekarang.
                 </h2>
