@@ -434,12 +434,15 @@ export function SosFab() {
     setPhotoError("");
 
     const controller = new AbortController();
-    // Berikan toleransi waktu 12 detik untuk inferensi visual AI sebelum fallback posko
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    // Berikan toleransi waktu 15 detik untuk inferensi visual AI sebelum fallback posko
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
+      console.log("[SOS-AI] Memulai kompresi & kirim foto ke AI...", photoFile.name, photoFile.size, "kategori:", categoryKey);
       // Kompresi kilat sisi client ke ~70 KB sebelum dikirim ke AI (memangkas waktu jaringan hingga 90%)
       const compressedBlob = await compressImageForAi(photoFile);
+      console.log("[SOS-AI] Hasil kompresi kilat:", compressedBlob.size, "bytes, tipe:", compressedBlob.type);
+      
       const formData = new FormData();
       formData.append("photo", compressedBlob, "photo.jpg");
       formData.append("category", categoryKey);
@@ -454,10 +457,13 @@ export function SosFab() {
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "Gagal memverifikasi foto.");
+        console.error("[SOS-AI] Server mengembalikan status error:", res.status, errJson);
+        throw new Error(errJson.error || `Gagal memverifikasi foto (HTTP ${res.status}).`);
       }
 
       const data = await res.json();
+      console.log("[SOS-AI] Respon AI diterima:", data);
+
       setAiResult({
         status: data.status,
         pesan: data.pesan,
@@ -469,12 +475,15 @@ export function SosFab() {
       if (data.status === "ditolak") {
         setPhotoError(data.pesan);
       }
-    } catch (err) {
-      console.warn("AI verification error / timeout fallback:", err);
+    } catch (err: unknown) {
+      console.warn("[SOS-AI] AI verification error / timeout fallback:", err);
       // Fast-Pass Darurat: jika AI offline atau timeout, sinyal darurat dialihkan ke posko
+      const isAbort = (err as { name?: string })?.name === "AbortError";
       setAiResult({
         status: "perlu_review",
-        pesan: "Verifikasi visual otomatis dialihkan ke posko agar panggilan darurat segera terkirim.",
+        pesan: isAbort
+          ? "Pemeriksaan AI membutuhkan waktu lebih lama. Foto diteruskan ke petugas posko agar panggilan darurat tidak tertunda."
+          : "Verifikasi visual otomatis dialihkan ke posko agar panggilan darurat segera terkirim.",
         tipe: "lainnya",
         bukti: ["Foto berstempel GPS & waktu siap diverifikasi tim posko"],
       });
@@ -535,7 +544,24 @@ export function SosFab() {
     setPhotoError("");
     rawPhotoFileRef.current = null;
     if (cameraInputRef.current) {
+      cameraInputRef.current.value = "";
       cameraInputRef.current.click();
+    }
+  };
+
+  const handleRetryAiVerification = async () => {
+    if (rawPhotoFileRef.current) {
+      await verifyDisasterPhotoWithAi(rawPhotoFileRef.current, selectedAssistance || "lainnya");
+    } else if (cameraPhotoUrl) {
+      try {
+        const res = await fetch(cameraPhotoUrl);
+        const blob = await res.blob();
+        const file = new File([blob], "sos_photo.jpg", { type: "image/jpeg" });
+        rawPhotoFileRef.current = file;
+        await verifyDisasterPhotoWithAi(file, selectedAssistance || "lainnya");
+      } catch (err) {
+        console.error("Gagal verifikasi ulang:", err);
+      }
     }
   };
 
@@ -641,6 +667,15 @@ export function SosFab() {
     setSelectedAssistance(type);
     if (rawPhotoFileRef.current) {
       verifyDisasterPhotoWithAi(rawPhotoFileRef.current, type);
+    } else if (cameraPhotoUrl) {
+      fetch(cameraPhotoUrl)
+        .then((r) => r.blob())
+        .then((b) => {
+          const f = new File([b], "sos_photo.jpg", { type: "image/jpeg" });
+          rawPhotoFileRef.current = f;
+          verifyDisasterPhotoWithAi(f, type);
+        })
+        .catch(() => {});
     }
     if (activeSosId) {
       updateSosAssistanceType(activeSosId, type);
@@ -1348,13 +1383,26 @@ export function SosFab() {
                           <Eye className="w-4 h-4 text-blue-600 shrink-0" />
                           <span>Lihat Pratinjau Foto</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={handleRetakePhoto}
-                          className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-                        >
-                          Ulangi Foto
-                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {aiResult?.status !== "lolos_foto" && !isVerifyingAi && (
+                            <button
+                              type="button"
+                              onClick={handleRetryAiVerification}
+                              className="px-2.5 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
+                              title="Picu verifikasi AI ulang secara instan"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              <span>Verifikasi Ulang AI</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleRetakePhoto}
+                            className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                          >
+                            Ulangi Foto
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
