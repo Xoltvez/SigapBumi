@@ -26,15 +26,11 @@ import {
   Sliders,
   Download,
   Upload,
-  Send,
-  Smartphone,
-  Target,
   Compass,
   Database,
   RefreshCw,
   FileSpreadsheet,
   ExternalLink,
-  BellRing,
   Trash2,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
@@ -51,7 +47,7 @@ import {
   clearAllLocalReportsAndCaches,
 } from "@/lib/services/reports";
 
-type SettingsTab = "petugas" | "audio" | "peta" | "respons" | "data";
+type SettingsTab = "petugas" | "audio" | "peta" | "data";
 
 export default function AdminPengaturanPage() {
   const { adminUser, updateAdminUser, isSirenMuted, setIsSirenMuted } = useAdmin();
@@ -79,8 +75,6 @@ export default function AdminPengaturanPage() {
   const [stopSirenRef, setStopSirenRef] = useState<(() => void) | null>(null);
   const [isDetectingGps, setIsDetectingGps] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
-  const [isTestingWebhook, setIsTestingWebhook] = useState(false);
-  const [desktopPermStatus, setDesktopPermStatus] = useState<NotificationPermission>("default");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,10 +92,6 @@ export default function AdminPengaturanPage() {
         unit: adminUser.unit || "bnpb_bpbd",
         unitName: adminUser.unitName || "BNPB / BPBD",
       });
-    }
-
-    if (typeof window !== "undefined" && "Notification" in window) {
-      setDesktopPermStatus(Notification.permission);
     }
   }, [adminUser]);
 
@@ -197,91 +187,6 @@ export default function AdminPengaturanPage() {
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
-  };
-
-  // Minta Izin Notifikasi Desktop
-  const handleRequestNotificationPermission = async () => {
-    if (typeof window === "undefined" || !("Notification" in window)) {
-      alert("Browser Anda tidak mendukung Notification API.");
-      return;
-    }
-
-    try {
-      const perm = await Notification.requestPermission();
-      setDesktopPermStatus(perm);
-      if (perm === "granted") {
-        new Notification("🚨 Notifikasi SigapBumi Diaktifkan", {
-          body: "Posko Anda akan menerima peringatan darurat saat sinyal SOS atau laporan baru masuk.",
-          icon: "/favicon.ico",
-        });
-        showToast("Izin notifikasi desktop berhasil diaktifkan!");
-      } else {
-        showToast("Izin notifikasi browser belum diberikan.");
-      }
-    } catch (e: any) {
-      alert("Gagal meminta izin notifikasi: " + e.message);
-    }
-  };
-
-  // Tes Kirim Notifikasi Desktop
-  const handleTestDesktopNotification = () => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-
-    if (Notification.permission === "granted") {
-      new Notification("🚨 PANGGILAN DARURAT SOS (SIMULASI)", {
-        body: "Warga membutuhkan pertolongan evakuasi segera di koordinat terdekat.",
-        icon: "/favicon.ico",
-      });
-      showToast("Notifikasi desktop berhasil dikirim ke layar Anda!");
-    } else {
-      handleRequestNotificationPermission();
-    }
-  };
-
-  // Uji Buka WhatsApp Dispatcher
-  const handleTestWhatsApp = () => {
-    const raw = settings.whatsappDispatcherNumber.replace(/\D/g, "");
-    if (!raw) {
-      alert("Masukkan nomor WhatsApp dispatcher terlebih dahulu.");
-      return;
-    }
-    const cleanPhone = raw.startsWith("0") ? "62" + raw.slice(1) : raw;
-    const msg = encodeURIComponent(
-      `[Pusdalops SigapBumi] Tes koneksi dispatch otomatis dari Posko Induk ${settings.stationCode} (${settings.stationName}).`
-    );
-    window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
-  };
-
-  // Uji Ping Webhook Darurat
-  const handleTestWebhook = async () => {
-    if (!settings.emergencyWebhookUrl) {
-      alert("Masukkan URL Webhook darurat terlebih dahulu.");
-      return;
-    }
-
-    setIsTestingWebhook(true);
-    try {
-      const payload = {
-        event: "TEST_DISPATCH_PING",
-        station_code: settings.stationCode,
-        station_name: settings.stationName,
-        timestamp: new Date().toISOString(),
-        test_by: officerForm.name,
-      };
-
-      const res = await fetch(settings.emergencyWebhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        mode: "no-cors",
-      });
-
-      showToast("Sinyal ping webhook darurat berhasil dikirimkan!");
-    } catch (err: any) {
-      alert("Gagal mengirim payload webhook: " + err.message);
-    } finally {
-      setIsTestingWebhook(false);
-    }
   };
 
   // Export Seluruh Data Laporan ke File CSV
@@ -516,19 +421,6 @@ export default function AdminPengaturanPage() {
         >
           <Layers className="w-4 h-4 text-purple-600" />
           <span>Tampilan Peta</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("respons")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-            activeTab === "respons"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-          }`}
-        >
-          <Target className="w-4 h-4 text-blue-600" />
-          <span>Target SLA & Dispatch</span>
         </button>
 
         <button
@@ -1219,214 +1111,7 @@ export default function AdminPengaturanPage() {
       )}
 
       {/* ========================================================= */}
-      {/* Tab 4: Target Respon & Dispatch SOS                       */}
-      {/* ========================================================= */}
-      {activeTab === "respons" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="p-6 md:p-8 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-6">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <Target className="w-5 h-5 text-blue-600" />
-                  <span>Standar Waktu Tanggap (SLA) & Yurisdiksi Geofence</span>
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Konfigurasikan batas target waktu penanganan cepat dan cakupan wilayah operasional posko Anda.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Target Respon Darurat (SLA)
-                  </label>
-                  <select
-                    value={settings.targetSlaMinutes || 15}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        targetSlaMinutes: parseInt(e.target.value, 10),
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-800 cursor-pointer"
-                  >
-                    <option value={5}>5 Menit (Golden Period Medis/Damkar)</option>
-                    <option value={10}>10 Menit (Respon Kilat)</option>
-                    <option value={15}>15 Menit (Standar Nasional BPBD)</option>
-                    <option value={30}>30 Menit (Wilayah Perluasan)</option>
-                  </select>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Indikator waktu di detail laporan akan menyala merah jika respon melebihi target ini.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Radius Geofence Wilayah Posko
-                  </label>
-                  <select
-                    value={settings.geofenceRadiusKm || 25}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        geofenceRadiusKm: parseInt(e.target.value, 10),
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-800 cursor-pointer"
-                  >
-                    <option value={5}>Radius 5 KM (Kecamatan)</option>
-                    <option value={10}>Radius 10 KM (Kota / Urban)</option>
-                    <option value={25}>Radius 25 KM (Kabupaten Standar)</option>
-                    <option value={50}>Radius 50 KM (Regional Aglomerasi)</option>
-                    <option value={0}>Semua Wilayah (Tanpa Pembatasan)</option>
-                  </select>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Radius lingkaran perimeter siaga di sekeliling koordinat basecamp posko Anda.
-                  </p>
-                </div>
-              </div>
-
-              {/* Integrasi WhatsApp Dispatcher */}
-              <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                      <Smartphone className="w-4 h-4 text-emerald-600" />
-                      Nomor WhatsApp Dispatcher Petugas Lapangan
-                    </span>
-                    <p className="text-[11px] text-emerald-800 mt-0.5">
-                      Panggilan SOS dan tugas darurat dapat langsung diteruskan ke grup koordinasi WhatsApp.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleTestWhatsApp}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs cursor-pointer self-start sm:self-auto"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Uji Kirim WA</span>
-                  </button>
-                </div>
-
-                <input
-                  type="text"
-                  value={settings.whatsappDispatcherNumber}
-                  onChange={(e) =>
-                    setSettings({ ...settings, whatsappDispatcherNumber: e.target.value })
-                  }
-                  placeholder="Contoh: 0811-9876-5432"
-                  className="w-full px-3.5 py-2 text-xs rounded-lg border border-emerald-300 bg-white font-mono text-emerald-950 font-semibold"
-                />
-              </div>
-
-              {/* Webhook Integrasi Darurat */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      <Send className="w-3.5 h-3.5 text-blue-600" />
-                      Webhook Integrasi Notifikasi Darurat (HTTP POST)
-                    </span>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Kirim payload JSON otomatis ke sistem Radio DMR, Discord Posko, atau server eksternal BNPB.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleTestWebhook}
-                    disabled={isTestingWebhook}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs cursor-pointer self-start sm:self-auto"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isTestingWebhook ? "animate-spin" : ""}`} />
-                    <span>{isTestingWebhook ? "Mengirim..." : "Uji Ping Webhook"}</span>
-                  </button>
-                </div>
-
-                <input
-                  type="url"
-                  value={settings.emergencyWebhookUrl}
-                  onChange={(e) =>
-                    setSettings({ ...settings, emergencyWebhookUrl: e.target.value })
-                  }
-                  placeholder="https://webhook.site/your-endpoint-url"
-                  className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 bg-white font-mono text-slate-800"
-                />
-              </div>
-
-              {/* Notifikasi Desktop Browser */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-blue-50/60 border border-blue-200">
-                <div className="pr-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-blue-950">
-                      Notifikasi Pop-up Desktop Browser
-                    </span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        desktopPermStatus === "granted"
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                          : desktopPermStatus === "denied"
-                          ? "bg-rose-100 text-rose-800 border border-rose-200"
-                          : "bg-amber-100 text-amber-800 border border-amber-200"
-                      }`}
-                    >
-                      {desktopPermStatus === "granted"
-                        ? "Izin Aktif"
-                        : desktopPermStatus === "denied"
-                        ? "Diblokir Browser"
-                        : "Perlu Izin"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-blue-800 mt-0.5">
-                    Memunculkan pemberitahuan di sudut layar komputer saat tab posko berada di latar belakang (*background*).
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {desktopPermStatus !== "granted" ? (
-                    <button
-                      type="button"
-                      onClick={handleRequestNotificationPermission}
-                      className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer"
-                    >
-                      Aktifkan Izin
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleTestDesktopNotification}
-                      className="px-3.5 py-2 rounded-xl border border-blue-300 bg-white hover:bg-blue-50 text-blue-800 text-xs font-bold shadow-2xs cursor-pointer flex items-center gap-1.5"
-                    >
-                      <BellRing className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Tes Pop-up</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <Target className="w-4 h-4 text-blue-600" />
-                <span>Kepatuhan Tanggap Darurat</span>
-              </h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Pengaturan SLA dan Geofence memastikan alur komando terpadu sesuai mandat Perka BNPB tentang Pos Komando Penanganan Darurat Bencana.
-              </p>
-              <div className="p-3 bg-slate-50 rounded-xl text-xs space-y-1.5 border border-slate-100">
-                <p className="font-semibold text-slate-800">Standar Respon Lapangan:</p>
-                <p className="text-slate-500">• 0–5 menit: Verifikasi data dan panggilan dispatcher.</p>
-                <p className="text-slate-500">• 5–15 menit: Pengerahan regu dan armada terdekat.</p>
-                <p className="text-slate-500">• 15+ menit: Pelaporan situasi terkini ke komando pusat.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================= */}
-      {/* Tab 5: Data & Cadangan                                    */}
+      {/* Tab 4: Data & Cadangan                                    */}
       {/* ========================================================= */}
       {activeTab === "data" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
