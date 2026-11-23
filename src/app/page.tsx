@@ -313,17 +313,16 @@ export default function HomePage() {
 
         const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
-        // A. Kinetic typography per kata dengan rotasi 3D & masking
+        // A. Kinetic typography reveal bertingkat tanpa distorsi jarak
         if (kineticWords.length > 0) {
           tl.fromTo(
             kineticWords,
-            { y: "120%", rotationX: 45, opacity: 0 },
+            { y: "110%", opacity: 0 },
             {
               y: "0%",
-              rotationX: 0,
               opacity: 1,
-              duration: 0.85,
-              stagger: 0.08,
+              duration: 0.8,
+              stagger: 0.1,
               ease: "power3.out",
             }
           );
@@ -721,27 +720,19 @@ export default function HomePage() {
           <div ref={heroLeftRef} className="lg:col-span-7 flex flex-col items-start space-y-6">
             {/* Main Headline */}
             <div>
-              <h1 className="gsap-hero-title text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-ink leading-[1.2] tracking-tight">
-                <span className="inline-block overflow-hidden pb-1">
-                  <span className="gsap-kinetic-word inline-block">Setiap</span>
-                </span>{" "}
-                <span className="inline-block overflow-hidden pb-1">
-                  <span className="gsap-kinetic-word inline-block">Detik</span>
-                </span>{" "}
-                <span className="inline-block overflow-hidden pb-1">
-                  <span className="gsap-kinetic-word inline-block text-primary">Berarti.</span>
-                </span>{" "}
-                <br className="hidden sm:inline" />
-                <span className="inline-block overflow-hidden pb-1">
-                  <span className="gsap-kinetic-word inline-block bg-gradient-to-r from-primary via-primary-hover to-amber-600 bg-clip-text text-transparent">
+              <h1 className="gsap-hero-title text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-ink leading-[1.18] tracking-tight">
+                <span className="block overflow-hidden">
+                  <span className="gsap-kinetic-word inline-block">
+                    Setiap Detik Berarti.
+                  </span>
+                </span>
+                <span className="block overflow-hidden">
+                  <span className="gsap-kinetic-word inline-block bg-gradient-to-r from-primary via-primary-hover to-amber-600 bg-clip-text text-transparent mr-2">
                     Laporkan Cepat.
                   </span>
-                </span>{" "}
-                <span className="inline-block overflow-hidden pb-1">
-                  <span className="gsap-kinetic-word inline-block">Lindungi</span>
-                </span>{" "}
-                <span className="inline-block overflow-hidden pb-1">
-                  <span className="gsap-kinetic-word inline-block">Bersama.</span>
+                  <span className="gsap-kinetic-word inline-block">
+                    Lindungi Bersama.
+                  </span>
                 </span>
               </h1>
               <p className="gsap-hero-desc text-ink-soft text-base sm:text-lg mt-3 leading-relaxed max-w-xl">
