@@ -188,30 +188,30 @@ export default function LaporanSayaPage() {
         return {
           label: "Damkar",
           fullLabel: "Pemadam Kebakaran",
-          icon: <Flame className="w-3.5 h-3.5 text-orange-500" />,
-          badgeClass: "bg-orange-500/10 text-orange-700 border-orange-300 dark:border-orange-800 dark:text-orange-300",
+          icon: <Flame className="w-3.5 h-3.5 text-orange-600" />,
+          badgeClass: "bg-orange-50 text-orange-800 border-orange-200",
         };
       case "medis":
         return {
           label: "Medis",
           fullLabel: "Tenaga Medis & Ambulans",
-          icon: <HeartPulse className="w-3.5 h-3.5 text-red-500" />,
-          badgeClass: "bg-red-500/10 text-red-700 border-red-300 dark:border-red-800 dark:text-red-300",
+          icon: <HeartPulse className="w-3.5 h-3.5 text-red-600" />,
+          badgeClass: "bg-red-50 text-red-800 border-red-200",
         };
       case "polisi":
         return {
           label: "Polisi",
           fullLabel: "Keamanan & Polisi",
-          icon: <Shield className="w-3.5 h-3.5 text-blue-500" />,
-          badgeClass: "bg-blue-500/10 text-blue-700 border-blue-300 dark:border-blue-800 dark:text-blue-300",
+          icon: <Shield className="w-3.5 h-3.5 text-blue-600" />,
+          badgeClass: "bg-blue-50 text-blue-800 border-blue-200",
         };
       case "bnpb_bpbd":
       default:
         return {
           label: "SAR / BPBD",
           fullLabel: "SAR / BNPB & BPBD",
-          icon: <LifeBuoy className="w-3.5 h-3.5 text-cyan-600" />,
-          badgeClass: "bg-cyan-500/10 text-cyan-700 border-cyan-300 dark:border-cyan-800 dark:text-cyan-300",
+          icon: <LifeBuoy className="w-3.5 h-3.5 text-teal-600" />,
+          badgeClass: "bg-teal-50 text-teal-800 border-teal-200",
         };
     }
   };
@@ -298,12 +298,12 @@ export default function LaporanSayaPage() {
 
       {/* Banner Status Autentikasi & Sinkronisasi */}
       {!currentUser && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3.5 text-xs text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3.5 text-xs text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
           <div className="flex items-start gap-2.5">
             <Radio className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 animate-pulse" />
             <div>
               <p className="font-semibold text-sm">Mode Riwayat Perangkat Lokal</p>
-              <p className="text-amber-800 dark:text-amber-300 mt-0.5 leading-relaxed">
+              <p className="text-amber-800 mt-0.5 leading-relaxed">
                 Menampilkan laporan yang Anda kirim dari browser ini (termasuk panggilan darurat SOS sebelum login). Silakan <strong>Masuk ke Akun</strong> agar seluruh laporan tersinkronisasi ke profil Anda secara permanen.
               </p>
             </div>
@@ -439,14 +439,14 @@ export default function LaporanSayaPage() {
                     </div>
 
                     <span
-                      className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${statusInfo.color}`}
+                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${statusInfo.color}`}
                     >
                       {statusInfo.label}
                     </span>
 
                     {isSos && sosInfo && (
                       <span
-                        className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded border ${sosInfo.badgeClass}`}
+                        className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${sosInfo.badgeClass}`}
                       >
                         {sosInfo.icon}
                         <span>Bantuan {sosInfo.label}</span>

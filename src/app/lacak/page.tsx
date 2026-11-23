@@ -305,27 +305,27 @@ function LacakContent() {
       case "damkar":
         return {
           label: "Pemadam Kebakaran (Damkar)",
-          icon: <Flame className="w-4 h-4 text-orange-500" />,
-          badgeClass: "bg-orange-500/10 text-orange-700 border-orange-300 dark:border-orange-800 dark:text-orange-300",
+          icon: <Flame className="w-4 h-4 text-orange-600" />,
+          badgeClass: "bg-orange-50 text-orange-800 border-orange-200",
         };
       case "medis":
         return {
           label: "Tenaga Medis & Ambulans",
-          icon: <HeartPulse className="w-4 h-4 text-red-500" />,
-          badgeClass: "bg-red-500/10 text-red-700 border-red-300 dark:border-red-800 dark:text-red-300",
+          icon: <HeartPulse className="w-4 h-4 text-red-600" />,
+          badgeClass: "bg-red-50 text-red-800 border-red-200",
         };
       case "polisi":
         return {
           label: "Keamanan & Kepolisian",
-          icon: <Shield className="w-4 h-4 text-blue-500" />,
-          badgeClass: "bg-blue-500/10 text-blue-700 border-blue-300 dark:border-blue-800 dark:text-blue-300",
+          icon: <Shield className="w-4 h-4 text-blue-600" />,
+          badgeClass: "bg-blue-50 text-blue-800 border-blue-200",
         };
       case "bnpb_bpbd":
       default:
         return {
           label: "SAR / BNPB & BPBD",
-          icon: <LifeBuoy className="w-4 h-4 text-cyan-600" />,
-          badgeClass: "bg-cyan-500/10 text-cyan-700 border-cyan-300 dark:border-cyan-800 dark:text-cyan-300",
+          icon: <LifeBuoy className="w-4 h-4 text-teal-600" />,
+          badgeClass: "bg-teal-50 text-teal-800 border-teal-200",
         };
     }
   };
