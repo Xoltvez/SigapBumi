@@ -30,6 +30,7 @@ interface DisasterMapProps {
   showLegend?: boolean;
   className?: string;
   disablePopup?: boolean;
+  showPinBadge?: boolean;
   routeCoords?: [number, number][] | null;
   isLiveNavigating?: boolean;
   userLocationCoords?: [number, number] | null;
@@ -163,7 +164,8 @@ function createPinIcon(
   status: ReportStatus,
   isSos: boolean = false,
   isSelected: boolean = false,
-  trackingCode?: string
+  trackingCode?: string,
+  showPinBadge: boolean = false
 ) {
   if (isSos) {
     if (isSelected) {
@@ -173,11 +175,15 @@ function createPinIcon(
           <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
             <!-- Outer Pulsing Radar Ring -->
             <div style="position: absolute; width: 100%; height: 100%; border-radius: 9999px; background-color: rgba(220, 38, 38, 0.45); animation: ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-            <!-- Floating Indicator Badge Label -->
+            ${
+              showPinBadge
+                ? `<!-- Floating Indicator Badge Label -->
             <div style="position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); background: #0F172A; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2.5px 8px; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.4); border: 1.5px solid #EF4444; white-space: nowrap; pointer-events: none; display: flex; align-items: center; gap: 4px; z-index: 100;">
               <span style="width: 6px; height: 6px; border-radius: 9999px; background: #EF4444; animation: ping 1s infinite;"></span>
               <span>${trackingCode || "SOS AKTIF"}</span>
-            </div>
+            </div>`
+                : ""
+            }
             <!-- Core Selected SOS Pin -->
             <div style="width: 26px; height: 26px; border-radius: 9999px; background-color: #DC2626; border: 3px solid #FFFFFF; box-shadow: 0 0 0 3px #DC2626, 0 6px 16px rgba(220,38,38,0.7); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 10px;">SOS</div>
           </div>
@@ -214,11 +220,15 @@ function createPinIcon(
         <div style="position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
           <!-- Outer Pulsing Radar Ring -->
           <div style="position: absolute; width: 100%; height: 100%; border-radius: 9999px; background-color: ${bgHex}; opacity: 0.4; animation: ping 1.3s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-          <!-- Floating Indicator Badge Label -->
+          ${
+            showPinBadge
+              ? `<!-- Floating Indicator Badge Label -->
           <div style="position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%); background: #0F172A; color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2.5px 8px; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.4); border: 1.5px solid ${bgHex}; white-space: nowrap; pointer-events: none; display: flex; align-items: center; gap: 4px; z-index: 100;">
             <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: ${bgHex};"></span>
             <span>${trackingCode || "TERPILIH"}</span>
-          </div>
+          </div>`
+              : ""
+          }
           <!-- Core Selected Pin -->
           <div style="width: 22px; height: 22px; border-radius: 9999px; background-color: ${bgHex}; border: 3px solid #FFFFFF; box-shadow: 0 0 0 3px ${bgHex}, 0 4px 14px rgba(0,0,0,0.45);"></div>
         </div>
@@ -249,6 +259,7 @@ export default function DisasterMap({
   showLegend = true,
   className = "",
   disablePopup = false,
+  showPinBadge = false,
   routeCoords = null,
   isLiveNavigating = false,
   userLocationCoords = null,
@@ -614,7 +625,7 @@ export default function DisasterMap({
       const pt = points.find((p) => p.id === id);
       if (pt) {
         const isSelected = Boolean(id === selectedPointId || (pt.tracking_code && pt.tracking_code === selectedPointId));
-        marker.setIcon(createPinIcon(pt.status, pt.is_sos, isSelected, pt.tracking_code));
+        marker.setIcon(createPinIcon(pt.status, pt.is_sos, isSelected, pt.tracking_code, showPinBadge));
         marker.setZIndexOffset(isSelected ? 1000 : 0);
       }
     });
@@ -745,7 +756,7 @@ export default function DisasterMap({
         }
         const isSelected = Boolean(pt.id === selectedPointId || (pt.tracking_code && pt.tracking_code === selectedPointId));
         // Perbarui icon jika status/sos berubah
-        existingMarker.setIcon(createPinIcon(pt.status, pt.is_sos, isSelected, pt.tracking_code));
+        existingMarker.setIcon(createPinIcon(pt.status, pt.is_sos, isSelected, pt.tracking_code, showPinBadge));
         existingMarker.setZIndexOffset(isSelected ? 1000 : 0);
         // Perbarui isi popup jika popup diaktifkan
         if (!disablePopup) {
@@ -755,7 +766,7 @@ export default function DisasterMap({
         const isSelected = Boolean(pt.id === selectedPointId || (pt.tracking_code && pt.tracking_code === selectedPointId));
         // Buat marker baru
         const marker = L.marker([latNum, lngNum], {
-          icon: createPinIcon(pt.status, pt.is_sos, isSelected, pt.tracking_code),
+          icon: createPinIcon(pt.status, pt.is_sos, isSelected, pt.tracking_code, showPinBadge),
           zIndexOffset: isSelected ? 1000 : 0,
         });
 
