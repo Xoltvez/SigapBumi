@@ -723,12 +723,23 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
                       <div>
                         <p>{verificationWarning}</p>
                         <p className="text-[11px] font-normal text-amber-700 mt-0.5">
-                          Silakan klik tombol <strong>&ldquo;Verifikasi Laporan Dahulu&rdquo;</strong> di bawah terlebih dahulu.
+                          Silakan klik tombol <strong>&ldquo;Verifikasi Laporan Dahulu&rdquo;</strong> di atas terlebih dahulu.
                         </p>
                       </div>
                     </div>
                   )}
 
+                  {/* 1. Verifikasi Laporan Dahulu (Paling Atas) */}
+                  <button
+                    type="button"
+                    onClick={() => openActionDialog("diverifikasi")}
+                    className="w-full h-10 px-4 rounded-md border-2 border-blue-500 bg-blue-50/90 hover:bg-blue-100 text-blue-900 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer active:scale-98"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                    <span>Verifikasi Laporan Dahulu</span>
+                  </button>
+
+                  {/* 2. Tandai Diproses / Tugaskan Tim */}
                   <button
                     type="button"
                     onClick={handleTandaiProsesClick}
@@ -742,6 +753,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
                     <span>Tandai Diproses / Tugaskan Tim</span>
                   </button>
 
+                  {/* 3. Tandai Selesai Ditangani */}
                   <button
                     type="button"
                     onClick={() => openActionDialog("selesai")}
@@ -751,15 +763,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
                     <span>Tandai Selesai Ditangani</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => openActionDialog("diverifikasi")}
-                    className="w-full h-9 px-4 rounded-md border-2 border-blue-400 bg-blue-50/80 hover:bg-blue-100 text-blue-800 text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-2xs cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-blue-600" />
-                    <span>Verifikasi Laporan Dahulu</span>
-                  </button>
-
+                  {/* 4. Tolak (Laporan Palsu/Duplikat) */}
                   <button
                     type="button"
                     onClick={() => openActionDialog("ditolak")}
