@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Settings,
   User,
@@ -24,9 +24,21 @@ import {
   Building2,
   Radio,
   Sliders,
+  Download,
+  Upload,
+  Send,
+  Smartphone,
+  Target,
+  Compass,
+  Database,
+  RefreshCw,
+  FileSpreadsheet,
+  ExternalLink,
+  BellRing,
+  Trash2,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
-import { playSosSiren, stopSosSiren } from "@/lib/audio/siren";
+import { playSosSiren, stopSosSiren, playReportChime } from "@/lib/audio/siren";
 import {
   getAdminSettings,
   saveAdminSettings,
@@ -34,8 +46,12 @@ import {
   type AdminSettingsConfig,
   DEFAULT_ADMIN_SETTINGS,
 } from "@/lib/services/settings";
+import {
+  fetchLiveReports,
+  clearAllLocalReportsAndCaches,
+} from "@/lib/services/reports";
 
-type SettingsTab = "petugas" | "audio" | "peta";
+type SettingsTab = "petugas" | "audio" | "peta" | "respons" | "data";
 
 export default function AdminPengaturanPage() {
   const { adminUser, updateAdminUser, isSirenMuted, setIsSirenMuted } = useAdmin();
@@ -45,7 +61,7 @@ export default function AdminPengaturanPage() {
 
   // State pengaturan posko
   const [settings, setSettings] = useState<AdminSettingsConfig>(DEFAULT_ADMIN_SETTINGS);
-  
+
   // State profil petugas piket
   const [officerForm, setOfficerForm] = useState({
     name: "Kapten Hendra Gunawan",
@@ -61,6 +77,12 @@ export default function AdminPengaturanPage() {
   const [toastMessage, setToastMessage] = useState("Pengaturan berhasil disimpan.");
   const [isTestingSiren, setIsTestingSiren] = useState(false);
   const [stopSirenRef, setStopSirenRef] = useState<(() => void) | null>(null);
+  const [isDetectingGps, setIsDetectingGps] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isTestingWebhook, setIsTestingWebhook] = useState(false);
+  const [desktopPermStatus, setDesktopPermStatus] = useState<NotificationPermission>("default");
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load initial settings and officer profile
   useEffect(() => {
@@ -76,6 +98,10 @@ export default function AdminPengaturanPage() {
         unit: adminUser.unit || "bnpb_bpbd",
         unitName: adminUser.unitName || "BNPB / BPBD",
       });
+    }
+
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setDesktopPermStatus(Notification.permission);
     }
   }, [adminUser]);
 
@@ -111,7 +137,7 @@ export default function AdminPengaturanPage() {
 
   // Reset pengaturan ke default
   const handleResetToDefault = () => {
-    if (window.confirm("Kembalikan semua konfigurasi posko ke pengaturan default awal?")) {
+    if (window.confirm("Kembalikan semua konfigurasi posko ke pengaturan default awal BNPB/BPBD?")) {
       const reset = resetAdminSettings();
       setSettings(reset);
       setIsSirenMuted(false);
@@ -139,8 +165,265 @@ export default function AdminPengaturanPage() {
     }
   };
 
+  // Tes Chime Nada Peringatan Halus
+  const handleTestChime = () => {
+    playReportChime(settings.sirenVolume * 0.7);
+    showToast("Memutar nada chime laporan masuk biasa...");
+  };
+
+  // Deteksi Otomatis Lokasi GPS Basecamp Posko
+  const handleDetectGps = () => {
+    if (typeof window === "undefined" || !("geolocation" in navigator)) {
+      alert("Browser Anda tidak mendukung Geolocation API.");
+      return;
+    }
+
+    setIsDetectingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsDetectingGps(false);
+        const lat = parseFloat(pos.coords.latitude.toFixed(6));
+        const lng = parseFloat(pos.coords.longitude.toFixed(6));
+        setSettings((prev) => ({
+          ...prev,
+          stationLat: lat,
+          stationLng: lng,
+        }));
+        showToast(`Titik koordinat berhasil dideteksi: ${lat}, ${lng}`);
+      },
+      (err) => {
+        setIsDetectingGps(false);
+        alert("Gagal mendeteksi koordinat GPS: " + err.message);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // Minta Izin Notifikasi Desktop
+  const handleRequestNotificationPermission = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      alert("Browser Anda tidak mendukung Notification API.");
+      return;
+    }
+
+    try {
+      const perm = await Notification.requestPermission();
+      setDesktopPermStatus(perm);
+      if (perm === "granted") {
+        new Notification("🚨 Notifikasi SigapBumi Diaktifkan", {
+          body: "Posko Anda akan menerima peringatan darurat saat sinyal SOS atau laporan baru masuk.",
+          icon: "/favicon.ico",
+        });
+        showToast("Izin notifikasi desktop berhasil diaktifkan!");
+      } else {
+        showToast("Izin notifikasi browser belum diberikan.");
+      }
+    } catch (e: any) {
+      alert("Gagal meminta izin notifikasi: " + e.message);
+    }
+  };
+
+  // Tes Kirim Notifikasi Desktop
+  const handleTestDesktopNotification = () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+
+    if (Notification.permission === "granted") {
+      new Notification("🚨 PANGGILAN DARURAT SOS (SIMULASI)", {
+        body: "Warga membutuhkan pertolongan evakuasi segera di koordinat terdekat.",
+        icon: "/favicon.ico",
+      });
+      showToast("Notifikasi desktop berhasil dikirim ke layar Anda!");
+    } else {
+      handleRequestNotificationPermission();
+    }
+  };
+
+  // Uji Buka WhatsApp Dispatcher
+  const handleTestWhatsApp = () => {
+    const raw = settings.whatsappDispatcherNumber.replace(/\D/g, "");
+    if (!raw) {
+      alert("Masukkan nomor WhatsApp dispatcher terlebih dahulu.");
+      return;
+    }
+    const cleanPhone = raw.startsWith("0") ? "62" + raw.slice(1) : raw;
+    const msg = encodeURIComponent(
+      `[Pusdalops SigapBumi] Tes koneksi dispatch otomatis dari Posko Induk ${settings.stationCode} (${settings.stationName}).`
+    );
+    window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
+  };
+
+  // Uji Ping Webhook Darurat
+  const handleTestWebhook = async () => {
+    if (!settings.emergencyWebhookUrl) {
+      alert("Masukkan URL Webhook darurat terlebih dahulu.");
+      return;
+    }
+
+    setIsTestingWebhook(true);
+    try {
+      const payload = {
+        event: "TEST_DISPATCH_PING",
+        station_code: settings.stationCode,
+        station_name: settings.stationName,
+        timestamp: new Date().toISOString(),
+        test_by: officerForm.name,
+      };
+
+      const res = await fetch(settings.emergencyWebhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        mode: "no-cors",
+      });
+
+      showToast("Sinyal ping webhook darurat berhasil dikirimkan!");
+    } catch (err: any) {
+      alert("Gagal mengirim payload webhook: " + err.message);
+    } finally {
+      setIsTestingWebhook(false);
+    }
+  };
+
+  // Export Seluruh Data Laporan ke File CSV
+  const handleExportCsv = async () => {
+    setIsExportingCsv(true);
+    try {
+      const reports = await fetchLiveReports();
+      if (!reports || reports.length === 0) {
+        alert("Belum ada data laporan untuk diexport.");
+        setIsExportingCsv(false);
+        return;
+      }
+
+      const headers = [
+        "Kode Tracking",
+        "Jenis Bencana",
+        "Judul Kejadian",
+        "Alamat Lokasi",
+        "Status",
+        "Prioritas",
+        "Waktu Lapor",
+        "Nama Pelapor",
+        "Kontak Pelapor",
+        "Latitude",
+        "Longitude",
+      ];
+
+      const csvRows = [headers.join(",")];
+
+      reports.forEach((r) => {
+        const row = [
+          `"${r.tracking_code || ""}"`,
+          `"${r.disaster_type || ""}"`,
+          `"${(r.title || "").replace(/"/g, '""')}"`,
+          `"${(r.address || "").replace(/"/g, '""')}"`,
+          `"${r.status || ""}"`,
+          `"${r.priority || ""}"`,
+          `"${r.created_at || ""}"`,
+          `"${(r.reporter_name || "").replace(/"/g, '""')}"`,
+          `"${r.phone_number || ""}"`,
+          `"${r.lat || ""}"`,
+          `"${r.lng || ""}"`,
+        ];
+        csvRows.push(row.join(","));
+      });
+
+      const csvString = "\uFEFF" + csvRows.join("\n");
+      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const dateStr = new Date().toISOString().split("T")[0];
+      link.setAttribute("href", url);
+      link.setAttribute("download", `sigapbumi_rekap_laporan_${dateStr}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast(`Berhasil mengekspor ${reports.length} data laporan ke CSV!`);
+    } catch (err: any) {
+      alert("Gagal mengekspor laporan ke CSV: " + err.message);
+    } finally {
+      setIsExportingCsv(false);
+    }
+  };
+
+  // Backup Konfigurasi Posko ke File JSON
+  const handleExportJsonConfig = () => {
+    const backupData = {
+      version: "1.0",
+      exported_at: new Date().toISOString(),
+      officer: officerForm,
+      settings: settings,
+    };
+
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `konfigurasi_posko_${settings.stationCode.toLowerCase()}_${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast("File cadangan konfigurasi JSON berhasil diunduh!");
+  };
+
+  // Pulihkan / Import Konfigurasi Posko dari File JSON
+  const handleImportJsonConfig = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (parsed.settings) {
+          const next = saveAdminSettings(parsed.settings);
+          setSettings(next);
+        }
+        if (parsed.officer) {
+          setOfficerForm(parsed.officer);
+          updateAdminUser(parsed.officer);
+        }
+        showToast("Konfigurasi posko berhasil dipulihkan dari file JSON!");
+      } catch (err: any) {
+        alert("Gagal membaca file konfigurasi JSON: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Bersihkan Cache Data Lokal Perangkat
+  const handleClearCache = () => {
+    if (
+      window.confirm(
+        "Bersihkan cache data laporan dan riwayat pencarian lokal di peramban ini? (Data di database Supabase tetap aman)"
+      )
+    ) {
+      clearAllLocalReportsAndCaches();
+      showToast("Cache lokal berhasil dibersihkan! Memuat ulang data segar...");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
+      {/* Hidden File Input for Config Restore */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImportJsonConfig}
+        accept=".json"
+        className="hidden"
+      />
+
       {/* Toast Notification */}
       {isSavedToast && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-slate-900 text-white shadow-2xl border border-slate-700 animate-in fade-in slide-in-from-bottom-3 duration-200">
@@ -164,7 +447,7 @@ export default function AdminPengaturanPage() {
             Pengaturan & Konfigurasi Posko
           </h1>
           <p className="text-xs md:text-sm text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Kelola profil petugas jaga, preferensi sirene darurat SOS, dan opsi visualisasi tampilan peta posko.
+            Kelola profil petugas jaga, preferensi sirene darurat SOS, opsi peta taktis, integrasi dispatch, dan manajemen data.
           </p>
         </div>
 
@@ -174,7 +457,7 @@ export default function AdminPengaturanPage() {
             type="button"
             onClick={handleResetToDefault}
             title="Kembalikan ke standar awal"
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold text-xs transition-colors shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold text-xs transition-colors shadow-sm cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Reset Default</span>
@@ -183,7 +466,7 @@ export default function AdminPengaturanPage() {
           <button
             type="button"
             onClick={handleSaveAll}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#EA580C] hover:bg-[#D44D07] text-white font-bold text-xs transition-all shadow-md hover:shadow-orange-500/20 active:scale-95"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#EA580C] hover:bg-[#D44D07] text-white font-bold text-xs transition-all shadow-md hover:shadow-orange-500/20 active:scale-95 cursor-pointer"
           >
             <Save className="w-4 h-4" />
             <span>Simpan Perubahan</span>
@@ -191,25 +474,25 @@ export default function AdminPengaturanPage() {
         </div>
       </div>
 
-      {/* Tabs Navigation */}
+      {/* Tabs Navigation (5 Menu Komprehensif) */}
       <div className="flex items-center gap-1.5 p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/80 overflow-x-auto scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveTab("petugas")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
             activeTab === "petugas"
               ? "bg-white text-slate-900 shadow-sm"
               : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
           }`}
         >
           <User className="w-4 h-4 text-[#EA580C]" />
-          <span>Profil & Petugas</span>
+          <span>Profil & Posko</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("audio")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
             activeTab === "audio"
               ? "bg-white text-slate-900 shadow-sm"
               : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
@@ -225,18 +508,46 @@ export default function AdminPengaturanPage() {
         <button
           type="button"
           onClick={() => setActiveTab("peta")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
             activeTab === "peta"
               ? "bg-white text-slate-900 shadow-sm"
               : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
           }`}
         >
-          <Layers className="w-4 h-4 text-purple-500" />
+          <Layers className="w-4 h-4 text-purple-600" />
           <span>Tampilan Peta</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("respons")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+            activeTab === "respons"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+          }`}
+        >
+          <Target className="w-4 h-4 text-blue-600" />
+          <span>Target SLA & Dispatch</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("data")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+            activeTab === "data"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+          }`}
+        >
+          <Database className="w-4 h-4 text-emerald-600" />
+          <span>Data & Cadangan</span>
         </button>
       </div>
 
-      {/* Tab 1: Profil Petugas & Posko */}
+      {/* ========================================================= */}
+      {/* Tab 1: Profil Petugas & Posko                             */}
+      {/* ========================================================= */}
       {activeTab === "petugas" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
@@ -316,36 +627,36 @@ export default function AdminPengaturanPage() {
                     {[
                       {
                         id: "pemerintahan",
-                        label: "Pemerintahan (Pusat)",
-                        sub: "Semua Data Masuk",
+                        label: "Pemerintahan",
+                        sub: "Semua Data",
                         icon: Building2,
                         color: "text-amber-600",
                       },
                       {
                         id: "bnpb_bpbd",
                         label: "BNPB / BPBD",
-                        sub: "Bencana Hidrometeorologi",
+                        sub: "Hidrometeorologi",
                         icon: LifeBuoy,
                         color: "text-[#EA580C]",
                       },
                       {
                         id: "damkar",
                         label: "Dinas Damkar",
-                        sub: "Kebakaran & Karhutla",
+                        sub: "Kebakaran",
                         icon: Flame,
                         color: "text-rose-500",
                       },
                       {
                         id: "medis",
                         label: "Dinkes / RS",
-                        sub: "Medis Darurat & PSC 119",
+                        sub: "Medis PSC 119",
                         icon: HeartPulse,
                         color: "text-rose-600",
                       },
                       {
                         id: "polisi",
-                        label: "Kepolisian (Polri)",
-                        sub: "Kamtibmas & Pengamanan",
+                        label: "Kepolisian",
+                        sub: "Kamtibmas",
                         icon: Shield,
                         color: "text-blue-600",
                       },
@@ -376,17 +687,11 @@ export default function AdminPengaturanPage() {
                       );
                     })}
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1.5">
-                    <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>
-                      Untuk berganti instansi atau hak akses, silakan logout dan login kembali dengan role yang sesuai.
-                    </span>
-                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Profil Stasiun Posko */}
+            {/* Profil Stasiun Posko & Titik GPS Basecamp */}
             <div className="p-6 md:p-8 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Radio className="w-4 h-4 text-blue-600" />
@@ -440,6 +745,57 @@ export default function AdminPengaturanPage() {
                     onChange={(e) => setSettings({ ...settings, dispatchCallsign: e.target.value })}
                     className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 focus:border-[#EA580C] font-mono text-slate-800"
                   />
+                </div>
+
+                {/* Titik Geospasial Posko Induk */}
+                <div className="sm:col-span-2 p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-[#EA580C]" />
+                        Titik Koordinat Basecamp Posko (WGS84)
+                      </span>
+                      <p className="text-[11px] text-slate-500">
+                        Titik tolak keberangkatan armada navigasi rute tercepat ke lokasi kejadian warga.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDetectGps}
+                      disabled={isDetectingGps}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs cursor-pointer self-start sm:self-auto"
+                    >
+                      <Compass className={`w-3.5 h-3.5 ${isDetectingGps ? "animate-spin" : ""}`} />
+                      <span>{isDetectingGps ? "Mendeteksi..." : "Deteksi GPS Saya"}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block mb-1">Latitude</span>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        value={settings.stationLat}
+                        onChange={(e) =>
+                          setSettings({ ...settings, stationLat: parseFloat(e.target.value) || 0 })
+                        }
+                        className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white font-mono text-slate-800"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block mb-1">Longitude</span>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        value={settings.stationLng}
+                        onChange={(e) =>
+                          setSettings({ ...settings, stationLng: parseFloat(e.target.value) || 0 })
+                        }
+                        className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white font-mono text-slate-800"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -571,12 +927,14 @@ export default function AdminPengaturanPage() {
         </div>
       )}
 
-      {/* Tab 2: Sirene & Audio SOS */}
+      {/* ========================================================= */}
+      {/* Tab 2: Sirene & Audio SOS                                 */}
+      {/* ========================================================= */}
       {activeTab === "audio" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <div className="p-6 md:p-8 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-6">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <Volume2 className="w-5 h-5 text-rose-500" />
@@ -587,27 +945,38 @@ export default function AdminPengaturanPage() {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleTestSiren}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-md ${
-                    isTestingSiren
-                      ? "bg-rose-600 text-white animate-pulse"
-                      : "bg-slate-900 hover:bg-slate-800 text-white"
-                  }`}
-                >
-                  {isTestingSiren ? (
-                    <>
-                      <Square className="w-3.5 h-3.5 fill-current" />
-                      <span>Hentikan Sirine</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      <span>Tes Bunyikan Sirine</span>
-                    </>
-                  )}
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleTestChime}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs cursor-pointer"
+                  >
+                    <Bell className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Tes Chime</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleTestSiren}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-md cursor-pointer ${
+                      isTestingSiren
+                        ? "bg-rose-600 text-white animate-pulse"
+                        : "bg-slate-900 hover:bg-slate-800 text-white"
+                    }`}
+                  >
+                    {isTestingSiren ? (
+                      <>
+                        <Square className="w-3.5 h-3.5 fill-current" />
+                        <span>Hentikan Sirine</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Tes Bunyikan Sirine</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Toggle Auto-Play Siren */}
@@ -674,7 +1043,7 @@ export default function AdminPengaturanPage() {
                 <label className="block text-xs font-bold text-slate-800 mb-2">
                   Durasi Ayunan Gelombang Sirine
                 </label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
                     { cycles: 2, label: "2 Ayunan (~1.6 Detik)", desc: "Singkat & tidak bising" },
                     { cycles: 4, label: "4 Ayunan (~3.2 Detik)", desc: "Rekomendasi standar posko" },
@@ -686,7 +1055,7 @@ export default function AdminPengaturanPage() {
                         key={c.cycles}
                         type="button"
                         onClick={() => setSettings({ ...settings, sirenCycles: c.cycles })}
-                        className={`p-3 rounded-xl border text-left transition-all ${
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                           isSelected
                             ? "border-rose-500 bg-rose-50/60 ring-1 ring-rose-500 text-rose-950"
                             : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
@@ -745,7 +1114,9 @@ export default function AdminPengaturanPage() {
         </div>
       )}
 
-      {/* Tab 3: Tampilan Peta */}
+      {/* ========================================================= */}
+      {/* Tab 3: Tampilan Peta                                      */}
+      {/* ========================================================= */}
       {activeTab === "peta" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
@@ -765,7 +1136,7 @@ export default function AdminPengaturanPage() {
                 <label className="block text-xs font-bold text-slate-800 mb-2">
                   Gaya Lapisan Peta Default
                 </label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
                     { id: "light", label: "OpenStreetMap Terang", desc: "Kontras tinggi siang hari" },
                     { id: "dark", label: "Carto Dark (Mode Malam)", desc: "Ramah mata di ruang kendali" },
@@ -779,7 +1150,7 @@ export default function AdminPengaturanPage() {
                         onClick={() =>
                           setSettings({ ...settings, defaultMapLayer: layer.id as any })
                         }
-                        className={`p-3 rounded-xl border text-left transition-all ${
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                           isSelected
                             ? "border-purple-600 bg-purple-50/70 ring-1 ring-purple-600 text-purple-950"
                             : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
@@ -798,7 +1169,7 @@ export default function AdminPengaturanPage() {
                 <label className="block text-xs font-bold text-slate-800 mb-2">
                   Interval Sinkronisasi Data Cadangan (Polling Fallback)
                 </label>
-                <div className="grid grid-cols-4 gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {[
                     { sec: 10, label: "Tiap 10 Detik" },
                     { sec: 15, label: "Tiap 15 Detik (Default)" },
@@ -811,9 +1182,9 @@ export default function AdminPengaturanPage() {
                         key={t.sec}
                         type="button"
                         onClick={() => setSettings({ ...settings, autoRefreshIntervalSec: t.sec })}
-                        className={`p-2.5 rounded-xl border text-center transition-all ${
+                        className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
                           isSelected
-                            ? "border-purple-600 bg-purple-50 text-purple-900 font-bold"
+                            ? "border-purple-600 bg-purple-50 text-purple-900 font-bold ring-1 ring-purple-600"
                             : "border-slate-200 bg-slate-50 text-slate-700 font-medium hover:bg-slate-100"
                         }`}
                       >
@@ -857,6 +1228,339 @@ export default function AdminPengaturanPage() {
               <p className="text-xs text-slate-600 leading-relaxed">
                 Pengaturan interval membantu menghemat konsumsi memori browser saat memantau dashboard 24/7 di monitor layar lebar posko.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* Tab 4: Target Respon & Dispatch SOS                       */}
+      {/* ========================================================= */}
+      {activeTab === "respons" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="p-6 md:p-8 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-6">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Target className="w-5 h-5 text-blue-600" />
+                  <span>Standar Waktu Tanggap (SLA) & Yurisdiksi Geofence</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Konfigurasikan batas target waktu penanganan cepat dan cakupan wilayah operasional posko Anda.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Target Respon Darurat (SLA)
+                  </label>
+                  <select
+                    value={settings.targetSlaMinutes || 15}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        targetSlaMinutes: parseInt(e.target.value, 10),
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-800 cursor-pointer"
+                  >
+                    <option value={5}>5 Menit (Golden Period Medis/Damkar)</option>
+                    <option value={10}>10 Menit (Respon Kilat)</option>
+                    <option value={15}>15 Menit (Standar Nasional BPBD)</option>
+                    <option value={30}>30 Menit (Wilayah Perluasan)</option>
+                  </select>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Indikator waktu di detail laporan akan menyala merah jika respon melebihi target ini.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Radius Geofence Wilayah Posko
+                  </label>
+                  <select
+                    value={settings.geofenceRadiusKm || 25}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        geofenceRadiusKm: parseInt(e.target.value, 10),
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-800 cursor-pointer"
+                  >
+                    <option value={5}>Radius 5 KM (Kecamatan)</option>
+                    <option value={10}>Radius 10 KM (Kota / Urban)</option>
+                    <option value={25}>Radius 25 KM (Kabupaten Standar)</option>
+                    <option value={50}>Radius 50 KM (Regional Aglomerasi)</option>
+                    <option value={0}>Semua Wilayah (Tanpa Pembatasan)</option>
+                  </select>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Radius lingkaran perimeter siaga di sekeliling koordinat basecamp posko Anda.
+                  </p>
+                </div>
+              </div>
+
+              {/* Integrasi WhatsApp Dispatcher */}
+              <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                      <Smartphone className="w-4 h-4 text-emerald-600" />
+                      Nomor WhatsApp Dispatcher Petugas Lapangan
+                    </span>
+                    <p className="text-[11px] text-emerald-800 mt-0.5">
+                      Panggilan SOS dan tugas darurat dapat langsung diteruskan ke grup koordinasi WhatsApp.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleTestWhatsApp}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs cursor-pointer self-start sm:self-auto"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Uji Kirim WA</span>
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  value={settings.whatsappDispatcherNumber}
+                  onChange={(e) =>
+                    setSettings({ ...settings, whatsappDispatcherNumber: e.target.value })
+                  }
+                  placeholder="Contoh: 0811-9876-5432"
+                  className="w-full px-3.5 py-2 text-xs rounded-lg border border-emerald-300 bg-white font-mono text-emerald-950 font-semibold"
+                />
+              </div>
+
+              {/* Webhook Integrasi Darurat */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <Send className="w-3.5 h-3.5 text-blue-600" />
+                      Webhook Integrasi Notifikasi Darurat (HTTP POST)
+                    </span>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Kirim payload JSON otomatis ke sistem Radio DMR, Discord Posko, atau server eksternal BNPB.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleTestWebhook}
+                    disabled={isTestingWebhook}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs cursor-pointer self-start sm:self-auto"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isTestingWebhook ? "animate-spin" : ""}`} />
+                    <span>{isTestingWebhook ? "Mengirim..." : "Uji Ping Webhook"}</span>
+                  </button>
+                </div>
+
+                <input
+                  type="url"
+                  value={settings.emergencyWebhookUrl}
+                  onChange={(e) =>
+                    setSettings({ ...settings, emergencyWebhookUrl: e.target.value })
+                  }
+                  placeholder="https://webhook.site/your-endpoint-url"
+                  className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-200 bg-white font-mono text-slate-800"
+                />
+              </div>
+
+              {/* Notifikasi Desktop Browser */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-blue-50/60 border border-blue-200">
+                <div className="pr-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-blue-950">
+                      Notifikasi Pop-up Desktop Browser
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        desktopPermStatus === "granted"
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                          : desktopPermStatus === "denied"
+                          ? "bg-rose-100 text-rose-800 border border-rose-200"
+                          : "bg-amber-100 text-amber-800 border border-amber-200"
+                      }`}
+                    >
+                      {desktopPermStatus === "granted"
+                        ? "Izin Aktif"
+                        : desktopPermStatus === "denied"
+                        ? "Diblokir Browser"
+                        : "Perlu Izin"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-800 mt-0.5">
+                    Memunculkan pemberitahuan di sudut layar komputer saat tab posko berada di latar belakang (*background*).
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {desktopPermStatus !== "granted" ? (
+                    <button
+                      type="button"
+                      onClick={handleRequestNotificationPermission}
+                      className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+                    >
+                      Aktifkan Izin
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleTestDesktopNotification}
+                      className="px-3.5 py-2 rounded-xl border border-blue-300 bg-white hover:bg-blue-50 text-blue-800 text-xs font-bold shadow-2xs cursor-pointer flex items-center gap-1.5"
+                    >
+                      <BellRing className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Tes Pop-up</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <Target className="w-4 h-4 text-blue-600" />
+                <span>Kepatuhan Tanggap Darurat</span>
+              </h4>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Pengaturan SLA dan Geofence memastikan alur komando terpadu sesuai mandat Perka BNPB tentang Pos Komando Penanganan Darurat Bencana.
+              </p>
+              <div className="p-3 bg-slate-50 rounded-xl text-xs space-y-1.5 border border-slate-100">
+                <p className="font-semibold text-slate-800">Standar Respon Lapangan:</p>
+                <p className="text-slate-500">• 0–5 menit: Verifikasi data dan panggilan dispatcher.</p>
+                <p className="text-slate-500">• 5–15 menit: Pengerahan regu dan armada terdekat.</p>
+                <p className="text-slate-500">• 15+ menit: Pelaporan situasi terkini ke komando pusat.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* Tab 5: Data & Cadangan                                    */}
+      {/* ========================================================= */}
+      {activeTab === "data" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="p-6 md:p-8 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-6">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Database className="w-5 h-5 text-emerald-600" />
+                  <span>Cadangan Data, Rekapitulasi & Pemeliharaan</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Ekspor rekaman kejadian untuk pelaporan dinas, cadangkan konfigurasi stasiun, dan bersihkan cache lokal.
+                </p>
+              </div>
+
+              {/* Ekspor Laporan ke CSV */}
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                    <span className="text-xs font-bold text-slate-900">
+                      Ekspor Seluruh Rekapitulasi Laporan (CSV / Excel)
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 max-w-xl">
+                    Unduh seluruh data pelaporan warga, titik koordinat, status verifikasi, dan nomor kontak pelapor untuk arsip resmi dan analisis di Microsoft Excel.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  disabled={isExportingCsv}
+                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  <Download className={`w-4 h-4 ${isExportingCsv ? "animate-bounce" : ""}`} />
+                  <span>{isExportingCsv ? "Mengekspor..." : "Unduh File CSV"}</span>
+                </button>
+              </div>
+
+              {/* Cadangkan & Pulihkan Konfigurasi JSON */}
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-blue-600" />
+                    <span className="text-xs font-bold text-slate-900">
+                      Cadangkan & Pulihkan Konfigurasi Posko (JSON)
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Simpan seluruh profil petugas, frekuensi radio, pengaturan sirine, dan titik basecamp ke file cadangan sehingga mudah disalin ke komputer posko lain.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleExportJsonConfig}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold inline-flex items-center gap-2 shadow-2xs transition-colors cursor-pointer"
+                  >
+                    <Download className="w-4 h-4 text-slate-500" />
+                    <span>Unduh Cadangan JSON</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2.5 rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-800 text-xs font-bold inline-flex items-center gap-2 shadow-2xs transition-colors cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4 text-blue-600" />
+                    <span>Pulihkan dari File JSON</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Bersihkan Cache Perangkat */}
+              <div className="p-5 rounded-2xl bg-rose-50/60 border border-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="w-5 h-5 text-rose-600" />
+                    <span className="text-xs font-bold text-rose-950">
+                      Bersihkan Cache Data Lokal Perangkat
+                    </span>
+                  </div>
+                  <p className="text-xs text-rose-800 max-w-xl">
+                    Hapus salinan cache peramban lokal jika tabel laporan terasa lambat atau data lama tersangkut di memori komputer ini.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleClearCache}
+                  className="px-4 py-2.5 rounded-xl border border-rose-300 bg-white hover:bg-rose-50 text-rose-700 text-xs font-bold inline-flex items-center gap-2 shadow-2xs transition-all shrink-0 cursor-pointer"
+                >
+                  <RefreshCw className="w-4 h-4 text-rose-600" />
+                  <span>Bersihkan Cache</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <Shield className="w-4 h-4 text-emerald-600" />
+                <span>Integritas & Keamanan Data</span>
+              </h4>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Seluruh ekspor data dilengkapi dengan standar proteksi PII. Data sensitif seperti NIK tetap terlindungi dalam ringkasan publik.
+              </p>
+              <div className="p-3 bg-emerald-50/60 rounded-xl text-xs space-y-1.5 border border-emerald-200 text-emerald-900">
+                <p className="font-bold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  Format Standar Nasional:
+                </p>
+                <p className="text-emerald-800 leading-relaxed">
+                  Ekspor CSV menyertakan UTF-8 Byte Order Mark (BOM) sehingga karakter bahasa Indonesia dan tanda baca tampil sempurna tanpa acak di Excel.
+                </p>
+              </div>
             </div>
           </div>
         </div>
