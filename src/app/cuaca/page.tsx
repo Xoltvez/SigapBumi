@@ -1,5 +1,8 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   CloudSun,
   Activity,
@@ -8,43 +11,552 @@ import {
   ChevronLeft,
   AlertTriangle,
   Info,
+  RefreshCw,
+  MapPin,
+  Clock,
+  Compass,
+  Wind,
+  Droplets,
+  Thermometer,
+  ShieldAlert,
+  Eye,
+  CheckCircle2,
 } from "lucide-react";
 
-export const metadata = {
-  title: "Peringatan Dini Cuaca & Gempa BMKG - SigapBumi",
-  description:
-    "Rujukan informasi cuaca ekstrem, peringatan gelombang, dan data gempa bumi terkini dari BMKG.",
-};
+interface GempaData {
+  Tanggal: string;
+  Jam: string;
+  DateTime: string;
+  Coordinates: string;
+  Lintang: string;
+  Bujur: string;
+  Magnitude: string;
+  Kedalaman: string;
+  Wilayah: string;
+  Potensi: string;
+  Dirasakan?: string;
+  Shakemap?: string;
+}
+
+interface WeatherPeriod {
+  datetime: string;
+  t: number;
+  hu: number;
+  ws: number;
+  wd: string;
+  weather_desc: string;
+  image: string;
+  local_datetime: string;
+}
+
+interface CityOption {
+  name: string;
+  province: string;
+  adm4: string;
+}
 
 export default function CuacaPage() {
+  const [activeTab, setActiveTab] = useState<"gempa" | "cuaca">("gempa");
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [lastUpdated, setLastUpdated] = useState<string>("");
+
+  // Data Gempa
+  const [gempaTerkini, setGempaTerkini] = useState<GempaData | null>(null);
+  const [daftarGempa, setDaftarGempa] = useState<GempaData[]>([]);
+  const [isShakemapOpen, setIsShakemapOpen] = useState<boolean>(false);
+
+  // Data Cuaca
+  const [cities, setCities] = useState<CityOption[]>([]);
+  const [selectedCityAdm4, setSelectedCityAdm4] = useState<string>("31.71.01.1001");
+  const [currentWeather, setCurrentWeather] = useState<{
+    lokasi?: { desa?: string; kotkab?: string; provinsi?: string };
+    periods?: WeatherPeriod[];
+  } | null>(null);
+  const [isLoadingWeather, setIsLoadingWeather] = useState<boolean>(false);
+
+  // Fetch data BMKG gempa & cuaca
+  const fetchBmkgData = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) setIsRefreshing(true);
+    else setIsLoading(true);
+
+    try {
+      const res = await fetch(`/api/bmkg?type=all&adm4=${encodeURIComponent(selectedCityAdm4)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.gempaTerkini) setGempaTerkini(json.gempaTerkini);
+        if (json.daftarGempa) setDaftarGempa(json.daftarGempa);
+        if (json.cities) setCities(json.cities);
+
+        // Parsing cuaca
+        const weatherRaw = json.cuaca?.data?.[0];
+        if (weatherRaw) {
+          const periodsList: WeatherPeriod[] = [];
+          if (Array.isArray(weatherRaw.cuaca)) {
+            weatherRaw.cuaca.forEach((dayArr: WeatherPeriod[]) => {
+              if (Array.isArray(dayArr)) {
+                dayArr.forEach((item) => periodsList.push(item));
+              }
+            });
+          }
+          setCurrentWeather({
+            lokasi: weatherRaw.lokasi,
+            periods: periodsList.slice(0, 8),
+          });
+        }
+
+        setLastUpdated(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+      }
+    } catch (err) {
+      console.warn("Gagal memuat data BMKG:", err);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [selectedCityAdm4]);
+
+  // Fetch khusus saat ganti kota cuaca
+  const handleSelectCity = async (adm4Code: string) => {
+    setSelectedCityAdm4(adm4Code);
+    setIsLoadingWeather(true);
+    try {
+      const res = await fetch(`/api/bmkg?type=cuaca&adm4=${encodeURIComponent(adm4Code)}`);
+      if (res.ok) {
+        const json = await res.json();
+        const weatherRaw = json.cuaca?.data?.[0];
+        if (weatherRaw) {
+          const periodsList: WeatherPeriod[] = [];
+          if (Array.isArray(weatherRaw.cuaca)) {
+            weatherRaw.cuaca.forEach((dayArr: WeatherPeriod[]) => {
+              if (Array.isArray(dayArr)) {
+                dayArr.forEach((item) => periodsList.push(item));
+              }
+            });
+          }
+          setCurrentWeather({
+            lokasi: weatherRaw.lokasi,
+            periods: periodsList.slice(0, 8),
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Gagal memuat data cuaca kota:", err);
+    } finally {
+      setIsLoadingWeather(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBmkgData();
+    const interval = setInterval(() => {
+      fetchBmkgData();
+    }, 120000); // refresh otomatis tiap 2 menit
+    return () => clearInterval(interval);
+  }, [fetchBmkgData]);
+
+  // Helper warna badge magnitudo
+  const getMagColor = (magStr: string) => {
+    const mag = parseFloat(magStr) || 0;
+    if (mag >= 7.0) return "bg-red-500 text-white border-red-600";
+    if (mag >= 6.0) return "bg-rose-500 text-white border-rose-600";
+    if (mag >= 5.0) return "bg-orange-500 text-white border-orange-600";
+    return "bg-amber-500 text-white border-amber-600";
+  };
+
+  const isTsunamiWarning = (potensi: string) => {
+    const lower = potensi.toLowerCase();
+    return lower.includes("waspada") || lower.includes("siaga") || lower.includes("awas") || lower.includes("potensi tsunami");
+  };
+
+  const activeWeatherItem = currentWeather?.periods?.[0];
+
   return (
-    <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 pb-28 md:pb-12 space-y-8">
+    <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 pb-28 md:pb-16 space-y-8">
       {/* Breadcrumb & Header */}
-      <div>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-soft hover:text-ink mb-3 transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          <span>Kembali ke Beranda</span>
-        </Link>
-        <div className="flex items-center gap-2 mb-2">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-warning-soft text-warning-text border border-warning/20">
-            <Radio className="w-3.5 h-3.5" />
-            <span>Rujukan Resmi BMKG</span>
-          </span>
-          <span className="text-xs text-ink-muted">· Indonesia</span>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-soft hover:text-ink mb-3 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Kembali ke Beranda</span>
+          </Link>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Live API Resmi BMKG</span>
+            </span>
+            <span className="text-xs text-ink-muted">· Real-Time InaTEWS</span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-ink tracking-tight">
+            Informasi Cuaca &amp; Peringatan Dini
+          </h1>
+          <p className="text-xs sm:text-sm text-ink-soft mt-1 leading-relaxed max-w-2xl">
+            Pusat pemantauan kegempaan nasional (InaTEWS) dan prakiraan cuaca kabupaten/kota terhubung langsung dengan sistem Badan Meteorologi, Klimatologi, dan Geofisika (BMKG).
+          </p>
         </div>
-        <h1 className="text-2xl md:text-3xl font-bold text-ink">
-          Informasi Cuaca & Peringatan Dini
-        </h1>
-        <p className="text-sm text-ink-soft mt-1 leading-relaxed">
-          Penyedia data kebencanaan atmosfer dan geofisika resmi Indonesia. SigapBumi merujuk langsung ke sistem Badan Meteorologi, Klimatologi, dan Geofisika (BMKG).
-        </p>
+
+        {/* Tombol Refresh Live */}
+        <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+          {lastUpdated && (
+            <span className="text-[11px] text-ink-muted hidden sm:inline">
+              Pembaruan: {lastUpdated} WIB
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => fetchBmkgData(true)}
+            disabled={isRefreshing}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-line bg-surface hover:bg-slate-50 text-ink font-semibold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-60"
+            title="Muat data terbaru langsung dari server BMKG"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-primary ${isRefreshing ? "animate-spin text-primary" : ""}`} />
+            <span>{isRefreshing ? "Menghubungkan..." : "Perbarui Data"}</span>
+          </button>
+        </div>
       </div>
 
+      {/* Tab Switcher: Gempa Bumi vs Prakiraan Cuaca */}
+      <div className="flex items-center gap-2 border-b border-line pb-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab("gempa")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+            activeTab === "gempa"
+              ? "bg-slate-900 text-white shadow-xs"
+              : "bg-transparent text-ink-soft hover:text-ink hover:bg-slate-100"
+          }`}
+        >
+          <Activity className="w-4 h-4 text-amber-400" />
+          <span>Gempa Bumi &amp; InaTEWS</span>
+          {daftarGempa.length > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-mono">
+              {daftarGempa.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("cuaca")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+            activeTab === "cuaca"
+              ? "bg-slate-900 text-white shadow-xs"
+              : "bg-transparent text-ink-soft hover:text-ink hover:bg-slate-100"
+          }`}
+        >
+          <CloudSun className="w-4 h-4 text-sky-400" />
+          <span>Prakiraan Cuaca Kota</span>
+        </button>
+      </div>
+
+      {/* KONTEN TAB 1: GEMPA BUMI & INATEWS */}
+      {activeTab === "gempa" && (
+        <div className="space-y-6">
+          {/* Hero Card: Gempa Bumi Terkini Real-Time */}
+          {isLoading ? (
+            <div className="bg-surface border border-line rounded-2xl p-8 text-center space-y-3">
+              <RefreshCw className="w-8 h-8 text-primary animate-spin mx-auto" />
+              <p className="text-sm font-bold text-ink">Mengambil Data Gempa Terkini dari BMKG...</p>
+              <p className="text-xs text-ink-muted">Menghubungkan ke pusat data seismik InaTEWS nasional</p>
+            </div>
+          ) : gempaTerkini ? (
+            <div className="bg-surface border border-line rounded-2xl p-5 sm:p-7 shadow-card relative overflow-hidden space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-black shadow-md border ${getMagColor(gempaTerkini.Magnitude)}`}>
+                    <span className="text-xs font-semibold leading-none opacity-90">M</span>
+                    <span className="text-2xl leading-none mt-0.5">{gempaTerkini.Magnitude}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-primary uppercase tracking-wider block">
+                      Aktivitas Seismik Terkini
+                    </span>
+                    <h2 className="text-lg sm:text-xl font-extrabold text-ink leading-tight mt-0.5">
+                      {gempaTerkini.Wilayah}
+                    </h2>
+                  </div>
+                </div>
+
+                {/* Status Tsunami */}
+                <div>
+                  {isTsunamiWarning(gempaTerkini.Potensi) ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold bg-red-100 text-red-800 border border-red-300 animate-pulse">
+                      <AlertTriangle className="w-4 h-4 text-red-600" />
+                      <span>{gempaTerkini.Potensi}</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>{gempaTerkini.Potensi}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Grid Detail Gempa & Shakemap */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                {/* 4 Poin Kunci Gempa */}
+                <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <div className="flex items-center gap-1.5 text-xs text-ink-muted mb-1">
+                      <Clock className="w-3.5 h-3.5 text-orange-500" />
+                      <span>Waktu Gempa (WIB)</span>
+                    </div>
+                    <p className="text-sm font-bold text-ink">{gempaTerkini.Jam}</p>
+                    <p className="text-[11px] text-ink-soft">{gempaTerkini.Tanggal}</p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <div className="flex items-center gap-1.5 text-xs text-ink-muted mb-1">
+                      <Activity className="w-3.5 h-3.5 text-red-500" />
+                      <span>Kedalaman Pusat</span>
+                    </div>
+                    <p className="text-sm font-bold text-ink">{gempaTerkini.Kedalaman}</p>
+                    <p className="text-[11px] text-ink-soft">Hiposentrum di bawah kerak</p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <div className="flex items-center gap-1.5 text-xs text-ink-muted mb-1">
+                      <Compass className="w-3.5 h-3.5 text-blue-500" />
+                      <span>Koordinat Episentrum</span>
+                    </div>
+                    <p className="text-sm font-bold text-ink font-mono">{gempaTerkini.Coordinates}</p>
+                    <p className="text-[11px] text-ink-soft">{gempaTerkini.Lintang} - {gempaTerkini.Bujur}</p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <div className="flex items-center gap-1.5 text-xs text-ink-muted mb-1">
+                      <MapPin className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Wilayah Dirasakan</span>
+                    </div>
+                    <p className="text-sm font-bold text-ink truncate">{gempaTerkini.Dirasakan || "Diteruskan ke posko"}</p>
+                    <p className="text-[11px] text-ink-soft">Skala Intensitas MMI</p>
+                  </div>
+                </div>
+
+                {/* Visual Peta Shakemap BMKG */}
+                <div className="lg:col-span-5 bg-slate-900 rounded-xl overflow-hidden border border-slate-800 flex flex-col justify-between">
+                  <div className="p-3 border-b border-slate-800 flex items-center justify-between text-white text-xs">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Peta Shakemap Resmi BMKG</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400">Peta Guncangan MMI</span>
+                  </div>
+
+                  <div
+                    onClick={() => setIsShakemapOpen(true)}
+                    className="relative aspect-video max-h-48 w-full bg-black flex items-center justify-center cursor-pointer group"
+                    title="Klik untuk memperbesar Shakemap"
+                  >
+                    {gempaTerkini.Shakemap ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={`https://data.bmkg.go.id/DataMKG/TEWS/${gempaTerkini.Shakemap}`}
+                        alt="Peta Shakemap Gempa BMKG"
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <p className="text-xs text-slate-400">Peta visual belum tersedia</p>
+                    )}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <span className="bg-black/80 text-white text-xs px-3 py-1.5 rounded-xl font-bold backdrop-blur-xs flex items-center gap-1.5">
+                        <Eye className="w-4 h-4 text-amber-400" />
+                        Perbesar Shakemap
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 bg-slate-950 text-right">
+                    <a
+                      href="https://inatews.bmkg.go.id"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-bold text-amber-400 hover:text-amber-300 inline-flex items-center gap-1"
+                    >
+                      <span>Buka InaTEWS BMKG Selengkapnya</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Daftar 10 Gempa Bumi Terkini (M 5.0+) */}
+          <div className="bg-surface border border-line rounded-2xl p-5 sm:p-6 shadow-card space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-ink">
+                  Daftar 10 Gempa Bumi Terkini (M 5.0+)
+                </h3>
+                <p className="text-xs text-ink-muted mt-0.5">
+                  Catatan getaran tektonik termutakhir yang terekam sensor seismograf BMKG di seluruh Indonesia
+                </p>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+                Data Realtime
+              </span>
+            </div>
+
+            <div className="divide-y divide-line/70">
+              {daftarGempa.map((gempa, idx) => (
+                <div
+                  key={`${gempa.DateTime}-${idx}`}
+                  className="py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 p-2.5 rounded-xl transition-colors"
+                >
+                  <div className="flex items-start sm:items-center gap-3">
+                    <div className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center font-bold shrink-0 border ${getMagColor(gempa.Magnitude)}`}>
+                      <span className="text-[9px] font-semibold opacity-90 leading-none">M</span>
+                      <span className="text-base leading-none mt-0.5 font-extrabold">{gempa.Magnitude}</span>
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-bold text-ink">
+                        {gempa.Wilayah}
+                      </p>
+                      <div className="flex items-center gap-2 text-[11px] text-ink-soft mt-0.5 flex-wrap">
+                        <span>Kedalaman: <strong>{gempa.Kedalaman}</strong></span>
+                        <span>•</span>
+                        <span>Koordinat: {gempa.Coordinates}</span>
+                        <span>•</span>
+                        <span className="text-ink-muted">{gempa.Tanggal}, {gempa.Jam}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="self-end sm:self-center shrink-0">
+                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
+                      {gempa.Potensi}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KONTEN TAB 2: PRAKIRAAN CUACA KOTA BMKG */}
+      {activeTab === "cuaca" && (
+        <div className="space-y-6">
+          {/* Pemilih Kota Besar */}
+          <div className="bg-surface border border-line rounded-2xl p-5 shadow-card space-y-3">
+            <span className="text-xs font-bold text-primary uppercase tracking-wider block">
+              Pilih Wilayah / Kota Prakiraan Cuaca
+            </span>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+              {cities.map((city) => (
+                <button
+                  key={city.adm4}
+                  type="button"
+                  onClick={() => handleSelectCity(city.adm4)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    selectedCityAdm4 === city.adm4
+                      ? "bg-primary text-white shadow-xs"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  {city.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Kartu Cuaca Kota Terpilih */}
+          {isLoadingWeather ? (
+            <div className="bg-surface border border-line rounded-2xl p-8 text-center space-y-3">
+              <RefreshCw className="w-8 h-8 text-primary animate-spin mx-auto" />
+              <p className="text-sm font-bold text-ink">Memuat Prakiraan Cuaca BMKG...</p>
+            </div>
+          ) : currentWeather && activeWeatherItem ? (
+            <div className="bg-gradient-to-br from-sky-500/10 via-white to-amber-500/10 border border-sky-200/80 rounded-2xl p-6 sm:p-8 shadow-card space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-sky-700 mb-1">
+                    <MapPin className="w-4 h-4" />
+                    <span>{currentWeather.lokasi?.kotkab || "Kota Terpilih"}, {currentWeather.lokasi?.provinsi}</span>
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-ink">
+                    {activeWeatherItem.weather_desc}
+                  </h2>
+                  <p className="text-xs text-ink-soft mt-0.5">
+                    Prakiraan resmi BMKG untuk waktu setempat: {activeWeatherItem.local_datetime}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {activeWeatherItem.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={activeWeatherItem.image}
+                      alt={activeWeatherItem.weather_desc}
+                      className="w-16 h-16 object-contain drop-shadow-sm"
+                    />
+                  )}
+                  <div>
+                    <span className="text-4xl sm:text-5xl font-black text-ink">
+                      {activeWeatherItem.t}°
+                    </span>
+                    <span className="text-base text-ink-muted ml-0.5">C</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3 Parameter Utama */}
+              <div className="grid grid-cols-3 gap-3 pt-2 border-t border-sky-100">
+                <div className="p-3 rounded-xl bg-white/80 border border-sky-100 flex items-center gap-3">
+                  <Droplets className="w-5 h-5 text-sky-600 shrink-0" />
+                  <div>
+                    <p className="text-[11px] text-ink-muted">Kelembapan</p>
+                    <p className="text-sm font-bold text-ink">{activeWeatherItem.hu}%</p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-white/80 border border-sky-100 flex items-center gap-3">
+                  <Wind className="w-5 h-5 text-teal-600 shrink-0" />
+                  <div>
+                    <p className="text-[11px] text-ink-muted">Kecepatan Angin</p>
+                    <p className="text-sm font-bold text-ink">{activeWeatherItem.ws} km/j</p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-white/80 border border-sky-100 flex items-center gap-3">
+                  <Compass className="w-5 h-5 text-indigo-600 shrink-0" />
+                  <div>
+                    <p className="text-[11px] text-ink-muted">Arah Angin</p>
+                    <p className="text-sm font-bold text-ink">Ke {activeWeatherItem.wd}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Prakiraan Jam-jaman */}
+              <div className="space-y-2 pt-2">
+                <span className="text-xs font-bold text-ink block">
+                  Prakiraan Waktu Berikutnya:
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {currentWeather.periods?.slice(1, 5).map((p, i) => (
+                    <div key={i} className="p-3 rounded-xl bg-white border border-slate-200 text-center space-y-1 shadow-2xs">
+                      <p className="text-[11px] font-semibold text-ink-muted">{p.local_datetime.split(" ")[1]?.slice(0, 5) || p.local_datetime} WIB</p>
+                      {p.image && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.image} alt={p.weather_desc} className="w-8 h-8 mx-auto object-contain" />
+                      )}
+                      <p className="text-xs font-bold text-ink">{p.t}°C</p>
+                      <p className="text-[10px] text-ink-soft truncate">{p.weather_desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+
       {/* Official Source Transparency Box */}
-      <div className="bg-surface border border-line rounded-lg p-5 shadow-card space-y-3">
+      <div className="bg-surface border border-line rounded-xl p-5 shadow-card space-y-2">
         <div className="flex items-start gap-3">
           <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
           <div className="space-y-1 text-xs text-ink-soft">
@@ -52,100 +564,40 @@ export default function CuacaPage() {
               Keterbukaan Data Sumber (Data Truthfulness)
             </p>
             <p className="leading-relaxed">
-              Untuk menjamin keandalan data keselamatan masyarakat dan menghindari misinformasi, data peringatan dini cuaca, siklon tropis, dan gempa bumi M 5.0+ wajib diverifikasi dari kanal terpusat BMKG.
+              Seluruh data gempa bumi dan cuaca di atas diambil langsung melalui kanal terbuka <strong>Badan Meteorologi, Klimatologi, dan Geofisika (BMKG)</strong> Republik Indonesia. Pembaruan data terjadi secara otomatis setiap ada rilis gempa baru dari stasiun seismik nasional.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Official Portals Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* BMKG Cuaca Card */}
-        <div className="bg-surface border border-line rounded-lg p-5 shadow-card flex flex-col justify-between space-y-4">
-          <div className="space-y-3">
-            <div className="w-10 h-10 rounded-md bg-info-soft text-info flex items-center justify-center">
-              <CloudSun className="w-5 h-5" />
+      {/* Modal Zoom Shakemap */}
+      {isShakemapOpen && gempaTerkini?.Shakemap && (
+        <div
+          onClick={() => setIsShakemapOpen(false)}
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+        >
+          <div className="relative max-w-2xl w-full bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl p-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-3 border-b border-slate-800 text-white">
+              <span className="font-bold text-sm">Peta Shakemap Guncangan Gempa BMKG</span>
+              <button
+                type="button"
+                onClick={() => setIsShakemapOpen(false)}
+                className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white cursor-pointer"
+              >
+                Tutup
+              </button>
             </div>
-            <div>
-              <h2 className="text-base font-bold text-ink">
-                Peringatan Dini Cuaca & Angin Kencang
-              </h2>
-              <p className="text-xs text-ink-muted mt-0.5">
-                Prakiraan potensi hujan lebat, kilat, dan cuaca ekstrem berbasis kabupaten/kota.
-              </p>
+            <div className="p-2 flex items-center justify-center bg-black">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://data.bmkg.go.id/DataMKG/TEWS/${gempaTerkini.Shakemap}`}
+                alt="Shakemap BMKG Fullscreen"
+                className="max-h-[75vh] w-auto object-contain rounded"
+              />
             </div>
-            <ul className="text-xs text-ink-soft space-y-1.5 list-disc list-inside">
-              <li>Peringatan cuaca ekstrem 3 harian</li>
-              <li>Peta citra radar cuaca real-time</li>
-              <li>Prakiraan tinggi gelombang laut dan pasang rob</li>
-            </ul>
-          </div>
-
-          <a
-            href="https://www.bmkg.go.id/cuaca/peringatan-dini-cuaca.bmkg"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors shadow-sm focus-visible:outline-primary"
-          >
-            <span>Buka Peringatan Cuaca BMKG</span>
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        </div>
-
-        {/* BMKG Gempa Card */}
-        <div className="bg-surface border border-line rounded-lg p-5 shadow-card flex flex-col justify-between space-y-4">
-          <div className="space-y-3">
-            <div className="w-10 h-10 rounded-md bg-warning-soft text-warning flex items-center justify-center">
-              <Activity className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-ink">
-                Pusat Gempa Bumi & Tsunami (InaTEWS)
-              </h2>
-              <p className="text-xs text-ink-muted mt-0.5">
-                Monitoring getaran gempa bumi berkekuatan M 5.0+ dan potensi tsunami di seluruh Indonesia.
-              </p>
-            </div>
-            <ul className="text-xs text-ink-soft space-y-1.5 list-disc list-inside">
-              <li>Informasi gempa bumi dirasakan terkini</li>
-              <li>Peta episenter dan kedalaman hiposenter</li>
-              <li>Status potensi tsunami (Waspada, Siaga, Awas)</li>
-            </ul>
-          </div>
-
-          <a
-            href="https://inatews.bmkg.go.id"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md bg-ink hover:bg-ink-soft text-white text-xs font-semibold transition-colors shadow-sm focus-visible:outline-ink"
-          >
-            <span>Buka Portal InaTEWS BMKG</span>
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        </div>
-      </div>
-
-      {/* Practical Safety Tips */}
-      <div className="bg-bg border border-line rounded-lg p-5 space-y-3">
-        <h3 className="text-sm font-bold text-ink flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-warning" />
-          <span>Panduan Saat Peringatan Cuaca Ekstrem Aktif</span>
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-ink-soft">
-          <div className="bg-surface p-3 rounded border border-line">
-            <p className="font-semibold text-ink mb-1">Angin Kencang</p>
-            <p>Jauhi pohon rindang tua, tiang listrik, dan baliho reklame besar saat hujan deras.</p>
-          </div>
-          <div className="bg-surface p-3 rounded border border-line">
-            <p className="font-semibold text-ink mb-1">Potensi Banjir</p>
-            <p>Simpan dokumen penting di tempat tinggi dan amankan instalasi listrik rumah.</p>
-          </div>
-          <div className="bg-surface p-3 rounded border border-line">
-            <p className="font-semibold text-ink mb-1">Wilayah Pesisir</p>
-            <p>Hindari berlayar atau beraktivitas di bibir pantai saat peringatan gelombang tinggi aktif.</p>
           </div>
         </div>
-      </div>
+      )}
     </main>
   );
 }
