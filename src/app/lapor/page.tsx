@@ -416,6 +416,31 @@ function LaporForm() {
     saveLocalReport(localReportItem);
     registerMyReportTrackingCode(trackingCode, currentUser?.email);
 
+    // Kirim sinkronisasi ke API server terpusat (/api/reports) agar data tersebar ke seluruh browser
+    if (typeof window !== "undefined") {
+      fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: reportId,
+          tracking_code: trackingCode,
+          disaster_type: formData.disaster_type,
+          title: formData.title,
+          description: formData.description,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+          address: formData.address,
+          province: formData.province,
+          regency: formData.regency,
+          reporter_id: isUuid && currentUser?.id ? currentUser.id : undefined,
+          reporter_name: finalReporterName,
+          reporter_phone: finalReporterPhone,
+          image_url: photoPreview,
+          priority: formData.priority,
+        }),
+      }).catch((e) => console.warn("API report sync background notice:", e));
+    }
+
     // 2. Coba simpan ke Supabase jika database/jaringan tersedia
     let isSavedRemote = false;
     try {

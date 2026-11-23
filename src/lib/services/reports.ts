@@ -701,6 +701,77 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
     console.warn("fetchLiveReports Supabase warning:", err);
   }
 
+  // Coba ambil dari endpoint sinkronisasi lintas browser /api/reports
+  if (typeof window !== "undefined") {
+    try {
+      const apiRes = await fetch("/api/reports", { cache: "no-store" });
+      if (apiRes.ok) {
+        const apiJson = await apiRes.json();
+        if (apiJson.success && Array.isArray(apiJson.reports)) {
+          apiJson.reports.forEach((row: any) => {
+            const coords = parsePostGISPoint(row.location) || {
+              lat: typeof row.lat === "number" ? row.lat : -6.2088,
+              lng: typeof row.lng === "number" ? row.lng : 106.8456,
+            };
+            const disaster = (row.disaster_type || "lainnya") as DisasterType;
+            const agency = inferAgencyFromDisaster(disaster);
+            const rawDesc = row.description || "";
+            const extractedPhoto = extractPhotoFromDescription(rawDesc) || row.image_url;
+            const extractedPhone = extractPhoneFromDescription(rawDesc) || row.phone_number;
+            const extractedReporter = extractReporterNameFromDescription(rawDesc) || row.reporter_name;
+            const cleanDesc = cleanReportDescription(rawDesc);
+            const { province: inferredProv, regency: inferredReg } = inferRegionFromAddress(row.address);
+
+            const isSos = Boolean(
+              (row.tracking_code || "").toUpperCase().startsWith("SOS-") ||
+              row.title?.toUpperCase().includes("SOS")
+            );
+
+            const priority = isSos
+              ? "kritis"
+              : row.status === "selesai"
+              ? "rendah"
+              : (row.priority_score || 0) >= 70
+              ? "tinggi"
+              : (row.priority_score || 0) >= 35
+              ? "sedang"
+              : "rendah";
+
+            const apiItem: LiveReportItem = {
+              id: row.id,
+              tracking_code: row.tracking_code,
+              disaster_type: disaster,
+              target_agency: agency,
+              title: removeEmojis(row.title || "Laporan Warga"),
+              description: cleanDesc,
+              address: removeEmojis(row.address) || "Lokasi Koordinat GPS Terdeteksi",
+              province: row.province || inferredProv,
+              regency: row.regency || inferredReg,
+              lat: coords.lat,
+              lng: coords.lng,
+              status: (row.status || "diterima") as ReportStatus,
+              priority,
+              confirmation_count: row.confirmation_count || 0,
+              created_at: formatReportTime(row.created_at || new Date().toISOString()),
+              raw_created_at: row.created_at || new Date().toISOString(),
+              image_url: extractedPhoto,
+              phone_number: extractedPhone,
+              reporter_name: extractedReporter,
+              is_demo: false,
+            };
+
+            // Tambahkan jika belum ada di liveItems
+            if (!liveItems.some((x) => x.tracking_code === apiItem.tracking_code || x.id === apiItem.id)) {
+              liveItems.push(apiItem);
+            }
+          });
+        }
+      }
+    } catch (apiErr) {
+      console.warn("fetchLiveReports /api/reports fallback notice:", apiErr);
+    }
+  }
+
   // Gabungkan laporan: Mock bawaan + Supabase live + Local Reports perangkat (status lokal selalu menang)
   const mergedMap = new Map<string, LiveReportItem>();
 
@@ -921,7 +992,130 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
     console.warn("fetchReportDetail Supabase warning:", err);
   }
 
-  // 2. Cek apakah ada di cache lokal perangkat
+  // 2. Cek ke endpoint sinkronisasi API server terpusat /api/reports?code=...
+  if (typeof window !== "undefined") {
+    try {
+      const apiRes = await fetch(`/api/reports?code=${encodeURIComponent(code)}`, { cache: "no-store" });
+      if (apiRes.ok) {
+        const apiJson = await apiRes.json();
+        if (apiJson.success && apiJson.report) {
+          const row = apiJson.report;
+          const coords = parsePostGISPoint(row.location) || {
+            lat: typeof row.lat === "number" ? row.lat : -6.2088,
+            lng: typeof row.lng === "number" ? row.lng : 106.8456,
+          };
+          const disaster = (row.disaster_type || "lainnya") as DisasterType;
+          let agency = inferAgencyFromDisaster(disaster);
+
+          const isSos = Boolean(
+            (row.tracking_code || "").toUpperCase().startsWith("SOS-") ||
+            (row.title || "").toUpperCase().includes("SOS")
+          );
+
+          const rawDesc = row.description || "";
+          const photoUrl =
+            (Array.isArray(row.report_media) && row.report_media.length > 0
+              ? row.report_media[0].media_url
+              : undefined) ||
+            extractPhotoFromDescription(rawDesc) ||
+            row.image_url;
+
+          const phoneNumber =
+            row.reporter_phone ||
+            extractPhoneFromDescription(rawDesc) ||
+            row.phone_number ||
+            undefined;
+          const reporterName =
+            row.reporter_name ||
+            extractReporterNameFromDescription(rawDesc) ||
+            undefined;
+          const cleanDesc = cleanReportDescription(rawDesc);
+
+          const logs = (row.report_status_logs || []) as Array<{
+            status: ReportStatus;
+            note?: string;
+            created_at: string;
+          }>;
+
+          const timeline: TimelineStep[] =
+            logs.length > 0
+              ? logs.map((log) => ({
+                  status: log.status,
+                  label:
+                    log.status === "diterima"
+                      ? "Laporan Diterima Sistem"
+                      : log.status === "diverifikasi"
+                      ? "Diverifikasi Petugas"
+                      : log.status === "ditindaklanjuti"
+                      ? "Penanganan Operasional Berjalan"
+                      : log.status === "selesai"
+                      ? "Penanganan Selesai"
+                      : "Laporan Ditolak",
+                  timestamp: formatReportTime(log.created_at),
+                  note: log.note || "Status diperbarui oleh sistem posko.",
+                }))
+              : [
+                  {
+                    status: (row.status || "diterima") as ReportStatus,
+                    label:
+                      row.status === "diterima"
+                        ? "Laporan Diterima Sistem"
+                        : "Status Terkini",
+                    timestamp: formatReportTime(row.created_at || new Date().toISOString()),
+                    note: "Laporan tersimpan di database SigapBumi.",
+                  },
+                ];
+
+          const { province: inferredProv, regency: inferredReg } = inferRegionFromAddress(row.address);
+          const priority = isSos
+            ? "kritis"
+            : row.status === "selesai"
+            ? "rendah"
+            : (row.priority_score || 0) >= 70
+            ? "tinggi"
+            : (row.priority_score || 0) >= 35
+            ? "sedang"
+            : "rendah";
+
+          const priority_label = isSos
+            ? "Kritis"
+            : priority === "tinggi"
+            ? "Tinggi"
+            : priority === "sedang"
+            ? "Sedang"
+            : "Rendah";
+
+          return {
+            id: row.id,
+            tracking_code: row.tracking_code,
+            disaster_type: disaster,
+            target_agency: agency,
+            title: removeEmojis(row.title || "Laporan Warga"),
+            description: cleanDesc,
+            address: removeEmojis(row.address) || "Lokasi Koordinat GPS Terdeteksi",
+            province: row.province || inferredProv,
+            regency: row.regency || inferredReg,
+            lat: coords.lat,
+            lng: coords.lng,
+            status: (row.status || "diterima") as ReportStatus,
+            priority,
+            priority_label,
+            confirmation_count: row.confirmation_count || 0,
+            created_at: formatReportTime(row.created_at || new Date().toISOString()),
+            timeline,
+            image_url: photoUrl,
+            phone_number: phoneNumber,
+            reporter_name: reporterName,
+            is_demo: false,
+          };
+        }
+      }
+    } catch (apiErr) {
+      console.warn("fetchReportDetail /api/reports fallback notice:", apiErr);
+    }
+  }
+
+  // 3. Cek apakah ada di cache lokal perangkat
   const localItems = getLocalReports();
   const localFound = localItems.find((r) => r.tracking_code === code);
   if (localFound) {
