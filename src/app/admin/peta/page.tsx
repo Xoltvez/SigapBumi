@@ -47,6 +47,7 @@ import {
 } from "@/lib/services/reports";
 import { fetchLiveSosAlerts, updateSosAlertStatus } from "@/lib/services/sos";
 import { calculateRoute, type RouteResult } from "@/lib/services/routing";
+import { getAdminSettings, saveAdminSettings } from "@/lib/services/settings";
 import { supabase } from "@/lib/supabase/client";
 import DisasterIcon from "@/components/common/DisasterIcon";
 import { useAdmin } from "@/components/layout/AdminShell";
@@ -98,6 +99,26 @@ export default function AdminPetaPage() {
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLiveNavigating, setIsLiveNavigating] = useState(false);
+
+  // Preferensi gaya layer peta (Terang, Gelap, Satelit) tersinkronisasi dengan Pengaturan Posko
+  const [mapLayer, setMapLayer] = useState<"light" | "dark" | "satellite">(() => {
+    return typeof window !== "undefined" ? getAdminSettings().defaultMapLayer || "light" : "light";
+  });
+
+  useEffect(() => {
+    const handleSettingsUpdated = (e: any) => {
+      if (e.detail?.defaultMapLayer) {
+        setMapLayer(e.detail.defaultMapLayer);
+      }
+    };
+    window.addEventListener("sigapbumi:settings-updated", handleSettingsUpdated);
+    return () => window.removeEventListener("sigapbumi:settings-updated", handleSettingsUpdated);
+  }, []);
+
+  const handleSwitchLayer = (layer: "light" | "dark" | "satellite") => {
+    setMapLayer(layer);
+    saveAdminSettings({ defaultMapLayer: layer });
+  };
 
   // Pantau lokasi GPS petugas secara real-time di background
   useEffect(() => {
@@ -493,8 +514,51 @@ export default function AdminPetaPage() {
             routeCoords={activeRoute?.coordinates || null}
             isLiveNavigating={isLiveNavigating}
             userLocationCoords={userLocation ? [userLocation.lat, userLocation.lng] : null}
+            mapLayer={mapLayer}
           />
         </div>
+
+        {/* Mobile Quick Layer Switcher */}
+        {!isLiveNavigating && (
+          <div className="absolute top-3 left-3 z-30 flex items-center gap-1 p-1 bg-white/95 backdrop-blur-md rounded-xl border border-slate-200/90 shadow-md text-[10px] font-bold pointer-events-auto">
+            <button
+              type="button"
+              onClick={() => handleSwitchLayer("light")}
+              className={`px-2 py-0.5 rounded-lg transition-all ${
+                mapLayer === "light"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+              title="Terang (OpenStreetMap)"
+            >
+              ☀️
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchLayer("dark")}
+              className={`px-2 py-0.5 rounded-lg transition-all ${
+                mapLayer === "dark"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+              title="Mode Malam (Carto Dark)"
+            >
+              🌙
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchLayer("satellite")}
+              className={`px-2 py-0.5 rounded-lg transition-all ${
+                mapLayer === "satellite"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+              title="Citra Satelit"
+            >
+              🛰️
+            </button>
+          </div>
+        )}
 
         {/* ============================================================== */}
         {/* HUD NAVIGASI TAKTIS PUSDALOPS SIGAPBUMI (MOBILE)               */}
@@ -1238,6 +1302,7 @@ export default function AdminPetaPage() {
               routeCoords={activeRoute?.coordinates || null}
               isLiveNavigating={isLiveNavigating}
               userLocationCoords={userLocation ? [userLocation.lat, userLocation.lng] : null}
+              mapLayer={mapLayer}
             />
 
             {/* ============================================================== */}
@@ -1353,6 +1418,51 @@ export default function AdminPetaPage() {
               <div className="absolute top-3.5 left-3.5 z-20 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-200/90 shadow-sm text-xs font-semibold text-slate-700 flex items-center gap-2 pointer-events-none animate-in fade-in duration-200">
                 <MapPin className="w-4 h-4 text-orange-500" />
                 <span>Klik pin bencana pada peta untuk menampilkan lembar kerja taktis</span>
+              </div>
+            )}
+
+            {/* Quick Layer Switcher Pill Desktop (Terang, Mode Malam, Satelit) */}
+            {!isLiveNavigating && (
+              <div className="absolute bottom-4 left-4 z-20 flex items-center gap-1 p-1 bg-white/95 backdrop-blur-md rounded-xl border border-slate-200/90 shadow-sm text-[11px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchLayer("light")}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                    mapLayer === "light"
+                      ? "bg-slate-900 text-white shadow-2xs"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                  title="Gaya OpenStreetMap Terang"
+                >
+                  <span>☀️</span>
+                  <span>Terang</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchLayer("dark")}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                    mapLayer === "dark"
+                      ? "bg-slate-900 text-white shadow-2xs"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                  title="Gaya Carto Dark (Mode Malam)"
+                >
+                  <span>🌙</span>
+                  <span>Malam</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchLayer("satellite")}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                    mapLayer === "satellite"
+                      ? "bg-slate-900 text-white shadow-2xs"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                  title="Citra Satelit Topografi"
+                >
+                  <span>🛰️</span>
+                  <span>Satelit</span>
+                </button>
               </div>
             )}
 

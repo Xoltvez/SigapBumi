@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { DisasterType, ReportStatus } from "@/types";
+import { getAdminSettings } from "@/lib/services/settings";
 
 export interface MapPoint {
   id: string;
@@ -32,6 +33,53 @@ interface DisasterMapProps {
   routeCoords?: [number, number][] | null;
   isLiveNavigating?: boolean;
   userLocationCoords?: [number, number] | null;
+  mapLayer?: "light" | "dark" | "satellite";
+}
+
+/**
+ * Factory untuk menghasilkan Tile Layer Leaflet sesuai mode (Terang, Gelap, Satelit)
+ */
+function createBaseTileLayer(layerType: "light" | "dark" | "satellite"): L.TileLayer {
+  if (layerType === "dark") {
+    return L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> kontributor &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
+      maxZoom: 20,
+      subdomains: "abcd",
+    });
+  }
+
+  if (layerType === "satellite") {
+    return L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      {
+        attribution:
+          'Citra Satelit &copy; <a href="https://www.esri.com" target="_blank" rel="noopener noreferrer">Esri</a>, Maxar, Earthstar Geographics',
+        maxZoom: 19,
+      }
+    );
+  }
+
+  // Default: OpenStreetMap Light
+  const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> kontributor',
+    maxZoom: 19,
+    subdomains: ["a", "b", "c"],
+  });
+
+  osmLayer.on("tileerror", (error: L.TileEvent) => {
+    const tileImg = error.tile as HTMLImageElement;
+    if (tileImg && !tileImg.dataset.fallback) {
+      tileImg.dataset.fallback = "1";
+      const coords = error.coords;
+      if (coords) {
+        tileImg.src = `https://a.tile.openstreetmap.fr/osmfr/${coords.z}/${coords.x}/${coords.y}.png`;
+      }
+    }
+  });
+
+  return osmLayer;
 }
 
 // Validasi keamanan koordinat geospasial agar tidak menyebabkan runtime exception Leaflet NaN
@@ -200,9 +248,11 @@ export default function DisasterMap({
   routeCoords = null,
   isLiveNavigating = false,
   userLocationCoords = null,
+  mapLayer,
 }: DisasterMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
@@ -256,27 +306,14 @@ export default function DisasterMap({
       worldCopyJump: false,
     });
 
-    // Ubin peta OpenStreetMap resmi (100% gratis, tanpa API Key, tanpa watermark)
-    const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> kontributor',
-      maxZoom: 19,
-      subdomains: ["a", "b", "c"],
-    });
-
-    osmLayer.on("tileerror", (error: L.TileEvent) => {
-      // Fallback mulus ke mirror OpenStreetMap jika server utama lambat
-      const tileImg = error.tile as HTMLImageElement;
-      if (tileImg && !tileImg.dataset.fallback) {
-        tileImg.dataset.fallback = "1";
-        const coords = error.coords;
-        if (coords) {
-          tileImg.src = `https://a.tile.openstreetmap.fr/osmfr/${coords.z}/${coords.x}/${coords.y}.png`;
-        }
-      }
-    });
-
-    osmLayer.addTo(map);
+    // Ubin peta Leaflet dinamis sesuai mode (OpenStreetMap Terang, Carto Dark Mode Malam, atau Citra Satelit)
+    const initialLayerType =
+      mapLayer ||
+      (typeof window !== "undefined" ? getAdminSettings().defaultMapLayer || "light" : "light") ||
+      "light";
+    const baseLayer = createBaseTileLayer(initialLayerType);
+    baseLayer.addTo(map);
+    tileLayerRef.current = baseLayer;
 
     const markersGroup = L.layerGroup().addTo(map);
     markersLayerRef.current = markersGroup;
@@ -483,6 +520,49 @@ export default function DisasterMap({
       mapInstanceRef.current = null;
     };
   }, []);
+
+  // Update tile layer secara real-time saat prop mapLayer atau event pengaturan posko berubah
+  useEffect(() => {
+    const applyLayer = (layerName: "light" | "dark" | "satellite") => {
+      if (!mapInstanceRef.current) return;
+      if (tileLayerRef.current) {
+        try {
+          mapInstanceRef.current.removeLayer(tileLayerRef.current);
+        } catch { }
+      }
+      const newLayer = createBaseTileLayer(layerName);
+      newLayer.addTo(mapInstanceRef.current);
+      newLayer.bringToBack();
+      tileLayerRef.current = newLayer;
+    };
+
+    const target =
+      mapLayer ||
+      (typeof window !== "undefined" ? getAdminSettings().defaultMapLayer || "light" : "light") ||
+      "light";
+
+    applyLayer(target);
+
+    const handleSettingsUpdated = (e: any) => {
+      if (e.detail?.defaultMapLayer && !mapLayer) {
+        applyLayer(e.detail.defaultMapLayer);
+      }
+    };
+
+    const handleCustomLayerChange = (e: any) => {
+      if (e.detail?.layer) {
+        applyLayer(e.detail.layer);
+      }
+    };
+
+    window.addEventListener("sigapbumi:settings-updated", handleSettingsUpdated);
+    window.addEventListener("sigapbumi:map-layer-change", handleCustomLayerChange);
+
+    return () => {
+      window.removeEventListener("sigapbumi:settings-updated", handleSettingsUpdated);
+      window.removeEventListener("sigapbumi:map-layer-change", handleCustomLayerChange);
+    };
+  }, [mapLayer]);
 
   // Pan to selected point and open popup when selectedPointId changes with smooth flight animation
   useEffect(() => {
