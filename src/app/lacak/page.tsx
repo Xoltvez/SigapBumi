@@ -25,8 +25,6 @@ import {
   Shield,
   Phone,
   Share2,
-  MessageCircle,
-  Send,
 } from "lucide-react";
 import { TimelineStatus, type TimelineStep } from "@/components/laporan/TimelineStatus";
 import type { DisasterType, ReportStatus, SosAssistanceType } from "@/types";
@@ -197,46 +195,6 @@ function LacakContent() {
     navigator.clipboard.writeText(url);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2200);
-  };
-
-  const handleNativeShare = async (report: ReportDetail) => {
-    const url = getShareUrl(report.tracking_code);
-    const shareData = {
-      title: `Pantau Laporan Bencana: ${report.tracking_code}`,
-      text: `Pantau perkembangan laporan bencana "${report.title}" di SigapBumi:\n`,
-      url: url,
-    };
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share(shareData);
-        return;
-      } catch {
-        // User cancelled or unsupported, fallback to modal
-      }
-    }
-    setIsShareModalOpen(true);
-  };
-
-  const getWhatsAppShareUrl = (report: ReportDetail) => {
-    const url = getShareUrl(report.tracking_code);
-    const statusLabel =
-      report.status === "ditindaklanjuti"
-        ? "Dalam Proses / Menuju Lokasi"
-        : report.status === "selesai"
-        ? "Selesai Ditangani"
-        : report.status === "diverifikasi"
-        ? "Telah Diverifikasi Posko"
-        : report.status.toUpperCase();
-
-    const message =
-      `🚨 *Pantau Perkembangan Laporan Bencana - SigapBumi*\n\n` +
-      `📋 *Kode Lacak:* ${report.tracking_code}\n` +
-      `🏷️ *Laporan:* ${report.title}\n` +
-      `📍 *Lokasi:* ${report.location}\n` +
-      `⏱️ *Status Terkini:* ${statusLabel}\n\n` +
-      `Pantau tahapan tindak lanjut dan respon petugas secara transparan melalui tautan ini:\n${url}`;
-
-    return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   };
 
   useEffect(() => {
@@ -946,33 +904,6 @@ function LacakContent() {
                     <Copy className="w-4 h-4" />
                   )}
                   <span>{linkCopied ? "Tersalin" : "Salin Link"}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Tombol Opsi Berbagi Cepat */}
-            <div className="space-y-2 pt-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
-                Kirim Langsung Melalui:
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <a
-                  href={getWhatsAppShareUrl(activeReport)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold transition-all shadow-sm"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Kirim ke WhatsApp</span>
-                </a>
-
-                <button
-                  type="button"
-                  onClick={() => handleNativeShare(activeReport)}
-                  className="flex items-center justify-center gap-2 h-11 px-4 rounded-xl border border-line bg-surface hover:bg-bg text-ink text-xs font-bold transition-all shadow-2xs"
-                >
-                  <Send className="w-4 h-4 text-primary" />
-                  <span>Aplikasi Lainnya</span>
                 </button>
               </div>
             </div>
