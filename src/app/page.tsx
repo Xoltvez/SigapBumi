@@ -437,6 +437,21 @@ export default function HomePage() {
             { opacity: 1, scale: 1, duration: 0.6, delay: 1, ease: "back.out(1.5)" }
           );
         }
+
+        // Rolling Counter untuk "1.420+ Warga Melaporkan"
+        const citizenCounter = heroCardRef.current.querySelector(".gsap-citizen-counter");
+        if (citizenCounter) {
+          const counterObj = { val: 0 };
+          gsap.to(counterObj, {
+            val: 1420,
+            duration: 2,
+            delay: 0.4,
+            ease: "power2.out",
+            onUpdate: () => {
+              citizenCounter.textContent = Math.round(counterObj.val).toLocaleString("id-ID");
+            },
+          });
+        }
       }
 
       // =========================================================================
@@ -563,26 +578,6 @@ export default function HomePage() {
               },
             }
           );
-        }
-
-        // Rolling Number Counter untuk Persentase Respons Posko
-        const statCounter = reportsSectionRef.current.querySelector(".gsap-stat-counter");
-        if (statCounter) {
-          const targetVal = parseFloat(resolvedRate) || 98.5;
-          const counterObj = { val: 0 };
-          gsap.to(counterObj, {
-            val: targetVal,
-            duration: 1.8,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: reportsSectionRef.current,
-              start: "top 82%",
-              toggleActions: "play none none none",
-            },
-            onUpdate: () => {
-              statCounter.textContent = counterObj.val.toFixed(1) + "%";
-            },
-          });
         }
 
         if (filterTabs) {
@@ -989,7 +984,9 @@ export default function HomePage() {
                   {/* Report Count */}
                   <div className="min-w-0">
                     <div className="text-xs sm:text-sm font-black text-white tracking-tight flex items-center gap-1.5">
-                      <span>1.420+ Warga Melaporkan</span>
+                      <span>
+                        <span className="gsap-citizen-counter font-mono">1.420</span>+ Warga Melaporkan
+                      </span>
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     </div>
                     <p className="text-[10px] text-slate-400 truncate">
@@ -1127,15 +1124,9 @@ export default function HomePage() {
       >
         <div className="gsap-rep-header opacity-0 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 id="laporan-terkini-title" className="text-xl md:text-2xl font-bold text-ink">
-                Laporan Kejadian Terkini
-              </h2>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="gsap-stat-counter">{resolvedRate}%</span> Tertangani
-              </span>
-            </div>
+            <h2 id="laporan-terkini-title" className="text-xl md:text-2xl font-bold text-ink">
+              Laporan Kejadian Terkini
+            </h2>
             <p className="text-xs sm:text-sm text-ink-soft mt-1">
               Data insiden terverifikasi posko terpadu dari seluruh penjuru Indonesia
             </p>
