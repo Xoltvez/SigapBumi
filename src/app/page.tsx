@@ -787,11 +787,7 @@ export default function HomePage() {
 
           {/* Right Column: Interactive Quick-Report Bento Card (Compact - hidden on mobile) */}
           <div ref={heroCardRef} className="hidden lg:block lg:col-span-5 relative max-w-[420px] mx-auto lg:max-w-none w-full [perspective:1000px]">
-            {/* Background Geometric Red/Orange Blob Accent */}
-            <div
-              aria-hidden="true"
-              className="absolute -top-3 -right-3 w-36 h-36 rounded-full bg-gradient-to-br from-red-500/70 to-orange-500/70 blur-md -z-10"
-            />
+            {/* Background Blob Accent */}
             <div
               aria-hidden="true"
               className="absolute -bottom-4 -left-4 w-32 h-32 rounded-2xl bg-orange-600/25 blur-lg -z-10"
