@@ -73,7 +73,8 @@ const DEFAULT_REPORTS: AdminReportRow[] = [];
 
 // Helper penyaring kewenangan laporan strictly per instansi / role
 export function checkReportBelongsToUnit(r: AdminReportRow, unit: string): boolean {
-  if (unit === "semua" || unit === "pemerintahan") return true;
+  // Pemerintahan dan BNPB/BPBD adalah Pusat Komando Penanggulangan Bencana Terpadu yang mencakup seluruh data masuk
+  if (unit === "semua" || unit === "pemerintahan" || unit === "bnpb_bpbd") return true;
 
   const titleUpper = (r.title || "").toUpperCase();
   const trackingUpper = (r.tracking_code || "").toUpperCase();
@@ -357,8 +358,14 @@ function LaporanContent() {
       )
       .subscribe();
 
+    // Polling berkala setiap 10 detik agar data lintas browser / profil selalu ter-update secara otomatis
+    const pollInterval = setInterval(() => {
+      loadData();
+    }, 10000);
+
     return () => {
       clearTimeout(timer);
+      clearInterval(pollInterval);
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:sos-created", handleLocalUpdate);
         window.removeEventListener("storage", handleLocalUpdate);

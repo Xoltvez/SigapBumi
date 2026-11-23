@@ -420,6 +420,12 @@ function LaporForm() {
     let isSavedRemote = false;
     try {
       const supabase = createClient();
+      
+      // Gabungkan wilayah ke alamat lengkap agar tersimpan rapi tanpa error kolom schema
+      const fullAddress = [formData.address, formData.regency, formData.province]
+        .filter(Boolean)
+        .join(", ");
+
       const insertPayload: Record<string, unknown> = {
         id: reportId,
         tracking_code: trackingCode,
@@ -427,19 +433,25 @@ function LaporForm() {
         title: formData.title,
         description: richDescription,
         location: `POINT(${formData.longitude} ${formData.latitude})`,
-        address: formData.address,
-        province: formData.province,
-        regency: formData.regency,
+        address: fullAddress,
         status: "diterima",
         confirmation_count: 0,
         priority_score: calculatedScore,
       };
 
-      if (isUuid && currentUser) {
+      if (isUuid && currentUser?.id) {
         insertPayload.reporter_id = currentUser.id;
       }
 
-      const { error } = await supabase.from("reports").insert(insertPayload);
+      let { error } = await supabase.from("reports").insert(insertPayload);
+
+      // Jika gagal karena constraint foreign key reporter_id (misal profil belum tersinkron), simpan tanpa reporter_id
+      if (error && error.message?.toLowerCase().includes("reporter_id")) {
+        console.warn("Retrying report insert without reporter_id foreign key constraint:", error.message);
+        delete insertPayload.reporter_id;
+        const retryResult = await supabase.from("reports").insert(insertPayload);
+        error = retryResult.error;
+      }
 
       if (!error) {
         isSavedRemote = true;
@@ -456,7 +468,7 @@ function LaporForm() {
           }
         }
       } else {
-        console.warn("Supabase insert notice:", error.message);
+        console.error("Supabase insert report error:", error.message, error.details);
       }
     } catch (err) {
       console.warn("Supabase insert network notice:", err);
