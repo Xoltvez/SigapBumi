@@ -290,8 +290,10 @@ function LaporanContent() {
     }
   }, []);
 
-  async function loadData() {
-    setIsLoading(true);
+  async function loadData(isSilent = false) {
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     try {
       const live = await fetchLiveReports();
       const formatted: AdminReportRow[] = (live || []).map((r) => {
@@ -341,19 +343,23 @@ function LaporanContent() {
       setReports(formatted);
     } catch (err) {
       console.warn("Gagal memuat daftar laporan admin:", err);
-      setReports([]);
+      if (!isSilent) {
+        setReports([]);
+      }
     } finally {
-      setIsLoading(false);
+      if (!isSilent) {
+        setIsLoading(false);
+      }
     }
   }
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadData();
+      loadData(false);
     }, 0);
 
     const handleLocalUpdate = () => {
-      loadData();
+      loadData(true);
     };
     if (typeof window !== "undefined") {
       window.addEventListener("sigapbumi:sos-created", handleLocalUpdate);
@@ -369,29 +375,29 @@ function LaporanContent() {
         "postgres_changes",
         { event: "*", schema: "public", table: "reports" },
         () => {
-          loadData();
+          loadData(true);
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "report_status_logs" },
         () => {
-          loadData();
+          loadData(true);
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sos_alerts" },
         () => {
-          loadData();
+          loadData(true);
         }
       )
       .subscribe();
 
-    // Polling berkala setiap 3 detik agar data lintas browser / profil selalu ter-update secara otomatis
+    // Polling cadangan berkala setiap 2 menit (120 detik) untuk efisiensi jaringan & kenyamanan baca
     const pollInterval = setInterval(() => {
-      loadData();
-    }, 3000);
+      loadData(true);
+    }, 2 * 60 * 1000);
 
     return () => {
       clearTimeout(timer);
@@ -509,9 +515,9 @@ function LaporanContent() {
 
           <button
             type="button"
-            onClick={loadData}
+            onClick={() => loadData(false)}
             disabled={isLoading}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors shrink-0"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors shrink-0 cursor-pointer"
           >
             <RotateCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-orange-500" : "text-slate-500"}`} />
             <span>Segarkan Data</span>

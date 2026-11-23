@@ -105,8 +105,8 @@ export default function AdminSosPage() {
     setActiveSosCount(countAktif);
   }, [countAktif, setActiveSosCount]);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
+  const loadData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setIsLoading(true);
     try {
       const live = await fetchLiveSosAlerts();
       const mappedLive: DisplaySosItem[] = (live || []).map((e, index) => {
@@ -183,14 +183,14 @@ export default function AdminSosPage() {
     } catch (err) {
       console.warn("Gagal sinkronisasi data SOS:", err);
     } finally {
-      setIsLoading(false);
+      if (!isSilent) setIsLoading(false);
     }
   }, [isSirenMuted]);
 
   useEffect(() => {
-    loadData();
+    loadData(false);
 
-    const handleLocalUpdate = () => loadData();
+    const handleLocalUpdate = () => loadData(true);
     if (typeof window !== "undefined") {
       window.addEventListener("sigapbumi:sos-created", handleLocalUpdate);
       window.addEventListener("sigapbumi:sos-updated", handleLocalUpdate);
@@ -207,29 +207,29 @@ export default function AdminSosPage() {
         "postgres_changes",
         { event: "*", schema: "public", table: "sos_alerts" },
         () => {
-          loadData();
+          loadData(true);
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "reports" },
         () => {
-          loadData();
+          loadData(true);
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "report_status_logs" },
         () => {
-          loadData();
+          loadData(true);
         }
       )
       .subscribe();
 
-    // Polling interval berkala (setiap 3 detik) sebagai jaminan sinkronisasi mutlak antar-browser
+    // Polling cadangan berkala setiap 2 menit (120 detik)
     const pollTimer = setInterval(() => {
-      loadData();
-    }, 3000);
+      loadData(true);
+    }, 2 * 60 * 1000);
 
     return () => {
       if (typeof window !== "undefined") {
@@ -390,7 +390,7 @@ export default function AdminSosPage() {
           {/* Segarkan Button */}
           <button
             type="button"
-            onClick={loadData}
+            onClick={() => loadData(false)}
             disabled={isLoading}
             className="px-4 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors inline-flex items-center gap-2 cursor-pointer"
           >

@@ -117,8 +117,8 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadDetail() {
-      setIsLoading(true);
+    async function loadDetail(isSilent = false) {
+      if (!isSilent) setIsLoading(true);
       try {
         const live = await fetchLiveReports();
         let found = live.find(
@@ -325,7 +325,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
     }, 0);
 
     const handleLocalUpdate = () => {
-      loadDetail();
+      loadDetail(true);
     };
     if (typeof window !== "undefined") {
       window.addEventListener("sigapbumi:report-updated", handleLocalUpdate);
@@ -340,24 +340,24 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "reports" },
-        () => loadDetail()
+        () => loadDetail(true)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "report_status_logs" },
-        () => loadDetail()
+        () => loadDetail(true)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sos_alerts" },
-        () => loadDetail()
+        () => loadDetail(true)
       )
       .subscribe();
 
-    // Polling interval berkala 3 detik
+    // Polling interval berkala 2 menit (fallback silent sync)
     const pollTimer = setInterval(() => {
-      loadDetail();
-    }, 3000);
+      loadDetail(true);
+    }, 2 * 60 * 1000);
 
     return () => {
       isMounted = false;
