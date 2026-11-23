@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/Footer";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { SosFab } from "@/components/layout/SosFab";
 import { ToastContainer } from "@/components/ui/Toast";
+import { GsapPageTransition } from "@/components/common/GsapPageTransition";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -36,7 +37,7 @@ export default function RootLayout({
           <Header />
         </Suspense>
         <ToastContainer />
-        <div className="flex-1 flex flex-col">{children}</div>
+        <GsapPageTransition>{children}</GsapPageTransition>
         <Suspense fallback={null}>
           <Footer />
         </Suspense>
