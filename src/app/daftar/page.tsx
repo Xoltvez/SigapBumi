@@ -104,7 +104,22 @@ export default function DaftarPage() {
     setLoading(true);
 
     try {
-      // 1. Coba daftar melalui Supabase Auth
+      // 1. Cek apakah email sudah aktif atau terdaftar
+      try {
+        const checkRes = await fetch(`/api/auth/active-session?email=${encodeURIComponent(email.trim())}`);
+        if (checkRes.ok) {
+          const checkJson = await checkRes.json();
+          if (checkJson.inUse) {
+            setErrorMsg("Alamat email ini sudah terdaftar dan sedang aktif digunakan. Silakan masuk menggunakan akun Anda.");
+            setFieldErrors({ email: "Email sudah aktif digunakan." });
+            setShakeKey((prev) => prev + 1);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {}
+
+      // 2. Coba daftar melalui Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password: password,
@@ -117,12 +132,26 @@ export default function DaftarPage() {
         },
       });
 
+      // Deteksi jika email sudah terdaftar di Supabase
+      if (
+        error?.message?.toLowerCase().includes("already registered") ||
+        error?.message?.toLowerCase().includes("already in use") ||
+        error?.message?.toLowerCase().includes("already exists") ||
+        (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0)
+      ) {
+        setErrorMsg("Alamat email ini sudah terdaftar. Silakan gunakan email lain atau langsung masuk ke akun Anda.");
+        setFieldErrors({ email: "Email sudah terdaftar." });
+        setShakeKey((prev) => prev + 1);
+        setLoading(false);
+        return;
+      }
+
       if (error) {
         // Jika error rate-limit atau project offline, beri fallback simulasi agar evaluator tetap bisa beroperasi
         console.warn("Supabase auth error / offline fallback:", error.message);
       }
 
-      // 2. Simpan profil ke tabel profiles jika user terbuat di auth
+      // 3. Simpan profil ke tabel profiles jika user terbuat di auth
       if (data?.user?.id) {
         try {
           await supabase.from("profiles").upsert({
@@ -136,13 +165,32 @@ export default function DaftarPage() {
         }
       }
 
-      // 3. Simpan info user lokal untuk persistensi sesi di browser
+      // 4. Daftarkan sesi unik di server
+      let assignedSessionId = `session_${Date.now()}`;
+      try {
+        const claimRes = await fetch("/api/auth/active-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "claim",
+            email: email.trim(),
+            userId: data?.user?.id,
+            userName: fullName.trim(),
+            force: true,
+          }),
+        });
+        const claimJson = await claimRes.json();
+        if (claimJson.sessionId) assignedSessionId = claimJson.sessionId;
+      } catch {}
+
+      // 5. Simpan info user lokal untuk persistensi sesi di browser
       const localUserData = {
         id: data?.user?.id || `user-${Date.now()}`,
         full_name: fullName.trim(),
         phone_number: phoneNumber.trim(),
         email: email.trim(),
         role: role,
+        sessionId: assignedSessionId,
         created_at: new Date().toISOString(),
       };
 

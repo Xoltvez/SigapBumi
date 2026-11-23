@@ -8,6 +8,7 @@ export interface UserSession {
   email: string;
   phone_number?: string;
   role?: string;
+  sessionId?: string;
   created_at?: string;
   loginAt?: string;
 }
@@ -82,6 +83,28 @@ export function setCurrentUser(user: UserSession): void {
 export function logoutUser(isIdleExpired = false): void {
   if (typeof window === "undefined") return;
   try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    let sessionUser: UserSession | null = null;
+    if (raw) {
+      try {
+        sessionUser = JSON.parse(raw);
+      } catch {}
+    }
+
+    // Beritahu server bahwa sesi untuk email ini telah dilepas
+    if (sessionUser?.email) {
+      fetch("/api/auth/active-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "release",
+          email: sessionUser.email,
+          sessionId: sessionUser.sessionId,
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    }
+
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(LAST_ACTIVITY_KEY);
     window.dispatchEvent(new Event(AUTH_EVENT));

@@ -13,6 +13,8 @@ import {
   LogOut,
   Loader2,
   AlertCircle,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import {
   getCurrentUser,
@@ -33,6 +35,11 @@ export default function MasukPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [sessionConflict, setSessionConflict] = useState<{
+    email: string;
+    message: string;
+    detail: string;
+  } | null>(null);
   const [shakeKey, setShakeKey] = useState(0);
 
   useEffect(() => {
@@ -43,8 +50,8 @@ export default function MasukPage() {
     return () => unsubscribe();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent, force = false) => {
+    if (e) e.preventDefault();
 
     const errors: typeof fieldErrors = {};
     if (!email.trim()) {
@@ -63,10 +70,54 @@ export default function MasukPage() {
     }
 
     setFieldErrors({});
+    setSessionConflict(null);
     setLoading(true);
 
+    let assignedSessionId = `session_${Date.now()}`;
+
     try {
-      // 1. Coba login via Supabase Auth jika tersedia
+      // 1. Verifikasi Keunikan Sesi Aktif: Cek apakah email sedang digunakan di sesi/perangkat lain
+      try {
+        const claimRes = await fetch("/api/auth/active-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: force ? "force_claim" : "claim",
+            email: email.trim(),
+            force: force,
+          }),
+        });
+
+        const claimJson = await claimRes.json();
+
+        // Jika email sedang aktif login di sesi lain dan bukan force take-over
+        if (!claimRes.ok || !claimJson.success) {
+          if (claimJson.inUse) {
+            setFieldErrors({
+              email: "Email ini sedang aktif digunakan di sesi lain.",
+            });
+            setSessionConflict({
+              email: email.trim(),
+              message:
+                claimJson.message ||
+                "Email ini sedang aktif login di website pada perangkat/sesi lain. Demi keamanan akun, satu akun tidak dapat digunakan secara bersamaan.",
+              detail:
+                "Silakan keluar dari sesi sebelumnya terlebih dahulu atau tunggu hingga sesi tersebut otomatis kadaluarsa (idle 1 jam).",
+            });
+            setShakeKey((prev) => prev + 1);
+            setLoading(false);
+            return;
+          }
+        }
+
+        if (claimJson.sessionId) {
+          assignedSessionId = claimJson.sessionId;
+        }
+      } catch (claimErr) {
+        console.warn("Gagal cek server active session:", claimErr);
+      }
+
+      // 2. Coba login via Supabase Auth jika tersedia
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password,
@@ -118,6 +169,7 @@ export default function MasukPage() {
         full_name: resolvedName,
         email: email.trim(),
         role: "warga",
+        sessionId: assignedSessionId,
         loginAt: new Date().toISOString(),
       };
 
@@ -136,6 +188,7 @@ export default function MasukPage() {
         full_name: fallbackName,
         email: email.trim(),
         role: "warga",
+        sessionId: `session_${Date.now()}`,
         loginAt: new Date().toISOString(),
       };
       setCurrentUser(userSession);
@@ -223,9 +276,48 @@ export default function MasukPage() {
           /* Form Login jika belum masuk */
           <form
             noValidate
-            onSubmit={handleSubmit}
+            onSubmit={(e) => handleSubmit(e, false)}
             className="space-y-4 text-left"
           >
+            {/* Alert Konflik Sesi Aktif: Email sedang login di tempat lain */}
+            {sessionConflict && (
+              <div className="p-4 rounded-xl border border-warning/40 bg-warning-soft/30 space-y-2.5 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-ink">
+                      Email Ini Sedang Digunakan di Sesi Lain
+                    </p>
+                    <p className="text-[11px] text-ink-soft leading-relaxed">
+                      {sessionConflict.message}
+                    </p>
+                    <p className="text-[11px] text-ink-soft leading-relaxed">
+                      {sessionConflict.detail}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-1.5 border-t border-warning/20 flex flex-col sm:flex-row items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSubmit(undefined, true)}
+                    disabled={loading}
+                    className="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-warning hover:bg-warning/90 text-white text-[11px] font-bold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Keluarkan Sesi Lama &amp; Masuk di Sini</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSessionConflict(null)}
+                    className="text-[11px] text-ink-soft hover:text-ink font-semibold"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div key={fieldErrors.email ? `email-${shakeKey}` : "email-field"} className={fieldErrors.email ? "animate-shake" : ""}>
               <label className="block text-xs font-semibold text-ink mb-1.5">
                 Alamat Email <span className="text-danger">*</span>
@@ -236,6 +328,7 @@ export default function MasukPage() {
                 onChange={(e) => {
                   setEmail(e.target.value);
                   if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                  if (sessionConflict) setSessionConflict(null);
                 }}
                 placeholder="nama@email.com"
                 className={`w-full h-11 px-3.5 rounded-md border bg-surface text-sm text-ink focus:outline-none transition-all ${

@@ -44,3 +44,6 @@ next-env.d.ts
 # internal documentation / PRD
 prd,agent.design.md/
 
+# local active sessions cache
+.system_active_sessions.json
+
