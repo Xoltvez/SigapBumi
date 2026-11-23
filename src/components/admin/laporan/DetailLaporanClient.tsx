@@ -324,19 +324,50 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
       loadDetail();
     }, 0);
 
-    // Realtime channel
+    const handleLocalUpdate = () => {
+      loadDetail();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("sigapbumi:report-updated", handleLocalUpdate);
+      window.addEventListener("sigapbumi:sos-updated", handleLocalUpdate);
+      window.addEventListener("storage", handleLocalUpdate);
+    }
+
+    // Realtime channel multi-tabel untuk sinkronisasi antar-browser
+    const channelId = `admin_detail_${reportId}_` + Math.random().toString(36).substring(2, 8);
     const channel = supabase
-      .channel(`admin_detail_${reportId}`)
+      .channel(channelId)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "reports", filter: `id=eq.${reportId}` },
+        { event: "*", schema: "public", table: "reports" },
+        () => loadDetail()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "report_status_logs" },
+        () => loadDetail()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sos_alerts" },
         () => loadDetail()
       )
       .subscribe();
 
+    // Polling interval berkala 3 detik
+    const pollTimer = setInterval(() => {
+      loadDetail();
+    }, 3000);
+
     return () => {
       isMounted = false;
       clearTimeout(timer);
+      clearInterval(pollTimer);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("sigapbumi:report-updated", handleLocalUpdate);
+        window.removeEventListener("sigapbumi:sos-updated", handleLocalUpdate);
+        window.removeEventListener("storage", handleLocalUpdate);
+      }
       supabase.removeChannel(channel);
     };
   }, [reportId]);

@@ -701,6 +701,31 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
     console.warn("fetchLiveReports Supabase warning:", err);
   }
 
+  // 1b. Cek dan sinkronkan status dari tabel sos_alerts Supabase jika ada sinyal SOS yang sudah diproses
+  try {
+    const { data: sosRows } = await supabase
+      .from("sos_alerts")
+      .select("id, status, note, created_at");
+    if (sosRows && sosRows.length > 0) {
+      sosRows.forEach((s) => {
+        const match = liveItems.find(
+          (r) => r.id === s.id || (s.note && s.note.includes(r.tracking_code))
+        );
+        if (match) {
+          if (s.status === "ditangani" && match.status === "diterima") {
+            match.status = "ditindaklanjuti";
+          } else if (s.status === "selesai" && match.status !== "selesai") {
+            match.status = "selesai";
+          } else if (s.status === "palsu" && match.status !== "ditolak") {
+            match.status = "ditolak";
+          }
+        }
+      });
+    }
+  } catch (err) {
+    console.warn("fetchLiveReports sos_alerts sync warning:", err);
+  }
+
   // Coba ambil dari endpoint sinkronisasi lintas browser /api/reports
   if (typeof window !== "undefined") {
     try {
@@ -772,7 +797,7 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
     }
   }
 
-  // Gabungkan laporan: Mock bawaan + Supabase live + Local Reports perangkat (status lokal selalu menang)
+  // Gabungkan laporan: Mock baseline -> Local Reports baseline -> Supabase live (Database pusat SELALU menang)
   const mergedMap = new Map<string, LiveReportItem>();
 
   // 1. Data default demonstrasi
@@ -781,13 +806,7 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
     mergedMap.set(item.id, item);
   });
 
-  // 2. Data database Supabase riil
-  liveItems.forEach((item) => {
-    mergedMap.set(item.tracking_code, item);
-    mergedMap.set(item.id, item);
-  });
-
-  // 3. Data lokal perangkat pengguna (laporan baru atau status yang diperbarui)
+  // 2. Data lokal perangkat pengguna (laporan baru offline/draft)
   localReports.forEach((item) => {
     const rawDesc = item.description || "";
     const extractedPhoto = extractPhotoFromDescription(rawDesc) || item.image_url;
@@ -805,6 +824,38 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
     mergedMap.set(item.tracking_code, sanitized);
     mergedMap.set(item.id, sanitized);
   });
+
+  // 3. Data database Supabase riil (MUTLAK MENIMPA data lokal & mock agar status selalu sinkron antar-browser)
+  liveItems.forEach((item) => {
+    const prev = mergedMap.get(item.tracking_code) || mergedMap.get(item.id);
+    const resolved: LiveReportItem = {
+      ...(prev || {}),
+      ...item,
+      status: item.status, // Status dari database pusat mutlak menjadi acuan
+    };
+    mergedMap.set(item.tracking_code, resolved);
+    mergedMap.set(item.id, resolved);
+  });
+
+  // 4. Sinkronkan kembali cache lokal di browser ini agar data lokal tidak basi
+  try {
+    const updatedLocal = localReports.map((local) => {
+      const serverMatch = liveItems.find(
+        (s) => s.id === local.id || s.tracking_code === local.tracking_code
+      );
+      if (serverMatch) {
+        return {
+          ...local,
+          status: serverMatch.status,
+          confirmation_count: serverMatch.confirmation_count,
+        };
+      }
+      return local;
+    });
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sigapbumi_local_reports", JSON.stringify(updatedLocal));
+    }
+  } catch {}
 
   const deletedIds = getDeletedReportIds();
   const allReports = Array.from(new Set(mergedMap.values())).filter(
@@ -863,13 +914,36 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
 
   // 1. Coba ambil dari database Supabase
   try {
-    const { data, error } = await supabase
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(code);
+    let query = supabase
       .from("reports")
-      .select("*, report_status_logs(*), report_media(*)")
-      .eq("tracking_code", code)
-      .maybeSingle();
+      .select("*, report_status_logs(*), report_media(*)");
+    if (isUuid) {
+      query = query.or(`id.eq.${code},tracking_code.eq.${code}`);
+    } else {
+      query = query.or(`tracking_code.eq.${code},tracking_code.ilike.${code}`);
+    }
+    const { data, error } = await query.maybeSingle();
 
     if (!error && data) {
+      // Sinkronkan status dari tabel sos_alerts jika lebih lanjut
+      try {
+        const { data: sosAlert } = await supabase
+          .from("sos_alerts")
+          .select("status")
+          .eq("id", data.id)
+          .maybeSingle();
+        if (sosAlert) {
+          if (sosAlert.status === "ditangani" && data.status === "diterima") {
+            data.status = "ditindaklanjuti";
+          } else if (sosAlert.status === "selesai" && data.status !== "selesai") {
+            data.status = "selesai";
+          } else if (sosAlert.status === "palsu" && data.status !== "ditolak") {
+            data.status = "ditolak";
+          }
+        }
+      } catch {}
+
       const coords = parsePostGISPoint(data.location) || { lat: -6.2088, lng: 106.8456 };
       const disaster = data.disaster_type as DisasterType;
       let agency = inferAgencyFromDisaster(disaster);
@@ -911,34 +985,93 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         created_at: string;
       }>;
 
-      const timeline: TimelineStep[] =
-        logs.length > 0
-          ? logs.map((log) => ({
-              status: log.status,
-              label:
-                log.status === "diterima"
-                  ? "Laporan Diterima Sistem"
-                  : log.status === "diverifikasi"
-                  ? "Diverifikasi Petugas"
-                  : log.status === "ditindaklanjuti"
-                  ? "Penanganan Operasional Berjalan"
-                  : log.status === "selesai"
-                  ? "Penanganan Selesai"
-                  : "Laporan Ditolak",
-              timestamp: formatReportTime(log.created_at),
-              note: log.note || "Status diperbarui oleh sistem posko.",
-            }))
-          : [
-              {
-                status: data.status as ReportStatus,
-                label:
-                  data.status === "diterima"
-                    ? "Laporan Diterima Sistem"
-                    : "Status Terkini",
-                timestamp: formatReportTime(data.created_at),
-                note: "Laporan tersimpan di database SigapBumi.",
-              },
-            ];
+      let timeline: TimelineStep[] = [];
+      if (logs.length > 0) {
+        timeline = logs.map((log) => ({
+          status: log.status,
+          label:
+            log.status === "diterima"
+              ? "Laporan Diterima Sistem"
+              : log.status === "diverifikasi"
+              ? "Diverifikasi Petugas"
+              : log.status === "ditindaklanjuti"
+              ? "Penanganan Operasional Berjalan"
+              : log.status === "selesai"
+              ? "Penanganan Selesai"
+              : "Laporan Ditolak",
+          timestamp: formatReportTime(log.created_at),
+          note: log.note || "Status diperbarui oleh sistem posko.",
+        }));
+
+        // Pastikan status saat ini tercantum di timeline
+        if (data.status === "ditindaklanjuti" && !timeline.some((t) => t.status === "ditindaklanjuti")) {
+          timeline.push({
+            status: "ditindaklanjuti",
+            label: "Penanganan Operasional Berjalan",
+            timestamp: formatReportTime(data.updated_at || new Date().toISOString()),
+            note: "Tim operasional siaga dan unit penolong telah dikerahkan ke lokasi darurat warga.",
+          });
+        } else if (data.status === "selesai" && !timeline.some((t) => t.status === "selesai")) {
+          if (!timeline.some((t) => t.status === "ditindaklanjuti")) {
+            timeline.push({
+              status: "ditindaklanjuti",
+              label: "Penanganan Operasional Berjalan",
+              timestamp: formatReportTime(data.updated_at || new Date().toISOString()),
+              note: "Tim operasional dikerahkan ke lokasi darurat warga.",
+            });
+          }
+          timeline.push({
+            status: "selesai",
+            label: "Penanganan Selesai",
+            timestamp: formatReportTime(data.updated_at || new Date().toISOString()),
+            note: "Penanganan insiden telah selesai ditangani secara tuntas oleh posko.",
+          });
+        }
+      } else {
+        timeline = [
+          {
+            status: "diterima",
+            label: "Laporan Diterima Sistem",
+            timestamp: formatReportTime(data.created_at),
+            note: "Laporan baru diterima oleh sistem.",
+          },
+        ];
+        if (data.status === "diverifikasi") {
+          timeline.push({
+            status: "diverifikasi",
+            label: "Diverifikasi Petugas",
+            timestamp: formatReportTime(data.updated_at || data.created_at),
+            note: "Laporan telah diverifikasi oleh petugas posko.",
+          });
+        } else if (data.status === "ditindaklanjuti") {
+          timeline.push({
+            status: "ditindaklanjuti",
+            label: "Penanganan Operasional Berjalan",
+            timestamp: formatReportTime(data.updated_at || data.created_at),
+            note: "Tim operasional siaga dan unit penolong telah dikerahkan ke lokasi darurat warga.",
+          });
+        } else if (data.status === "selesai") {
+          timeline.push({
+            status: "ditindaklanjuti",
+            label: "Penanganan Operasional Berjalan",
+            timestamp: formatReportTime(data.updated_at || data.created_at),
+            note: "Tim operasional telah dikerahkan ke lokasi.",
+          });
+          timeline.push({
+            status: "selesai",
+            label: "Penanganan Selesai",
+            timestamp: formatReportTime(data.updated_at || data.created_at),
+            note: "Penanganan insiden telah selesai ditangani secara tuntas oleh posko.",
+          });
+        } else if (data.status === "ditolak") {
+          timeline.push({
+            status: "ditolak",
+            label: "Laporan Ditolak",
+            timestamp: formatReportTime(data.updated_at || data.created_at),
+            note: "Laporan ditolak setelah peninjauan posko operasional.",
+          });
+        }
+      }
 
       const isSosReport = Boolean(
         (data.tracking_code || "").toUpperCase().startsWith("SOS-") ||
@@ -1221,6 +1354,7 @@ export async function updateReportStatusLive(
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("sigapbumi:report-updated", { detail: { id: reportId, status: newStatus } }));
+      window.dispatchEvent(new CustomEvent("sigapbumi:sos-updated", { detail: { id: reportId, status: newStatus } }));
       window.dispatchEvent(new Event("storage"));
     }
 
@@ -1262,6 +1396,7 @@ export async function updateReportStatusLive(
 
     // 3. Direct update
     try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reportId);
       await supabase
         .from("reports")
         .update({
@@ -1269,6 +1404,46 @@ export async function updateReportStatusLive(
           updated_at: new Date().toISOString(),
         })
         .or(`id.eq.${reportId},tracking_code.eq.${reportId}`);
+
+      let targetUuid = isUuid ? reportId : null;
+      if (!targetUuid) {
+        const { data: rep } = await supabase
+          .from("reports")
+          .select("id")
+          .eq("tracking_code", reportId)
+          .maybeSingle();
+        if (rep?.id) targetUuid = rep.id;
+      }
+
+      if (targetUuid) {
+        try {
+          await supabase.from("report_status_logs").insert({
+            report_id: targetUuid,
+            status: newStatus,
+            note: cleanNote,
+            created_at: new Date().toISOString(),
+          });
+        } catch {}
+
+        try {
+          const sosStatus =
+            newStatus === "ditolak"
+              ? "selesai"
+              : newStatus === "ditindaklanjuti"
+              ? "ditangani"
+              : newStatus === "selesai"
+              ? "selesai"
+              : "aktif";
+          const sosPayload: Record<string, unknown> = { status: sosStatus };
+          if (newStatus === "selesai" || newStatus === "ditolak") {
+            sosPayload.resolved_at = new Date().toISOString();
+          }
+          await supabase
+            .from("sos_alerts")
+            .update(sosPayload)
+            .eq("id", targetUuid);
+        } catch {}
+      }
     } catch {
       // Ignore
     }

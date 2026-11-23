@@ -385,14 +385,24 @@ export function SosFab() {
     if (!activeSosId) return;
 
     const channel = supabase
-      .channel(`sos_live_citizen_${activeSosId}`)
+      .channel(`sos_live_citizen_${activeSosId}_${Math.random().toString(36).substring(2, 7)}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "sos_alerts" },
-        (payload) => {
+        { event: "*", schema: "public", table: "sos_alerts" },
+        (payload: any) => {
           if (payload.new?.id === activeSosId) {
             if (payload.new.status) setSosStatus(payload.new.status);
             if (payload.new.acknowledged_by) setDispatchedTeam(payload.new.acknowledged_by);
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reports" },
+        (payload: any) => {
+          if (payload.new?.id === activeSosId || (trackingCode && payload.new?.tracking_code === trackingCode)) {
+            if (payload.new.status === "ditindaklanjuti") setSosStatus("ditangani");
+            else if (payload.new.status === "selesai" || payload.new.status === "ditolak") setSosStatus("selesai");
           }
         }
       )
@@ -414,13 +424,41 @@ export function SosFab() {
 
     if (typeof window !== "undefined") {
       window.addEventListener("sigapbumi:sos-updated", handleLocalUpdate);
+      window.addEventListener("sigapbumi:report-updated", handleLocalUpdate);
       window.addEventListener("storage", handleLocalUpdate);
     }
 
+    const pollTimer = setInterval(async () => {
+      try {
+        const { data: sos } = await supabase
+          .from("sos_alerts")
+          .select("status")
+          .eq("id", activeSosId)
+          .maybeSingle();
+        if (sos?.status) {
+          if (sos.status === "ditangani" || sos.status === "aktif" || sos.status === "selesai") {
+            setSosStatus(sos.status);
+          } else if (sos.status === "palsu") {
+            setSosStatus("selesai");
+          }
+          return;
+        }
+        const { data: rep } = await supabase
+          .from("reports")
+          .select("status")
+          .eq("id", activeSosId)
+          .maybeSingle();
+        if (rep?.status === "ditindaklanjuti") setSosStatus("ditangani");
+        else if (rep?.status === "selesai" || rep?.status === "ditolak") setSosStatus("selesai");
+      } catch {}
+    }, 3000);
+
     return () => {
+      clearInterval(pollTimer);
       supabase.removeChannel(channel);
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:sos-updated", handleLocalUpdate);
+        window.removeEventListener("sigapbumi:report-updated", handleLocalUpdate);
         window.removeEventListener("storage", handleLocalUpdate);
       }
     };

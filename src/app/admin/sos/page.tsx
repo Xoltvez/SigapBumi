@@ -116,7 +116,7 @@ export default function AdminSosPage() {
 
         const trackingCode =
           e.tracking_code ||
-          (e.note ? (e.note.match(/SOS-\d+/)?.[0]) : undefined) ||
+          (e.note ? (e.note.match(/\[Kode:\s*([^\]]+)\]/)?.[1] || e.note.match(/SOS-\d+/)?.[0]) : undefined) ||
           (e.id.startsWith("SOS") ? e.id : undefined);
 
         return {
@@ -948,7 +948,7 @@ export default function AdminSosPage() {
                   {item.status !== "palsu" && item.status !== "selesai" && (
                     <button
                       type="button"
-                      onClick={() => handleMarkFake(item.id, item.displayCode)}
+                      onClick={() => handleMarkFake(item.id, item.trackingCode || (item.displayCode.startsWith("SOS-") ? item.displayCode : undefined))}
                       className="h-9 px-2.5 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                       title="Tandai sebagai panggilan palsu / prank"
                     >
@@ -962,7 +962,7 @@ export default function AdminSosPage() {
                   {isAktif && (
                     <button
                       type="button"
-                      onClick={() => handleMarkProcessing(item.id, item.displayCode)}
+                      onClick={() => handleMarkProcessing(item.id, item.trackingCode || (item.displayCode.startsWith("SOS-") ? item.displayCode : undefined))}
                       className="h-9 px-3 sm:px-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                     >
                       <Pause className="w-3.5 h-3.5 text-slate-500" />
@@ -973,7 +973,7 @@ export default function AdminSosPage() {
                   {!isAktif && !isResolved && (
                     <button
                       type="button"
-                      onClick={() => handleMarkResolved(item.id, item.displayCode)}
+                      onClick={() => handleMarkResolved(item.id, item.trackingCode || (item.displayCode.startsWith("SOS-") ? item.displayCode : undefined))}
                       className="h-9 px-3.5 sm:px-4 rounded-xl bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5 text-white" />

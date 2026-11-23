@@ -269,14 +269,13 @@ function LacakContent() {
     window.addEventListener("storage", handleUpdate);
 
     const channel = supabase
-      .channel(`lacak_realtime_${currentCode}`)
+      .channel(`lacak_realtime_${currentCode}_${Math.random().toString(36).substring(2, 7)}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "reports",
-          filter: `tracking_code=eq.${currentCode}`,
         },
         () => {
           performSearch(currentCode);
@@ -285,7 +284,7 @@ function LacakContent() {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "report_status_logs",
         },
@@ -293,9 +292,26 @@ function LacakContent() {
           performSearch(currentCode);
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "sos_alerts",
+        },
+        () => {
+          performSearch(currentCode);
+        }
+      )
       .subscribe();
 
+    // Polling interval berkala 3 detik agar sinkronisasi lintas browser dijamin 100% selalu ter-update
+    const pollTimer = setInterval(() => {
+      performSearch(currentCode);
+    }, 3000);
+
     return () => {
+      clearInterval(pollTimer);
       window.removeEventListener("sigapbumi:report-updated", handleUpdate);
       window.removeEventListener("sigapbumi:sos-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);

@@ -116,11 +116,36 @@ export async function POST(request: Request) {
         const { data: found } = await supabase
           .from("reports")
           .select("id")
-          .eq("tracking_code", reportId)
+          .or(`tracking_code.eq.${reportId},tracking_code.ilike.${reportId}`)
           .maybeSingle();
         if (found?.id) {
           targetReportUuid = found.id;
         }
+      }
+
+      // Jika belum ditemukan di reports, cek apakah reportId ada di tabel sos_alerts
+      if (!targetReportUuid && isUUID) {
+        const { data: sosFound } = await supabase
+          .from("sos_alerts")
+          .select("id")
+          .eq("id", reportId)
+          .maybeSingle();
+        if (sosFound?.id) {
+          targetReportUuid = sosFound.id;
+        }
+      }
+
+      const sosStatus =
+        status === "ditolak"
+          ? "selesai"
+          : status === "ditindaklanjuti"
+          ? "ditangani"
+          : status === "selesai"
+          ? "selesai"
+          : "aktif";
+      const sosPayload: Record<string, unknown> = { status: sosStatus };
+      if (status === "selesai" || status === "ditolak") {
+        sosPayload.resolved_at = nowIso;
       }
 
       if (targetReportUuid) {
@@ -146,18 +171,6 @@ export async function POST(request: Request) {
 
         // Sinkronkan juga ke tabel sos_alerts jika ada
         try {
-          const sosStatus =
-            status === "ditolak"
-              ? "selesai"
-              : status === "ditindaklanjuti"
-              ? "ditangani"
-              : status === "selesai"
-              ? "selesai"
-              : "aktif";
-          const sosPayload: Record<string, unknown> = { status: sosStatus };
-          if (status === "selesai" || status === "ditolak") {
-            sosPayload.resolved_at = nowIso;
-          }
           await supabase
             .from("sos_alerts")
             .update(sosPayload)
@@ -165,6 +178,14 @@ export async function POST(request: Request) {
         } catch {
           // Abaikan jika bukan SOS
         }
+      } else {
+        // Fallback update langsung ke sos_alerts jika id cocok
+        try {
+          await supabase
+            .from("sos_alerts")
+            .update(sosPayload)
+            .eq("id", reportId);
+        } catch {}
       }
     }
 

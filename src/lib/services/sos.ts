@@ -162,6 +162,7 @@ export async function sendSosAlert(params: {
   const trackingCode = `SOS-${Date.now().toString().slice(-4)}`;
 
   const noteParts = [
+    `[Kode: ${trackingCode}]`,
     params.note || "Panggilan Darurat SOS Warga (Realtime)",
     params.phoneNumber ? `[Kontak: ${params.phoneNumber}]` : "",
     params.photoUrl ? `[Foto: ${params.photoUrl}]` : "",
@@ -170,6 +171,7 @@ export async function sendSosAlert(params: {
 
   const newItem: LiveSosItem = {
     id: generatedId,
+    tracking_code: trackingCode,
     source: params.senderName || "Ponsel Warga (GPS Sensor)",
     assistance_type: params.assistanceType || "damkar",
     address: `Koordinat GPS: ${params.lat.toFixed(4)}, ${params.lng.toFixed(4)}`,
@@ -494,12 +496,15 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
         const extractedPhone = phoneMatch ? phoneMatch[1].trim() : undefined;
         const photoMatch = row.note ? (row.note as string).match(/\[Foto:\s*([^\]]+)\]/) : null;
         const extractedPhoto = photoMatch ? photoMatch[1].trim() : (row.photo_url || undefined);
+        const codeMatch = row.note ? (row.note as string).match(/\[Kode:\s*([^\]]+)\]/) : null;
+        const extractedCode = codeMatch ? codeMatch[1].trim() : (row.note ? (row.note as string).match(/SOS-\d+/)?.[0] : undefined);
 
         return {
           id: row.id,
+          tracking_code: extractedCode,
           source: "Ponsel Warga (GPS Sensor)",
           assistance_type: (row.assistance_type as SosAssistanceType) || "damkar",
-          address: row.note ? `${row.note.replace(/\[(Kontak|Foto):[^\]]+\]/g, "").trim()}` : `Lokasi GPS (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`,
+          address: row.note ? `${row.note.replace(/\[(Kontak|Foto|Kode):[^\]]+\]/g, "").trim()}` : `Lokasi GPS (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`,
           coordinates: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
           lat: coords.lat,
           lng: coords.lng,
@@ -530,7 +535,7 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
       repData.forEach((row) => {
         // Cek apakah sinyal SOS ini sudah ada di supabaseItems agar tidak duplikat
         const existingIdx = supabaseItems.findIndex(
-          (item) => item.id === row.id || (item.note && row.tracking_code && item.note.includes(row.tracking_code))
+          (item) => item.id === row.id || (item.tracking_code && row.tracking_code && item.tracking_code === row.tracking_code) || (item.note && row.tracking_code && item.note.includes(row.tracking_code))
         );
 
         const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
@@ -542,12 +547,27 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
         const extractedPhoto = mediaPhoto || (photoMatch ? photoMatch[1].trim() : undefined) || row.image_url || undefined;
 
         if (existingIdx >= 0) {
-          // Gabungkan foto & kontak jika item yang ada belum lengkap
-          if (!supabaseItems[existingIdx].photo_url && extractedPhoto) {
-            supabaseItems[existingIdx].photo_url = extractedPhoto;
+          const existing = supabaseItems[existingIdx];
+          // Sinkronkan tracking_code jika belum ada
+          if (!existing.tracking_code && row.tracking_code) {
+            existing.tracking_code = row.tracking_code;
           }
-          if (!supabaseItems[existingIdx].phone_number && extractedPhone) {
-            supabaseItems[existingIdx].phone_number = extractedPhone;
+          // Sinkronisasi status dua arah (jika di data laporan sudah berubah, monitor SOS otomatis mengikuti)
+          if (row.status === "ditindaklanjuti") {
+            existing.status = "ditangani";
+          } else if (row.status === "selesai") {
+            existing.status = "selesai";
+          } else if (row.status === "ditolak") {
+            existing.status = "palsu";
+          } else if (row.status === "diterima" && existing.status !== "ditangani" && existing.status !== "selesai") {
+            existing.status = "aktif";
+          }
+          // Gabungkan foto & kontak jika item yang ada belum lengkap
+          if (!existing.photo_url && extractedPhoto) {
+            existing.photo_url = extractedPhoto;
+          }
+          if (!existing.phone_number && extractedPhone) {
+            existing.phone_number = extractedPhone;
           }
           return;
         }
@@ -739,21 +759,7 @@ export async function updateSosAlertStatus(
       ? "Laporan SOS ditolak (terindikasi panggilan palsu / prank)."
       : "Panggilan darurat SOS diterima oleh posko siaga.";
 
-  // 1. Sinkronkan ke tabel reports, report_status_logs, dan cache laporan warga
-  const targetKey = trackingCode || id;
-  try {
-    await updateReportStatusLive(targetKey, reportStatus, note, dispatchedTeam || "Tim Siaga Posko");
-  } catch (err) {
-    console.warn("updateReportStatusLive from sos error:", err);
-  }
-
-  if (trackingCode && id && trackingCode !== id) {
-    try {
-      await updateReportStatusLive(id, reportStatus, note, dispatchedTeam || "Tim Siaga Posko");
-    } catch {}
-  }
-
-  // 2. Update tabel sos_alerts (hanya field yang valid di database)
+  // 1. Update tabel sos_alerts Supabase
   try {
     const sosPayload: Record<string, unknown> = {
       status: newStatus === "palsu" ? "selesai" : newStatus,
@@ -768,6 +774,19 @@ export async function updateSosAlertStatus(
       .eq("id", id);
   } catch (err) {
     console.warn("updateSosAlertStatus sos_alerts error:", err);
+  }
+
+  // 2. Sinkronkan ke tabel reports, report_status_logs, dan cache laporan warga
+  try {
+    await updateReportStatusLive(id, reportStatus, note, dispatchedTeam || "Tim Siaga Posko");
+  } catch (err) {
+    console.warn("updateReportStatusLive from sos by id error:", err);
+  }
+
+  if (trackingCode && trackingCode !== id) {
+    try {
+      await updateReportStatusLive(trackingCode, reportStatus, note, dispatchedTeam || "Tim Siaga Posko");
+    } catch {}
   }
 
   // 3. Broadcast update ke seluruh tab & browser
