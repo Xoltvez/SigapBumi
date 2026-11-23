@@ -190,11 +190,13 @@ function LacakContent() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const performSearch = useCallback(async (codeToSearch: string) => {
+  const performSearch = useCallback(async (codeToSearch: string, isSilent = false) => {
     const cleanCode = codeToSearch.trim().toUpperCase();
     if (!cleanCode) return;
 
-    setIsLoading(true);
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     setHasSearched(true);
     if (typeof window !== "undefined") {
       setIsVouched(Boolean(localStorage.getItem(`sigapbumi_vouched_${cleanCode}`)));
@@ -231,18 +233,20 @@ function LacakContent() {
       // 2. Fallback ke preset demo statis
       if (SAMPLE_REPORTS[cleanCode]) {
         setActiveReport(SAMPLE_REPORTS[cleanCode]);
-      } else {
+      } else if (!isSilent) {
         setActiveReport(null);
       }
     } catch (err) {
       console.warn("Gagal mencari detail laporan:", err);
       if (SAMPLE_REPORTS[cleanCode]) {
         setActiveReport(SAMPLE_REPORTS[cleanCode]);
-      } else {
+      } else if (!isSilent) {
         setActiveReport(null);
       }
     } finally {
-      setIsLoading(false);
+      if (!isSilent) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -261,7 +265,7 @@ function LacakContent() {
     const currentCode = activeReport.tracking_code;
 
     const handleUpdate = () => {
-      performSearch(currentCode);
+      performSearch(currentCode, true);
     };
 
     window.addEventListener("sigapbumi:report-updated", handleUpdate);
@@ -278,7 +282,7 @@ function LacakContent() {
           table: "reports",
         },
         () => {
-          performSearch(currentCode);
+          performSearch(currentCode, true);
         }
       )
       .on(
@@ -289,7 +293,7 @@ function LacakContent() {
           table: "report_status_logs",
         },
         () => {
-          performSearch(currentCode);
+          performSearch(currentCode, true);
         }
       )
       .on(
@@ -300,15 +304,15 @@ function LacakContent() {
           table: "sos_alerts",
         },
         () => {
-          performSearch(currentCode);
+          performSearch(currentCode, true);
         }
       )
       .subscribe();
 
-    // Polling interval berkala 3 detik agar sinkronisasi lintas browser dijamin 100% selalu ter-update
+    // Polling interval berkala 4 detik di background secara senyap (tanpa menampilkan spinner loading)
     const pollTimer = setInterval(() => {
-      performSearch(currentCode);
-    }, 3000);
+      performSearch(currentCode, true);
+    }, 4000);
 
     return () => {
       clearInterval(pollTimer);
