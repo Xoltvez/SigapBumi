@@ -182,13 +182,6 @@ export default function CuacaPage() {
             <ChevronLeft className="w-4 h-4" />
             <span>Kembali ke Beranda</span>
           </Link>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Live API Resmi BMKG</span>
-            </span>
-            <span className="text-xs text-ink-muted">· Real-Time InaTEWS</span>
-          </div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-ink tracking-tight">
             Informasi Cuaca &amp; Peringatan Dini
           </h1>
