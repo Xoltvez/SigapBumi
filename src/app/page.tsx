@@ -148,12 +148,21 @@ export default function HomePage() {
     weatherIcon?: string;
   } | null>(null);
 
+  // Data Peringatan Gempa Terkini Realtime BMKG
+  const [liveQuake, setLiveQuake] = useState<{
+    magnitude: string;
+    wilayah: string;
+    kedalaman: string;
+    dirasakan: string;
+    potensi: string;
+  } | null>(null);
+
   useEffect(() => {
     let isMounted = true;
 
-    const fetchWeather = async (lat?: number, lng?: number) => {
+    const fetchWeatherAndQuake = async (lat?: number, lng?: number) => {
       try {
-        let url = "/api/bmkg?type=cuaca";
+        let url = "/api/bmkg?type=all";
         if (lat !== undefined && lng !== undefined) {
           url += `&lat=${lat}&lng=${lng}`;
         } else {
@@ -163,6 +172,8 @@ export default function HomePage() {
         const res = await fetch(url);
         if (!res.ok) return;
         const json = await res.json();
+        
+        // 1. Cuaca Lokal
         const raw = json.cuaca?.data?.[0];
         const matched = json.matchedCity;
         const firstPeriod = raw?.cuaca?.[0]?.[0];
@@ -176,8 +187,22 @@ export default function HomePage() {
             weatherIcon: firstPeriod.image,
           });
         }
+
+        // 2. Gempa Terkini InaTEWS BMKG
+        if (isMounted && json.gempaTerkini) {
+          const g = json.gempaTerkini;
+          setLiveQuake({
+            magnitude: g.Magnitude || "5.0",
+            wilayah: (g.Wilayah || "").replace(/^Pusat gempa berada di\s*/i, ""),
+            kedalaman: g.Kedalaman || "10 km",
+            dirasakan: g.Dirasakan ? `Gempa dirasakan di ${g.Dirasakan.replace(/^[I|V|X\s,-]+/, "")}` : "Terasa di wilayah sekitar",
+            potensi: (g.Potensi || "").toLowerCase().includes("tidak berpotensi")
+              ? "Tidak berpotensi tsunami"
+              : g.Potensi || "Tidak berpotensi tsunami",
+          });
+        }
       } catch (err) {
-        console.warn("Gagal memuat cuaca lokal warga:", err);
+        console.warn("Gagal memuat cuaca & gempa BMKG:", err);
       }
     };
 
@@ -190,7 +215,7 @@ export default function HomePage() {
           const parsed = JSON.parse(rawAddr);
           if (parsed.lat && parsed.lng) {
             hasCoords = true;
-            fetchWeather(parsed.lat, parsed.lng);
+            fetchWeatherAndQuake(parsed.lat, parsed.lng);
           }
         }
       } catch {}
@@ -199,15 +224,15 @@ export default function HomePage() {
       if (!hasCoords && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
-            fetchWeather(pos.coords.latitude, pos.coords.longitude);
+            fetchWeatherAndQuake(pos.coords.latitude, pos.coords.longitude);
           },
           () => {
-            fetchWeather();
+            fetchWeatherAndQuake();
           },
           { timeout: 6000, maximumAge: 300000 }
         );
       } else if (!hasCoords) {
-        fetchWeather();
+        fetchWeatherAndQuake();
       }
     }
 
@@ -1066,15 +1091,25 @@ export default function HomePage() {
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500 text-white">
+                <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500 text-white shrink-0">
                   Peringatan Dini BMKG
                 </span>
-                <span className="text-xs font-semibold text-amber-900">
-                  Siaga Cuaca Ekstrem &amp; Potensi Bencana Hidrometeorologi
+                <span className="text-xs sm:text-sm font-bold text-ink">
+                  {liveQuake ? (
+                    <>Gempa M {liveQuake.magnitude} — {liveQuake.wilayah}</>
+                  ) : (
+                    "Siaga Cuaca Ekstrem & Potensi Bencana Hidrometeorologi"
+                  )}
                 </span>
               </div>
-              <p className="text-xs text-ink/80 mt-0.5 leading-relaxed">
-                Waspada hujan lebat disertai angin kencang di pesisir Sumatera, Jawa, Bali, dan Kalimantan. Pantau aliran sungai terdekat.
+              <p className="text-[11px] sm:text-xs text-ink-soft mt-0.5 leading-snug">
+                {liveQuake ? (
+                  <>
+                    Kedalaman {liveQuake.kedalaman} • {liveQuake.dirasakan} • {liveQuake.potensi}
+                  </>
+                ) : (
+                  "Waspada potensi cuaca ekstrem di pesisir. Pantau aliran sungai terdekat."
+                )}
               </p>
             </div>
           </div>
