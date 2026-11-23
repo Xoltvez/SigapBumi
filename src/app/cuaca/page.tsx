@@ -211,20 +211,26 @@ export default function CuacaPage() {
       </div>
 
       {/* Tab Switcher: Gempa Bumi vs Prakiraan Cuaca */}
-      <div className="flex items-center gap-2 border-b border-line pb-1">
+      <div className="flex items-center gap-2.5 border-b border-line pb-2">
         <button
           type="button"
           onClick={() => setActiveTab("gempa")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
             activeTab === "gempa"
-              ? "bg-slate-900 text-white shadow-xs"
-              : "bg-transparent text-ink-soft hover:text-ink hover:bg-slate-100"
+              ? "bg-slate-900 text-white shadow-xs border border-slate-900"
+              : "bg-surface border border-slate-200 hover:border-slate-300 text-ink-soft hover:text-ink hover:bg-slate-50 shadow-2xs"
           }`}
         >
           <Activity className="w-4 h-4 text-amber-400" />
           <span>Gempa Bumi &amp; InaTEWS</span>
           {daftarGempa.length > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-mono">
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                activeTab === "gempa"
+                  ? "bg-white/20 text-white"
+                  : "bg-slate-100 text-slate-700 border border-slate-200"
+              }`}
+            >
               {daftarGempa.length}
             </span>
           )}
@@ -235,8 +241,8 @@ export default function CuacaPage() {
           onClick={() => setActiveTab("cuaca")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
             activeTab === "cuaca"
-              ? "bg-slate-900 text-white shadow-xs"
-              : "bg-transparent text-ink-soft hover:text-ink hover:bg-slate-100"
+              ? "bg-slate-900 text-white shadow-xs border border-slate-900"
+              : "bg-surface border border-slate-200 hover:border-slate-300 text-ink-soft hover:text-ink hover:bg-slate-50 shadow-2xs"
           }`}
         >
           <CloudSun className="w-4 h-4 text-sky-400" />
@@ -447,8 +453,8 @@ export default function CuacaPage() {
                   onClick={() => handleSelectCity(city.adm4)}
                   className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     selectedCityAdm4 === city.adm4
-                      ? "bg-primary text-white shadow-xs"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      ? "bg-primary text-white shadow-xs border border-primary"
+                      : "bg-surface text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300 shadow-2xs"
                   }`}
                 >
                   {city.name}
