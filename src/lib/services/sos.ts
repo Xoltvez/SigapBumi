@@ -599,8 +599,8 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
     }
   });
 
-  // 1. Masukkan sinyal dari Supabase
-  supabaseItems.forEach((item) => {
+  // 1. Masukkan sinyal dari local cache (sebagai baseline awal)
+  localItems.forEach((item) => {
     if (item && item.id) {
       const fallbackPhoto = reportImageMap.get(item.id);
       mergedMap.set(item.id, {
@@ -610,8 +610,8 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
     }
   });
 
-  // 2. Masukkan / timpa dengan sinyal dari local cache (agar status lokal selalu terbaru)
-  localItems.forEach((item) => {
+  // 2. TIMPA DENGAN DATA SUPABASE PUSAT (Supabase adalah Single Source of Truth utama antar-browser!)
+  supabaseItems.forEach((item) => {
     if (item && item.id) {
       const prev = mergedMap.get(item.id);
       const fallbackPhoto = reportImageMap.get(item.id);
@@ -620,9 +620,29 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
         ...item,
         photo_url: item.photo_url || prev?.photo_url || fallbackPhoto,
         phone_number: item.phone_number || prev?.phone_number,
+        // Status dari database pusat mutlak menjadi acuan utama
+        status: item.status,
       });
     }
   });
+
+  // 3. Sinkronkan kembali cache lokal di browser ini agar data lokal tidak basi
+  try {
+    const updatedLocal = localItems.map((local) => {
+      const serverMatch = supabaseItems.find(
+        (s) => s.id === local.id || (s.tracking_code && local.note?.includes(s.tracking_code))
+      );
+      if (serverMatch) {
+        return {
+          ...local,
+          status: serverMatch.status,
+          dispatched_team: serverMatch.dispatched_team || local.dispatched_team,
+        };
+      }
+      return local;
+    });
+    saveLocalSosCache(updatedLocal);
+  } catch {}
 
   const sorted = Array.from(mergedMap.values()).sort((a, b) => {
     const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;

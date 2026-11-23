@@ -186,11 +186,14 @@ export default function AdminSosPage() {
       window.addEventListener("sigapbumi:sos-created", handleLocalUpdate);
       window.addEventListener("sigapbumi:sos-updated", handleLocalUpdate);
       window.addEventListener("sigapbumi:sos-deleted", handleLocalUpdate);
+      window.addEventListener("sigapbumi:report-updated", handleLocalUpdate);
       window.addEventListener("storage", handleLocalUpdate);
     }
 
+    // Realtime Supabase Channel untuk sinkronisasi antar-browser
+    const channelId = "admin_sos_page_realtime_" + Math.random().toString(36).substring(2, 8);
     const channel = supabase
-      .channel("admin_sos_page_realtime_sync")
+      .channel(channelId)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sos_alerts" },
@@ -198,15 +201,36 @@ export default function AdminSosPage() {
           loadData();
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reports" },
+        () => {
+          loadData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "report_status_logs" },
+        () => {
+          loadData();
+        }
+      )
       .subscribe();
+
+    // Polling interval berkala (setiap 3 detik) sebagai jaminan sinkronisasi mutlak antar-browser
+    const pollTimer = setInterval(() => {
+      loadData();
+    }, 3000);
 
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:sos-created", handleLocalUpdate);
         window.removeEventListener("sigapbumi:sos-updated", handleLocalUpdate);
         window.removeEventListener("sigapbumi:sos-deleted", handleLocalUpdate);
+        window.removeEventListener("sigapbumi:report-updated", handleLocalUpdate);
         window.removeEventListener("storage", handleLocalUpdate);
       }
+      clearInterval(pollTimer);
       supabase.removeChannel(channel);
     };
   }, [loadData]);
