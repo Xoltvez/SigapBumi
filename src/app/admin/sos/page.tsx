@@ -281,12 +281,18 @@ export default function AdminSosPage() {
     const trackingCode = target.trackingCode || (target.displayCode.startsWith("SOS-") ? target.displayCode : undefined);
 
     setSosList((prev) =>
-      prev.map((item) => (item.id === target.id ? { ...item, status: "palsu" } : item))
+      prev.map((item) =>
+        item.id === target.id ||
+        (trackingCode && (item.trackingCode === trackingCode || item.displayCode === trackingCode))
+          ? { ...item, status: "palsu" }
+          : item
+      )
     );
     try {
       await updateSosAlertStatus(target.id, "palsu", "Posko Terpadu (Verifikasi Gagal/Prank)", trackingCode);
       setToastMessage(`Sinyal ${target.displayCode} ditandai sebagai HOAKS / PALSU. Laporan darurat ditolak.`);
       setTimeout(() => setToastMessage(null), 3500);
+      await loadData(true);
     } catch (err) {
       console.error("Gagal menandai hoaks:", err);
       alert("Terjadi kendala saat menandai hoaks.");

@@ -499,6 +499,17 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
         const codeMatch = row.note ? (row.note as string).match(/\[Kode:\s*([^\]]+)\]/) : null;
         const extractedCode = codeMatch ? codeMatch[1].trim() : (row.note ? (row.note as string).match(/SOS-\d+/)?.[0] : undefined);
 
+        const isHoax = Boolean(
+          (row as any).closing_note?.includes("HOAKS") ||
+          (row as any).closing_note?.includes("PALSU") ||
+          row.note?.includes("HOAKS") ||
+          row.note?.includes("PALSU") ||
+          row.status === "palsu"
+        );
+        const statusVal: "aktif" | "ditangani" | "selesai" | "palsu" = isHoax
+          ? "palsu"
+          : (row.status as "aktif" | "ditangani" | "selesai") || "aktif";
+
         return {
           id: row.id,
           tracking_code: extractedCode,
@@ -510,7 +521,7 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
           lng: coords.lng,
           time_ago: timeAgo(row.created_at),
           battery_level: "85%",
-          status: (row.status as "aktif" | "ditangani" | "selesai" | "palsu") || "aktif",
+          status: statusVal,
           phone_number: extractedPhone,
           photo_url: extractedPhoto,
           dispatched_team: row.acknowledged_by || undefined,
@@ -595,7 +606,7 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
           lng: coords.lng,
           time_ago: timeAgo(row.created_at),
           battery_level: "95%",
-          status: row.status === "selesai" ? "selesai" : row.status === "ditindaklanjuti" ? "ditangani" : "aktif",
+          status: row.status === "selesai" ? "selesai" : row.status === "ditindaklanjuti" ? "ditangani" : row.status === "ditolak" ? "palsu" : "aktif",
           phone_number: extractedPhone,
           photo_url: extractedPhoto,
           note: row.description || undefined,
@@ -761,17 +772,29 @@ export async function updateSosAlertStatus(
 
   // 1. Update tabel sos_alerts Supabase
   try {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
     const sosPayload: Record<string, unknown> = {
       status: newStatus === "palsu" ? "selesai" : newStatus,
     };
     if (newStatus === "selesai" || newStatus === "palsu") {
       sosPayload.resolved_at = new Date().toISOString();
     }
+    if (newStatus === "palsu") {
+      sosPayload.closing_note = "HOAKS / PALSU";
+    }
 
-    await supabase
-      .from("sos_alerts")
-      .update(sosPayload)
-      .eq("id", id);
+    if (isUuid) {
+      await supabase
+        .from("sos_alerts")
+        .update(sosPayload)
+        .eq("id", id);
+    }
+    if (trackingCode) {
+      await supabase
+        .from("sos_alerts")
+        .update(sosPayload)
+        .ilike("note", `%${trackingCode}%`);
+    }
   } catch (err) {
     console.warn("updateSosAlertStatus sos_alerts error:", err);
   }

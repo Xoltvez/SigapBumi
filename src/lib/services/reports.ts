@@ -1397,16 +1397,30 @@ export async function updateReportStatusLive(
     // 3. Direct update
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reportId);
-      await supabase
-        .from("reports")
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .or(`id.eq.${reportId},tracking_code.eq.${reportId}`);
+      let targetUuid: string | null = isUuid ? reportId : null;
 
-      let targetUuid = isUuid ? reportId : null;
-      if (!targetUuid) {
+      if (isUuid) {
+        await supabase
+          .from("reports")
+          .update({
+            status: newStatus,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", reportId);
+      } else {
+        const { data: rep } = await supabase
+          .from("reports")
+          .update({
+            status: newStatus,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("tracking_code", reportId)
+          .select("id")
+          .maybeSingle();
+        if (rep?.id) targetUuid = rep.id;
+      }
+
+      if (!targetUuid && !isUuid) {
         const { data: rep } = await supabase
           .from("reports")
           .select("id")
