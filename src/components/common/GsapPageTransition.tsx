@@ -11,10 +11,12 @@ interface GsapPageTransitionProps {
 // Rute yang dikecualikan dari animasi transisi:
 // 1. Halaman Login & Register warga (/masuk, /daftar)
 // 2. Seluruh Dashboard Posko & login admin (/admin/*)
+// 3. Peta Bencana (/peta) agar elemen fixed mobile tidak terkunci dalam transform containing block
 const isRouteExcludedFromTransition = (pathname: string | null): boolean => {
   if (!pathname) return false;
   return (
     pathname.startsWith("/admin") ||
+    pathname.startsWith("/peta") ||
     pathname === "/masuk" ||
     pathname === "/daftar" ||
     pathname.includes("/login") ||
@@ -97,7 +99,7 @@ export function GsapPageTransition({ children }: GsapPageTransitionProps) {
         tl.fromTo(
           container,
           { opacity: 0.85, y: 12 },
-          { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }
+          { opacity: 1, y: 0, duration: 0.3, ease: "power2.out", clearProps: "transform" }
         );
 
         // A. Judul & Header Halaman Masuk Duluan

@@ -90,6 +90,9 @@ function PetaContent() {
   const touchCurrentY = useRef<number>(0);
   const isDragging = useRef<boolean>(false);
 
+  // Tinggi sheet saat diciutkan (minimized peek height yang presisi tanpa ruang kosong di bawah)
+  const collapsedHeight = selectedPoint ? 88 : 58;
+
   // Animasi GSAP pembukaan & penutupan Mobile Bottom Sheet
   useEffect(() => {
     if (!mobileSheetRef.current) return;
@@ -111,13 +114,13 @@ function PetaContent() {
       }
     } else {
       gsap.to(mobileSheetRef.current, {
-        height: 76,
+        height: collapsedHeight,
         duration: 0.35,
         ease: "power2.inOut",
         overwrite: "auto",
       });
     }
-  }, [isMobileSheetOpen]);
+  }, [isMobileSheetOpen, collapsedHeight]);
 
   // Touch gesture handlers untuk membuka & menutup sheet dengan drag / swipe
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -133,11 +136,11 @@ function PetaContent() {
 
     // Respon interaktif visual saat ditarik secara realtime
     if (!isMobileSheetOpen && deltaY < 0) {
-      const targetHeight = Math.min(76 + Math.abs(deltaY) * 0.9, window.innerHeight * 0.68);
+      const targetHeight = Math.min(collapsedHeight + Math.abs(deltaY) * 0.9, window.innerHeight * 0.68);
       gsap.set(mobileSheetRef.current, { height: targetHeight });
     } else if (isMobileSheetOpen && deltaY > 0) {
       const baseHeight = window.innerHeight * 0.68;
-      const targetHeight = Math.max(76, baseHeight - deltaY * 0.9);
+      const targetHeight = Math.max(collapsedHeight, baseHeight - deltaY * 0.9);
       gsap.set(mobileSheetRef.current, { height: targetHeight });
     }
   };
@@ -153,7 +156,7 @@ function PetaContent() {
       setIsMobileSheetOpen(false);
     } else if (mobileSheetRef.current) {
       gsap.to(mobileSheetRef.current, {
-        height: isMobileSheetOpen ? "68vh" : 76,
+        height: isMobileSheetOpen ? "68vh" : collapsedHeight,
         duration: 0.3,
         ease: "power2.out",
       });
@@ -172,11 +175,11 @@ function PetaContent() {
       const deltaY = touchCurrentY.current - touchStartY.current;
 
       if (!isMobileSheetOpen && deltaY < 0) {
-        const targetHeight = Math.min(76 + Math.abs(deltaY) * 0.9, window.innerHeight * 0.68);
+        const targetHeight = Math.min(collapsedHeight + Math.abs(deltaY) * 0.9, window.innerHeight * 0.68);
         gsap.set(mobileSheetRef.current, { height: targetHeight });
       } else if (isMobileSheetOpen && deltaY > 0) {
         const baseHeight = window.innerHeight * 0.68;
-        const targetHeight = Math.max(76, baseHeight - deltaY * 0.9);
+        const targetHeight = Math.max(collapsedHeight, baseHeight - deltaY * 0.9);
         gsap.set(mobileSheetRef.current, { height: targetHeight });
       }
     };
@@ -193,7 +196,7 @@ function PetaContent() {
         setIsMobileSheetOpen(false);
       } else if (mobileSheetRef.current) {
         gsap.to(mobileSheetRef.current, {
-          height: isMobileSheetOpen ? "68vh" : 76,
+          height: isMobileSheetOpen ? "68vh" : collapsedHeight,
           duration: 0.3,
           ease: "power2.out",
         });
@@ -221,7 +224,7 @@ function PetaContent() {
     const deltaY = touchCurrentY.current - touchStartY.current;
     if (deltaY > 0) {
       const baseHeight = window.innerHeight * 0.68;
-      const targetHeight = Math.max(76, baseHeight - deltaY * 0.9);
+      const targetHeight = Math.max(collapsedHeight, baseHeight - deltaY * 0.9);
       gsap.set(mobileSheetRef.current, { height: targetHeight });
     }
   };
@@ -683,7 +686,7 @@ function PetaContent() {
         <div
           ref={mobileSheetRef}
           className="absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 flex flex-col overflow-hidden will-change-[height]"
-          style={{ height: 76 }}
+          style={{ height: isMobileSheetOpen ? "68vh" : collapsedHeight }}
         >
           {/* Handle Bar Drag Area (Mendukung sentuhan / scroll tarik ke atas dan ke bawah) */}
           <div
@@ -703,7 +706,8 @@ function PetaContent() {
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            className="px-4 py-2 flex items-center justify-between gap-3 border-b border-slate-100 select-none cursor-grab active:cursor-grabbing"
+            onClick={() => setIsMobileSheetOpen((prev) => !prev)}
+            className="px-4 py-2 flex items-center justify-between gap-3 border-b border-slate-100 select-none cursor-pointer"
           >
             {selectedPoint ? (
               <div className="flex-1 min-w-0">
