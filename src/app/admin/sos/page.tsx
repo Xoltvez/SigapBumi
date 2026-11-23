@@ -66,10 +66,12 @@ export default function AdminSosPage() {
   const knownIdsRef = React.useRef<Set<string>>(new Set());
   const isFirstLoadRef = React.useRef<boolean>(true);
 
-  // Modal & Toast states for delete
+  // Modal & Toast states for delete & hoax
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<DisplaySosItem | null>(null);
+  const [hoaxConfirmTarget, setHoaxConfirmTarget] = useState<DisplaySosItem | null>(null);
   const [isClearAllModalOpen, setIsClearAllModalOpen] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [isMarkingHoax, setIsMarkingHoax] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
 
@@ -271,19 +273,26 @@ export default function AdminSosPage() {
     }
   };
 
-  const handleMarkFake = async (id: string, trackingCode?: string) => {
-    if (!confirm("Tandai sinyal SOS ini sebagai PALSU / HOAKS? Sinyal akan dibatalkan dan catatan disimpan.")) {
-      return;
-    }
+  const handleConfirmMarkHoax = async () => {
+    if (!hoaxConfirmTarget) return;
+    const target = hoaxConfirmTarget;
+    setIsMarkingHoax(true);
+
+    const trackingCode = target.trackingCode || (target.displayCode.startsWith("SOS-") ? target.displayCode : undefined);
+
     setSosList((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: "palsu" } : item))
+      prev.map((item) => (item.id === target.id ? { ...item, status: "palsu" } : item))
     );
     try {
-      await updateSosAlertStatus(id, "palsu", "Posko Terpadu (Verifikasi Gagal/Prank)", trackingCode);
-      setToastMessage("Sinyal SOS ditandai sebagai HOAKS / PALSU. Laporan darurat ditolak.");
+      await updateSosAlertStatus(target.id, "palsu", "Posko Terpadu (Verifikasi Gagal/Prank)", trackingCode);
+      setToastMessage(`Sinyal ${target.displayCode} ditandai sebagai HOAKS / PALSU. Laporan darurat ditolak.`);
       setTimeout(() => setToastMessage(null), 3500);
     } catch (err) {
       console.error("Gagal menandai hoaks:", err);
+      alert("Terjadi kendala saat menandai hoaks.");
+    } finally {
+      setIsMarkingHoax(false);
+      setHoaxConfirmTarget(null);
     }
   };
 
@@ -956,7 +965,7 @@ export default function AdminSosPage() {
                   {item.status !== "palsu" && item.status !== "selesai" && (
                     <button
                       type="button"
-                      onClick={() => handleMarkFake(item.id, item.trackingCode || (item.displayCode.startsWith("SOS-") ? item.displayCode : undefined))}
+                      onClick={() => setHoaxConfirmTarget(item)}
                       className="h-9 px-2.5 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                       title="Tandai sebagai panggilan palsu / prank"
                     >
@@ -1035,6 +1044,63 @@ export default function AdminSosPage() {
           </div>
         )}
       </div>
+
+      {/* Modal Dialog Konfirmasi Hoaks / Palsu */}
+      {hoaxConfirmTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-rose-100 text-left space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3.5">
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 shrink-0 mt-0.5">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-900">
+                  Tandai Panggilan Palsu / Hoaks
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Apakah Anda yakin ingin menandai panggilan darurat{" "}
+                  <strong className="text-slate-900 font-semibold">
+                    {hoaxConfirmTarget.displayCode} ({hoaxConfirmTarget.title})
+                  </strong>{" "}
+                  sebagai <span className="text-rose-600 font-semibold">PALSU / HOAKS</span>?
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-rose-50/70 border border-rose-200/80 rounded-xl p-3 text-xs text-rose-800 space-y-1.5">
+              <div className="flex items-center gap-1.5 font-semibold text-rose-900">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>Dampak Tindakan:</span>
+              </div>
+              <ul className="list-disc list-inside text-[11px] text-rose-700 space-y-0.5 pl-0.5">
+                <li>Sinyal darurat dan sirine posko akan seketika dihentikan.</li>
+                <li>Status di menu Lacak Laporan warga otomatis ditandai <strong>Ditolak</strong>.</li>
+                <li>Catatan penolakan tersimpan permanen di audit log sistem pelacakan.</li>
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setHoaxConfirmTarget(null)}
+                disabled={isMarkingHoax}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmMarkHoax}
+                disabled={isMarkingHoax}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span>{isMarkingHoax ? "Memproses..." : "Ya, Tandai Hoaks"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Dialog Konfirmasi Hapus SOS */}
       {deleteConfirmTarget && (
