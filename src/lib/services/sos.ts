@@ -780,7 +780,7 @@ export async function updateSosAlertStatus(
       sosPayload.resolved_at = new Date().toISOString();
     }
     if (newStatus === "palsu") {
-      sosPayload.closing_note = "HOAKS / PALSU";
+      sosPayload.closing_note = "HOAX / PALSU";
     }
 
     if (isUuid) {

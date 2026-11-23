@@ -540,7 +540,7 @@ export default function DaftarPage() {
                   className="mt-0.5 rounded border-line text-primary focus:ring-primary h-4 w-4 shrink-0"
                 />
                 <span className="leading-relaxed">
-                  Saya menyatakan bahwa informasi yang saya berikan akurat dan berkomitmen tidak menyebarkan laporan palsu/hoaks demi keselamatan umum.
+                  Saya menyatakan bahwa informasi yang saya berikan akurat dan berkomitmen tidak menyebarkan laporan palsu/hoax demi keselamatan umum.
                 </span>
               </label>
               {fieldErrors.agreeTerms && (

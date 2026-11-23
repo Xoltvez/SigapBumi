@@ -73,7 +73,7 @@ const SECTIONS: LegalSection[] = [
       <>
         <p>Pengguna dilarang untuk:</p>
         <ul>
-          <li>Mengirim laporan palsu, hoaks, atau sinyal SOS iseng yang dapat mengalihkan sumber daya penanganan darurat.</li>
+          <li>Mengirim laporan palsu, hoax, atau sinyal SOS iseng yang dapat mengalihkan sumber daya penanganan darurat.</li>
           <li>Mengunggah konten yang mengandung SARA, pornografi, kekerasan berlebihan, atau melanggar hukum.</li>
           <li>Menyalahgunakan data pribadi pengguna lain yang terlihat di platform.</li>
           <li>Mengganggu, meretas, atau membebani sistem SigapBumi secara sengaja.</li>
