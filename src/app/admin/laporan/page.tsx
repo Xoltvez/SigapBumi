@@ -68,6 +68,19 @@ function formatReportTime(dateStr?: string) {
   }
 }
 
+function getPaginationPages(current: number, total: number): (number | string)[] {
+  if (total <= 5) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 3) {
+    return [1, 2, 3, "...", total];
+  }
+  if (current >= total - 2) {
+    return [1, "...", total - 2, total - 1, total];
+  }
+  return [1, "...", current, "...", total];
+}
+
 // Dataset laporan default: dikosongkan agar murni membaca live database
 const DEFAULT_REPORTS: AdminReportRow[] = [];
 
@@ -971,9 +984,9 @@ function LaporanContent() {
             Menampilkan{" "}
             <span className="font-bold text-slate-700">
               {totalItems === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–
-              {Math.min(currentPage * PAGE_SIZE, totalItems === 5 ? 142 : totalItems)}
+              {Math.min(currentPage * PAGE_SIZE, totalItems)}
             </span>{" "}
-            dari <span className="font-bold text-slate-700">{totalItems === 5 ? 142 : totalItems}</span> laporan
+            dari <span className="font-bold text-slate-700">{totalItems}</span> laporan
           </p>
 
           <div className="flex items-center gap-1.5 self-center">
@@ -981,72 +994,40 @@ function LaporanContent() {
             <button
               type="button"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="w-8 h-8 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors shadow-2xs"
+              disabled={currentPage <= 1}
+              className="w-8 h-8 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors shadow-2xs cursor-pointer disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            {/* Page 1 */}
-            <button
-              type="button"
-              onClick={() => setCurrentPage(1)}
-              className={`w-8 h-8 rounded-lg text-xs font-bold transition-all shadow-2xs ${
-                currentPage === 1
-                  ? "bg-slate-900 text-white"
-                  : "bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              1
-            </button>
-
-            {/* Page 2 */}
-            <button
-              type="button"
-              onClick={() => setCurrentPage(2)}
-              className={`w-8 h-8 rounded-lg text-xs font-bold transition-all shadow-2xs ${
-                currentPage === 2
-                  ? "bg-slate-900 text-white"
-                  : "bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              2
-            </button>
-
-            {/* Page 3 */}
-            <button
-              type="button"
-              onClick={() => setCurrentPage(3)}
-              className={`w-8 h-8 rounded-lg text-xs font-bold transition-all shadow-2xs ${
-                currentPage === 3
-                  ? "bg-slate-900 text-white"
-                  : "bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              3
-            </button>
-
-            <span className="px-1 text-slate-400">...</span>
-
-            {/* Page 10 */}
-            <button
-              type="button"
-              onClick={() => setCurrentPage(10)}
-              className={`w-8 h-8 rounded-lg text-xs font-bold transition-all shadow-2xs ${
-                currentPage === 10
-                  ? "bg-slate-900 text-white"
-                  : "bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              10
-            </button>
+            {/* Dynamic Page Buttons */}
+            {getPaginationPages(currentPage, totalPages).map((p, idx) =>
+              typeof p === "number" ? (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setCurrentPage(p)}
+                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer ${
+                    currentPage === p
+                      ? "bg-slate-900 text-white"
+                      : "bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {p}
+                </button>
+              ) : (
+                <span key={idx} className="px-1 text-slate-400 select-none">
+                  ...
+                </span>
+              )
+            )}
 
             {/* Next */}
             <button
               type="button"
-              onClick={() => setCurrentPage((p) => Math.min(10, p + 1))}
-              disabled={currentPage === 10}
-              className="w-8 h-8 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors shadow-2xs"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="w-8 h-8 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors shadow-2xs cursor-pointer disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
