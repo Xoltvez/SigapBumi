@@ -996,7 +996,7 @@ function PetaContent() {
                       value={desktopSearch}
                       onChange={(e) => setDesktopSearch(e.target.value)}
                       placeholder="Cari titik kejadian, wilayah, atau jalan..."
-                      className="w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                      className="w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
                     />
                     {desktopSearch && (
                       <button

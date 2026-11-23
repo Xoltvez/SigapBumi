@@ -69,6 +69,22 @@ body {
   outline-offset: 2px;
 }
 
+/* Hilangkan outline kotak kaku pada elemen input agar selaras dengan kontainer search bar */
+input,
+textarea,
+select {
+  outline: none;
+}
+
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none !important;
+}
+
 /* Micro-interactions smooth transitions */
 button, a, input, select, textarea {
   transition-property: color, background-color, border-color, box-shadow, transform;

@@ -809,22 +809,22 @@ export default function HomePage() {
             {/* Direct Quick Tracking / Search Bar */}
             <form
               onSubmit={handleTrackingSubmit}
-              className="gsap-hero-search w-full max-w-xl bg-surface border-2 border-line hover:border-primary/50 focus-within:border-primary rounded-xl p-1.5 shadow-sm transition-all flex flex-col sm:flex-row items-stretch gap-1.5"
+              className="gsap-hero-search w-full max-w-xl bg-surface border-2 border-line hover:border-primary/50 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15 rounded-2xl p-1.5 shadow-sm transition-all flex flex-col sm:flex-row items-stretch gap-1.5"
             >
-              <div className="flex items-center px-3 gap-2 flex-1 min-h-[44px]">
-                <Search className="w-4 h-4 text-ink-muted shrink-0" />
+              <div className="flex items-center px-3.5 gap-2.5 flex-1 min-h-[46px]">
+                <Search className="w-4 h-4 text-ink-muted shrink-0 transition-colors" />
                 <input
                   type="text"
                   value={trackingInput}
                   onChange={(e) => setTrackingInput(e.target.value)}
                   placeholder="Masukkan Kode Lacak (cth: SB-2026-001) / Lokasi..."
-                  className="w-full text-xs sm:text-sm bg-transparent text-ink placeholder:text-ink-muted focus:outline-none"
+                  className="w-full text-xs sm:text-sm bg-transparent text-ink placeholder:text-ink-muted border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
                   aria-label="Input kode pelacakan bencana"
                 />
               </div>
               <button
                 type="submit"
-                className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-ink hover:bg-ink-soft text-white text-xs sm:text-sm font-semibold transition-colors shrink-0 shadow-xs cursor-pointer"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-ink hover:bg-ink-soft text-white text-xs sm:text-sm font-semibold transition-colors shrink-0 shadow-xs cursor-pointer"
               >
                 <span>Lacak Status</span>
                 <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
