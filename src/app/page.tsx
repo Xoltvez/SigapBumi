@@ -59,6 +59,15 @@ export default function HomePage() {
   const [trackingInput, setTrackingInput] = useState("");
   const [selectedDisasterFilter, setSelectedDisasterFilter] = useState<string>("semua");
 
+  // State interaktif checklist Tas Siaga Bencana (TSB)
+  const [checkedTsb, setCheckedTsb] = useState<Record<string, boolean>>({
+    dokumen: true,
+    p3k: true,
+    air: false,
+    senter: false,
+    peluit: false,
+  });
+
   // Checklist Tas Siaga Bencana (TSB) standar BPBD
   const tsbItems = [
     {
@@ -87,6 +96,32 @@ export default function HomePage() {
       desc: "Sinyal suara penolong SOS dan daya komunikasi ponsel",
     },
   ];
+
+  // Handler interaktif centang TSB dengan tactile spring & tas 3D react
+  const handleToggleTsb = (id: string) => {
+    setCheckedTsb((prev) => {
+      const nextVal = !prev[id];
+      // Animasi tactile bounce pada item TSB yang diklik
+      const el = document.getElementById(`tsb-item-${id}`);
+      if (el) {
+        gsap.fromTo(
+          el,
+          { scale: 0.96 },
+          { scale: 1, duration: 0.45, ease: "elastic.out(1.2, 0.4)" }
+        );
+      }
+      // Animasi guncangan kesiapan pada tas siaga 3D
+      const bagBox = mitigasiSectionRef.current?.querySelector(".gsap-bag-box");
+      if (bagBox) {
+        gsap.fromTo(
+          bagBox,
+          { rotation: nextVal ? 3 : -3, y: -6 },
+          { rotation: 0, y: 0, duration: 0.6, ease: "elastic.out(1.2, 0.35)" }
+        );
+      }
+      return { ...prev, [id]: nextVal };
+    });
+  };
 
   const handleTrackingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -271,50 +306,111 @@ export default function HomePage() {
 
       // 2. Hero Left Headline & Action Elements Stagger Entrance (Dimuat di Awal Saat Buka Web)
       if (heroLeftRef.current) {
-        const headline = heroLeftRef.current.querySelector(".gsap-hero-title");
+        const kineticWords = heroLeftRef.current.querySelectorAll(".gsap-kinetic-word");
         const desc = heroLeftRef.current.querySelector(".gsap-hero-desc");
         const searchBar = heroLeftRef.current.querySelector(".gsap-hero-search");
         const ctaButtons = heroLeftRef.current.querySelector(".gsap-hero-cta");
 
         const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
+        // A. Kinetic typography per kata dengan rotasi 3D & masking
+        if (kineticWords.length > 0) {
+          tl.fromTo(
+            kineticWords,
+            { y: "120%", rotationX: 45, opacity: 0 },
+            {
+              y: "0%",
+              rotationX: 0,
+              opacity: 1,
+              duration: 0.85,
+              stagger: 0.08,
+              ease: "power3.out",
+            }
+          );
+        }
+
+        // B. Deskripsi menyusul halus
         tl.fromTo(
-          headline,
-          { opacity: 0, y: 35 },
-          { opacity: 1, y: 0, duration: 0.85 }
+          desc,
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.7 },
+          "-=0.5"
         )
-          .fromTo(
-            desc,
-            { opacity: 0, y: 25 },
-            { opacity: 1, y: 0, duration: 0.75 },
-            "-=0.55"
-          )
+          // C. Bar pencarian pelacakan meluncur
           .fromTo(
             searchBar,
-            { opacity: 0, y: 25, scale: 0.98 },
-            { opacity: 1, y: 0, scale: 1, duration: 0.75 },
-            "-=0.5"
+            { opacity: 0, y: 22, scale: 0.98 },
+            { opacity: 1, y: 0, scale: 1, duration: 0.7 },
+            "-=0.45"
           )
+          // D. Tombol aksi hero
           .fromTo(
             ctaButtons,
-            { opacity: 0, y: 20 },
-            { opacity: 1, y: 0, duration: 0.65 },
-            "-=0.45"
+            { opacity: 0, y: 18 },
+            { opacity: 1, y: 0, duration: 0.6 },
+            "-=0.4"
           );
       }
 
       // 3. Right Hero Bento Card Entrance & Floating Ambient
       if (heroCardRef.current) {
-        const cardBox = heroCardRef.current.querySelector(".gsap-bento-box");
+        const cardBox = heroCardRef.current.querySelector(".gsap-bento-box") as HTMLElement | null;
         const shadowLayer = heroCardRef.current.querySelector(".gsap-offset-shadow");
         const bentoItems = heroCardRef.current.querySelectorAll(".gsap-bento-item");
         const avatarGroup = heroCardRef.current.querySelector(".gsap-avatar-stack");
+        const radar1 = heroCardRef.current.querySelector(".gsap-radar-sweep");
+        const radar2 = heroCardRef.current.querySelector(".gsap-radar-sweep-2");
 
-        gsap.fromTo(
-          cardBox,
-          { opacity: 0, scale: 0.92, y: 30 },
-          { opacity: 1, scale: 1, y: 0, duration: 0.9, delay: 0.25, ease: "back.out(1.3)" }
-        );
+        if (cardBox) {
+          gsap.fromTo(
+            cardBox,
+            { opacity: 0, scale: 0.92, y: 30 },
+            { opacity: 1, scale: 1, y: 0, duration: 0.9, delay: 0.25, ease: "back.out(1.3)" }
+          );
+
+          // 3D Tilt Magnetik Halus mengikuti Kursor Mouse
+          const xTo = gsap.quickTo(cardBox, "rotationY", { duration: 0.45, ease: "power2.out" });
+          const yTo = gsap.quickTo(cardBox, "rotationX", { duration: 0.45, ease: "power2.out" });
+
+          const handleMouseMove = (e: MouseEvent) => {
+            const rect = cardBox.getBoundingClientRect();
+            const relX = (e.clientX - rect.left) / rect.width - 0.5;
+            const relY = (e.clientY - rect.top) / rect.height - 0.5;
+            xTo(relX * 12); // maks 6 derajat rotation Y
+            yTo(-relY * 12); // maks 6 derajat rotation X
+          };
+
+          const handleMouseLeave = () => {
+            xTo(0);
+            yTo(0);
+          };
+
+          cardBox.addEventListener("mousemove", handleMouseMove);
+          cardBox.addEventListener("mouseleave", handleMouseLeave);
+        }
+
+        // Radar Sonar Pulsing
+        if (radar1) {
+          gsap.to(radar1, {
+            scale: 1.08,
+            opacity: 0.8,
+            duration: 2.2,
+            repeat: -1,
+            yoyo: true,
+            ease: "sine.inOut",
+          });
+        }
+        if (radar2) {
+          gsap.to(radar2, {
+            scale: 1.15,
+            opacity: 0.4,
+            duration: 3,
+            repeat: -1,
+            yoyo: true,
+            ease: "sine.inOut",
+            delay: 0.5,
+          });
+        }
 
         if (shadowLayer) {
           gsap.to(shadowLayer, {
@@ -366,6 +462,17 @@ export default function HomePage() {
             },
           }
         );
+
+        const warnIcon = warningSectionRef.current.querySelector(".gsap-warn-icon");
+        if (warnIcon) {
+          gsap.to(warnIcon, {
+            scale: 1.15,
+            duration: 1.1,
+            repeat: -1,
+            yoyo: true,
+            ease: "power1.inOut",
+          });
+        }
       }
 
       // SECTION 3: Kategori Kejadian Bencana (Header + 6 Bento Cards)
@@ -409,6 +516,29 @@ export default function HomePage() {
               },
             }
           );
+
+          // Efek Elastisitas Squash & Stretch 3D pada Ikon Bencana saat Hover
+          catCards.forEach((c) => {
+            const iconBox = c.querySelector(".gsap-cat-icon-box");
+            if (iconBox) {
+              c.addEventListener("mouseenter", () => {
+                gsap.to(iconBox, {
+                  scale: 1.22,
+                  rotation: 6,
+                  duration: 0.55,
+                  ease: "elastic.out(1.2, 0.35)",
+                });
+              });
+              c.addEventListener("mouseleave", () => {
+                gsap.to(iconBox, {
+                  scale: 1,
+                  rotation: 0,
+                  duration: 0.35,
+                  ease: "power2.out",
+                });
+              });
+            }
+          });
         }
       }
 
@@ -434,6 +564,26 @@ export default function HomePage() {
               },
             }
           );
+        }
+
+        // Rolling Number Counter untuk Persentase Respons Posko
+        const statCounter = reportsSectionRef.current.querySelector(".gsap-stat-counter");
+        if (statCounter) {
+          const targetVal = parseFloat(resolvedRate) || 98.5;
+          const counterObj = { val: 0 };
+          gsap.to(counterObj, {
+            val: targetVal,
+            duration: 1.8,
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: reportsSectionRef.current,
+              start: "top 82%",
+              toggleActions: "play none none none",
+            },
+            onUpdate: () => {
+              statCounter.textContent = counterObj.val.toFixed(1) + "%";
+            },
+          });
         }
 
         if (filterTabs) {
@@ -571,12 +721,28 @@ export default function HomePage() {
           <div ref={heroLeftRef} className="lg:col-span-7 flex flex-col items-start space-y-6">
             {/* Main Headline */}
             <div>
-              <h1 className="gsap-hero-title text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-ink leading-[1.18] tracking-tight">
-                Setiap Detik Berarti. <br className="hidden sm:inline" />
-                <span className="bg-gradient-to-r from-primary via-primary-hover to-amber-600 bg-clip-text text-transparent">
-                  Laporkan Cepat.
+              <h1 className="gsap-hero-title text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-ink leading-[1.2] tracking-tight">
+                <span className="inline-block overflow-hidden pb-1">
+                  <span className="gsap-kinetic-word inline-block">Setiap</span>
                 </span>{" "}
-                Lindungi Bersama.
+                <span className="inline-block overflow-hidden pb-1">
+                  <span className="gsap-kinetic-word inline-block">Detik</span>
+                </span>{" "}
+                <span className="inline-block overflow-hidden pb-1">
+                  <span className="gsap-kinetic-word inline-block text-primary">Berarti.</span>
+                </span>{" "}
+                <br className="hidden sm:inline" />
+                <span className="inline-block overflow-hidden pb-1">
+                  <span className="gsap-kinetic-word inline-block bg-gradient-to-r from-primary via-primary-hover to-amber-600 bg-clip-text text-transparent">
+                    Laporkan Cepat.
+                  </span>
+                </span>{" "}
+                <span className="inline-block overflow-hidden pb-1">
+                  <span className="gsap-kinetic-word inline-block">Lindungi</span>
+                </span>{" "}
+                <span className="inline-block overflow-hidden pb-1">
+                  <span className="gsap-kinetic-word inline-block">Bersama.</span>
+                </span>
               </h1>
               <p className="gsap-hero-desc text-ink-soft text-base sm:text-lg mt-3 leading-relaxed max-w-xl">
                 Kirimkan laporan kejadian bencana, pantau status penanganan secara terbuka, dan akses informasi tanggap darurat resmi dalam satu pintu.
@@ -629,19 +795,29 @@ export default function HomePage() {
           </div>
 
           {/* Right Column: Interactive Quick-Report Bento Card (Compact - hidden on mobile) */}
-          <div ref={heroCardRef} className="hidden lg:block lg:col-span-5 relative max-w-[420px] mx-auto lg:max-w-none w-full">
+          <div ref={heroCardRef} className="hidden lg:block lg:col-span-5 relative max-w-[420px] mx-auto lg:max-w-none w-full [perspective:1000px]">
             {/* Background Geometric Red/Orange Blob Accent */}
             <div
               aria-hidden="true"
-              className="absolute -top-2 -right-2 w-28 h-28 rounded-full bg-gradient-to-br from-red-500/80 to-orange-500/80 blur-xs -z-10"
+              className="absolute -top-3 -right-3 w-36 h-36 rounded-full bg-gradient-to-br from-red-500/70 to-orange-500/70 blur-md -z-10"
             />
             <div
               aria-hidden="true"
-              className="absolute -bottom-3 -left-3 w-24 h-24 rounded-2xl bg-orange-600/25 blur-md -z-10"
+              className="absolute -bottom-4 -left-4 w-32 h-32 rounded-2xl bg-orange-600/25 blur-lg -z-10"
             />
 
-            {/* Dark Container Card */}
-            <div className="gsap-bento-box bg-[#111622] border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xl shadow-black/40 space-y-3 text-white">
+            {/* Emergency Sonar Radar Rings */}
+            <div
+              aria-hidden="true"
+              className="gsap-radar-sweep pointer-events-none absolute -inset-3 rounded-[32px] border border-orange-500/25 -z-10"
+            />
+            <div
+              aria-hidden="true"
+              className="gsap-radar-sweep-2 pointer-events-none absolute -inset-6 rounded-[36px] border border-red-500/15 -z-10"
+            />
+
+            {/* Dark Container Card with 3D Tilt */}
+            <div className="gsap-bento-box bg-[#111622] border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl shadow-black/50 space-y-3 text-white [transform-style:preserve-3d] transition-transform duration-100 ease-out">
               {/* Header Headline */}
               <div>
                 <h2 className="text-sm sm:text-base font-bold text-white tracking-tight leading-snug">
@@ -921,7 +1097,7 @@ export default function HomePage() {
               >
                 <div>
                   <div className="mb-3.5">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-2 ${cat.iconColor} p-2.5 shadow-2xs`}>
+                    <div className={`gsap-cat-icon-box w-14 h-14 rounded-2xl flex items-center justify-center transition-transform ${cat.iconColor} p-2.5 shadow-2xs`}>
                       {cat.iconUrl ? (
                         <div className="relative w-9 h-9 flex items-center justify-center">
                           <Image
@@ -964,9 +1140,15 @@ export default function HomePage() {
       >
         <div className="gsap-rep-header opacity-0 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
           <div>
-            <h2 id="laporan-terkini-title" className="text-xl md:text-2xl font-bold text-ink">
-              Laporan Kejadian Terkini
-            </h2>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 id="laporan-terkini-title" className="text-xl md:text-2xl font-bold text-ink">
+                Laporan Kejadian Terkini
+              </h2>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="gsap-stat-counter">{resolvedRate}%</span> Tertangani
+              </span>
+            </div>
             <p className="text-xs sm:text-sm text-ink-soft mt-1">
               Data insiden terverifikasi posko terpadu dari seluruh penjuru Indonesia
             </p>
@@ -1125,35 +1307,63 @@ export default function HomePage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Bento 1: Checklist Tas Siaga Bencana (TSB) Standar BPBD (7 cols) */}
           <div className="gsap-tsb-box opacity-0 lg:col-span-7 bg-surface border border-line rounded-2xl p-6 shadow-card space-y-4">
-            <div>
-              <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                Checklist Kesiapsiagaan
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                  Checklist Kesiapsiagaan
+                </span>
+                <h3 className="text-lg font-bold text-ink mt-0.5">
+                  Tas Siaga Bencana (TSB) Keluarga
+                </h3>
+              </div>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100/80 text-emerald-800 border border-emerald-200">
+                {Object.values(checkedTsb).filter(Boolean).length}/{tsbItems.length} Siap
               </span>
-              <h3 className="text-lg font-bold text-ink mt-0.5">
-                Tas Siaga Bencana (TSB) Keluarga
-              </h3>
             </div>
 
             <p className="text-xs text-ink-soft leading-relaxed">
-              Pastikan tas siaga berisi kebutuhan pokok bertahan hidup minimal untuk 72 jam pertama pasca bencana:
+              Pastikan tas siaga berisi kebutuhan pokok bertahan hidup minimal untuk 72 jam pertama pasca bencana (klik untuk menandai):
             </p>
 
-            {/* Checklist Items */}
+            {/* Checklist Items Interaktif */}
             <div className="space-y-2.5 pt-1">
-              {tsbItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="gsap-tsb-item opacity-0 w-full p-3 rounded-xl border border-line/80 bg-slate-50/70 flex items-start gap-3 hover:border-emerald-300 transition-colors"
-                >
-                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-ink">{item.label}</p>
-                    <p className="text-[11px] text-ink-muted mt-0.5 leading-snug">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
+              {tsbItems.map((item) => {
+                const isChecked = Boolean(checkedTsb[item.id]);
+                return (
+                  <button
+                    key={item.id}
+                    id={`tsb-item-${item.id}`}
+                    type="button"
+                    onClick={() => handleToggleTsb(item.id)}
+                    className={`gsap-tsb-item opacity-0 w-full p-3 rounded-xl border text-left flex items-start gap-3 transition-all duration-200 cursor-pointer ${
+                      isChecked
+                        ? "bg-emerald-50/70 border-emerald-300 text-emerald-950"
+                        : "bg-slate-50/70 border-line/80 hover:border-slate-300 text-ink"
+                    }`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                        isChecked
+                          ? "bg-emerald-500 text-white shadow-xs"
+                          : "bg-slate-200 text-slate-400"
+                      }`}
+                    >
+                      <CheckCircle2 className={`w-3.5 h-3.5 ${isChecked ? "text-white" : "opacity-0"}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className={`text-xs font-bold ${isChecked ? "text-emerald-900" : "text-ink"}`}>
+                          {item.label}
+                        </p>
+                        <span className={`text-[10px] font-semibold shrink-0 ${isChecked ? "text-emerald-700" : "text-slate-400"}`}>
+                          {isChecked ? "Siap ✓" : "Centang"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-ink-muted mt-0.5 leading-snug">{item.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="pt-2 flex items-center justify-between text-xs text-ink-soft">
