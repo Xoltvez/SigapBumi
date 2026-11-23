@@ -24,6 +24,12 @@ import {
   HeartPulse,
   Shield,
   Phone,
+  Share2,
+  MessageCircle,
+  Send,
+  Truck,
+  PhoneCall,
+  ShieldAlert,
 } from "lucide-react";
 import { TimelineStatus, type TimelineStep } from "@/components/laporan/TimelineStatus";
 import type { DisasterType, ReportStatus, SosAssistanceType } from "@/types";
@@ -168,7 +174,7 @@ SAMPLE_REPORTS["LPR-2X7M9P"] = SAMPLE_REPORTS["SB-2026-2X7M"];
 
 function LacakContent() {
   const searchParams = useSearchParams();
-  const urlKode = searchParams.get("kode") || "";
+  const urlKode = searchParams.get("kode") || searchParams.get("code") || "";
 
   const [searchInput, setSearchInput] = useState(urlKode || "SB-2026-8F3K");
   const [activeReport, setActiveReport] = useState<ReportDetail | null>(
@@ -179,6 +185,62 @@ function LacakContent() {
   const [copied, setCopied] = useState(false);
   const [isVouched, setIsVouched] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const getShareUrl = (trackingCode: string) => {
+    if (typeof window !== "undefined") {
+      return `${window.location.origin}/lacak?kode=${encodeURIComponent(trackingCode)}`;
+    }
+    return `https://sigapbumi.id/lacak?kode=${encodeURIComponent(trackingCode)}`;
+  };
+
+  const handleCopyShareLink = (trackingCode: string) => {
+    const url = getShareUrl(trackingCode);
+    navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2200);
+  };
+
+  const handleNativeShare = async (report: ReportDetail) => {
+    const url = getShareUrl(report.tracking_code);
+    const shareData = {
+      title: `Pantau Laporan Bencana: ${report.tracking_code}`,
+      text: `Pantau perkembangan laporan bencana "${report.title}" di SigapBumi:\n`,
+      url: url,
+    };
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // User cancelled or unsupported, fallback to modal
+      }
+    }
+    setIsShareModalOpen(true);
+  };
+
+  const getWhatsAppShareUrl = (report: ReportDetail) => {
+    const url = getShareUrl(report.tracking_code);
+    const statusLabel =
+      report.status === "ditindaklanjuti"
+        ? "Dalam Proses / Menuju Lokasi"
+        : report.status === "selesai"
+        ? "Selesai Ditangani"
+        : report.status === "diverifikasi"
+        ? "Telah Diverifikasi Posko"
+        : report.status.toUpperCase();
+
+    const message =
+      `🚨 *Pantau Perkembangan Laporan Bencana - SigapBumi*\n\n` +
+      `📋 *Kode Lacak:* ${report.tracking_code}\n` +
+      `🏷️ *Laporan:* ${report.title}\n` +
+      `📍 *Lokasi:* ${report.location}\n` +
+      `⏱️ *Status Terkini:* ${statusLabel}\n\n` +
+      `Pantau tahapan tindak lanjut dan respon petugas secara transparan melalui tautan ini:\n${url}`;
+
+    return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -415,8 +477,9 @@ function LacakContent() {
         );
       case "ditindaklanjuti":
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-warning-soft text-warning-text border border-warning">
-            Sedang Ditindaklanjuti
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 inline-flex items-center gap-1.5 shadow-2xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+            Dalam Proses / Menuju Lokasi
           </span>
         );
       case "selesai":
@@ -556,7 +619,18 @@ function LacakContent() {
             </div>
 
             <div className="flex sm:flex-col items-start sm:items-end gap-2">
-              {getStatusBadge(activeReport.status)}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsShareModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#EA580C] border border-orange-200/80 text-xs font-bold transition-all shadow-2xs hover:shadow-xs"
+                  title="Bagikan Tautan Laporan ke Keluarga atau Grup WhatsApp"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Bagikan</span>
+                </button>
+                {getStatusBadge(activeReport.status)}
+              </div>
               <span className="text-xs text-ink-muted flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
                 {activeReport.created_at}
@@ -635,6 +709,61 @@ function LacakContent() {
               </div>
             );
           })()}
+
+          {/* Estimasi Waktu Respon Petugas Saat 'Dalam Proses / Menuju Lokasi' */}
+          {activeReport.status === "ditindaklanjuti" && (
+            <div className="rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 p-4 sm:p-5 text-slate-800 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 -mt-3 -mr-3 w-32 h-32 bg-amber-400/10 rounded-full blur-xl pointer-events-none" />
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-200/80 px-2.5 py-1 rounded-full border border-amber-300">
+                    Tim Respon Lapangan Sedang Menuju Lokasi
+                  </span>
+                </div>
+                <div className="inline-flex items-center gap-2 text-xs font-bold text-amber-950 bg-white/95 px-3.5 py-1.5 rounded-lg border border-amber-300/80 shadow-2xs">
+                  <Clock className="w-4 h-4 text-amber-600 animate-spin" />
+                  <span>Perkiraan Tiba (ETA): <strong className="text-amber-700 font-extrabold">~15 - 25 Menit</strong></span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 text-xs">
+                <div className="bg-white/90 rounded-xl p-3.5 border border-amber-200/80 shadow-2xs space-y-1">
+                  <div className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
+                    <Truck className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Armada Diberangkatkan</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Unit evakuasi & personil siaga posko terdekat telah meluncur ke koordinat kejadian.
+                  </p>
+                </div>
+
+                <div className="bg-white/90 rounded-xl p-3.5 border border-amber-200/80 shadow-2xs space-y-1">
+                  <div className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
+                    <PhoneCall className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Kesiapan Kontak Pelapor</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Pastikan nomor telepon pelapor <strong className="text-slate-800">{activeReport.phone_number || "Anda"}</strong> tetap aktif untuk panduan arah gang.
+                  </p>
+                </div>
+
+                <div className="bg-white/90 rounded-xl p-3.5 border border-amber-200/80 shadow-2xs space-y-1">
+                  <div className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
+                    <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Keselamatan Warga</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Tetap di titik aman yang tinggi/terbuka, dahulukan lansia & anak-anak, siapkan senter jika malam.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Foto Bukti Kejadian dari Kamera (Jika Ada) */}
           {activeReport.image_url && (
@@ -717,12 +846,23 @@ function LacakContent() {
               <ExternalLink className="w-4 h-4" />
             </Link>
 
-            <Link
-              href="/lapor"
-              className="inline-flex items-center justify-center h-10 px-4 rounded-md bg-surface border border-line text-xs font-semibold text-ink hover:bg-bg transition-colors min-h-[44px]"
-            >
-              Kirim Laporan Baru
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(true)}
+                className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md bg-[#EA580C] hover:bg-[#c2410c] text-white text-xs font-bold transition-all shadow-sm min-h-[44px]"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Bagikan Tautan Laporan</span>
+              </button>
+
+              <Link
+                href="/lapor"
+                className="inline-flex items-center justify-center h-10 px-4 rounded-md bg-surface border border-line text-xs font-semibold text-ink hover:bg-bg transition-colors min-h-[44px]"
+              >
+                Kirim Laporan Baru
+              </Link>
+            </div>
           </div>
         </section>
       ) : hasSearched ? (
@@ -780,6 +920,126 @@ function LacakContent() {
               alt="Foto bukti lapangan ukuran penuh"
               className="max-h-[82vh] w-auto max-w-full object-contain rounded-lg border border-white/20 shadow-2xl"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Modal Dialog Bagikan Tautan Laporan */}
+      {isShareModalOpen && activeReport && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setIsShareModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-lg bg-surface border border-line rounded-2xl p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-primary flex items-center justify-center shrink-0">
+                  <Share2 className="w-5 h-5 text-[#EA580C]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-ink leading-tight">
+                    Bagikan Perkembangan Laporan
+                  </h3>
+                  <p className="text-xs text-ink-muted mt-0.5">
+                    Kirim link langsung ke keluarga atau grup WhatsApp warga
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(false)}
+                className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-bg transition-colors"
+                aria-label="Tutup modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Ringkasan Laporan Singkat */}
+            <div className="bg-bg p-3.5 rounded-xl border border-line space-y-1.5 text-xs">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="font-mono font-bold text-primary text-sm">
+                  {activeReport.tracking_code}
+                </span>
+                {getStatusBadge(activeReport.status)}
+              </div>
+              <p className="font-semibold text-ink line-clamp-1">{activeReport.title}</p>
+              <p className="text-ink-muted flex items-center gap-1.5 line-clamp-1">
+                <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span>{activeReport.location}</span>
+              </p>
+            </div>
+
+            {/* Input Link & Salin URL */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-ink flex items-center justify-between">
+                <span>Tautan Langsung Pelacakan:</span>
+                {linkCopied && (
+                  <span className="text-xs text-success font-semibold flex items-center gap-1 animate-in fade-in">
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    Tautan berhasil disalin!
+                  </span>
+                )}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={getShareUrl(activeReport.tracking_code)}
+                  className="flex-1 h-11 px-3.5 rounded-xl border border-line bg-surface text-ink text-xs font-mono select-all focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleCopyShareLink(activeReport.tracking_code)}
+                  className="h-11 px-4 rounded-xl bg-ink hover:bg-ink-soft text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
+                >
+                  {linkCopied ? (
+                    <Check className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                  <span>{linkCopied ? "Tersalin" : "Salin Link"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Tombol Opsi Berbagi Cepat */}
+            <div className="space-y-2 pt-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+                Kirim Langsung Melalui:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <a
+                  href={getWhatsAppShareUrl(activeReport)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold transition-all shadow-sm"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Kirim ke WhatsApp</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => handleNativeShare(activeReport)}
+                  className="flex items-center justify-center gap-2 h-11 px-4 rounded-xl border border-line bg-surface hover:bg-bg text-ink text-xs font-bold transition-all shadow-2xs"
+                >
+                  <Send className="w-4 h-4 text-primary" />
+                  <span>Aplikasi Lainnya</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Catatan Bawah */}
+            <p className="text-[11px] text-ink-muted text-center pt-1">
+              Penerima tautan dapat langsung melihat perkembangan tanpa perlu memasukkan kode lacak secara manual.
+            </p>
           </div>
         </div>
       )}
