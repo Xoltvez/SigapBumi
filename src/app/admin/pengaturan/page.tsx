@@ -869,11 +869,6 @@ export default function AdminPengaturanPage() {
                 <Shield className="w-32 h-32" />
               </div>
 
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider mb-4 border border-emerald-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                Badge Petugas Valid
-              </div>
-
               <div className="flex items-center gap-3.5 mb-5">
                 <div className="w-14 h-14 rounded-2xl bg-[#EA580C] text-white flex items-center justify-center font-bold text-xl shadow-lg">
                   <User className="w-7 h-7" />
@@ -899,16 +894,6 @@ export default function AdminPengaturanPage() {
                 <div className="flex justify-between items-center text-slate-300">
                   <span className="text-slate-400">Posko Induk:</span>
                   <span className="font-bold text-white">{settings.stationCode}</span>
-                </div>
-                <div className="flex justify-between items-center text-slate-300">
-                  <span className="text-slate-400">Kanal Radio:</span>
-                  <span className="font-mono text-emerald-300">{settings.radioFrequency}</span>
-                </div>
-                <div className="flex justify-between items-center text-slate-300">
-                  <span className="text-slate-400">Status Akses:</span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
-                    Super Admin Posko
-                  </span>
                 </div>
               </div>
             </div>
