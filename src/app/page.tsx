@@ -218,7 +218,7 @@ export default function HomePage() {
             fetchWeatherAndQuake(parsed.lat, parsed.lng);
           }
         }
-      } catch {}
+      } catch { }
 
       // 2. Jika izin lokasi geolocation sudah aktif di browser
       if (!hasCoords && navigator.geolocation) {
@@ -279,67 +279,67 @@ export default function HomePage() {
     bgAccent: string;
     iconColor: string;
   }[] = [
-    {
-      type: "banjir",
-      label: "Tsunami & Banjir",
-      desc: "Gelombang tsunami, luapan sungai, rob pantai, dan genangan air",
-      iconUrl: "/icon%20bencana/banjir.png",
-      badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
-      borderColor: "hover:border-blue-400 hover:shadow-blue-500/10",
-      bgAccent: "group-hover:bg-blue-50/50",
-      iconColor: "text-blue-600 bg-blue-100/70",
-    },
-    {
-      type: "gempa",
-      label: "Gempa Bumi",
-      desc: "Guncangan tektonik, retakan tanah, dan dampak seismik",
-      iconUrl: "/icon%20bencana/gempa%20bumi.png",
-      badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
-      borderColor: "hover:border-amber-400 hover:shadow-amber-500/10",
-      bgAccent: "group-hover:bg-amber-50/50",
-      iconColor: "text-amber-600 bg-amber-100/70",
-    },
-    {
-      type: "kebakaran",
-      label: "Kebakaran Pemukiman",
-      desc: "Insiden api perumahan, korsleting listrik, dan gedung publik",
-      iconUrl: "/icon%20bencana/house-fire.png",
-      badgeColor: "bg-red-50 text-red-700 border-red-200",
-      borderColor: "hover:border-red-400 hover:shadow-red-500/10",
-      bgAccent: "group-hover:bg-red-50/50",
-      iconColor: "text-red-600 bg-red-100/70",
-    },
-    {
-      type: "longsor",
-      label: "Tanah Longsor",
-      desc: "Gerakan lereng tebing, jalan terputus, dan material batuan",
-      iconUrl: "/icon%20bencana/avalanche.png",
-      badgeColor: "bg-stone-50 text-stone-700 border-stone-200",
-      borderColor: "hover:border-stone-400 hover:shadow-stone-500/10",
-      bgAccent: "group-hover:bg-stone-50/50",
-      iconColor: "text-stone-700 bg-stone-200/80",
-    },
-    {
-      type: "karhutla",
-      label: "Karhutla & Kabut Asap",
-      desc: "Kebakaran lahan gambut, hutan lindung, dan titik api (hotspot)",
-      iconUrl: "/icon%20bencana/fire.png",
-      badgeColor: "bg-orange-50 text-orange-700 border-orange-200",
-      borderColor: "hover:border-orange-400 hover:shadow-orange-500/10",
-      bgAccent: "group-hover:bg-orange-50/50",
-      iconColor: "text-orange-600 bg-orange-100/70",
-    },
-    {
-      type: "lainnya",
-      label: "Lainnya",
-      desc: "Insiden kedaruratan umum, cuaca ekstrem, pohon tumbang, & darurat lain",
-      iconUrl: "/icon%20bencana/disaster-management.png",
-      badgeColor: "bg-cyan-50 text-cyan-700 border-cyan-200",
-      borderColor: "hover:border-cyan-400 hover:shadow-cyan-500/10",
-      bgAccent: "group-hover:bg-cyan-50/50",
-      iconColor: "text-cyan-600 bg-cyan-100/70",
-    },
-  ];
+      {
+        type: "banjir",
+        label: "Tsunami & Banjir",
+        desc: "Gelombang tsunami, luapan sungai, rob pantai, dan genangan air",
+        iconUrl: "/icon%20bencana/banjir.png",
+        badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
+        borderColor: "hover:border-blue-400 hover:shadow-blue-500/10",
+        bgAccent: "group-hover:bg-blue-50/50",
+        iconColor: "text-blue-600 bg-blue-100/70",
+      },
+      {
+        type: "gempa",
+        label: "Gempa Bumi",
+        desc: "Guncangan tektonik, retakan tanah, dan dampak seismik",
+        iconUrl: "/icon%20bencana/gempa%20bumi.png",
+        badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
+        borderColor: "hover:border-amber-400 hover:shadow-amber-500/10",
+        bgAccent: "group-hover:bg-amber-50/50",
+        iconColor: "text-amber-600 bg-amber-100/70",
+      },
+      {
+        type: "kebakaran",
+        label: "Kebakaran Pemukiman",
+        desc: "Insiden api perumahan, korsleting listrik, dan gedung publik",
+        iconUrl: "/icon%20bencana/house-fire.png",
+        badgeColor: "bg-red-50 text-red-700 border-red-200",
+        borderColor: "hover:border-red-400 hover:shadow-red-500/10",
+        bgAccent: "group-hover:bg-red-50/50",
+        iconColor: "text-red-600 bg-red-100/70",
+      },
+      {
+        type: "longsor",
+        label: "Tanah Longsor",
+        desc: "Gerakan lereng tebing, jalan terputus, dan material batuan",
+        iconUrl: "/icon%20bencana/avalanche.png",
+        badgeColor: "bg-stone-50 text-stone-700 border-stone-200",
+        borderColor: "hover:border-stone-400 hover:shadow-stone-500/10",
+        bgAccent: "group-hover:bg-stone-50/50",
+        iconColor: "text-stone-700 bg-stone-200/80",
+      },
+      {
+        type: "karhutla",
+        label: "Karhutla & Kabut Asap",
+        desc: "Kebakaran lahan gambut, hutan lindung, dan titik api (hotspot)",
+        iconUrl: "/icon%20bencana/fire.png",
+        badgeColor: "bg-orange-50 text-orange-700 border-orange-200",
+        borderColor: "hover:border-orange-400 hover:shadow-orange-500/10",
+        bgAccent: "group-hover:bg-orange-50/50",
+        iconColor: "text-orange-600 bg-orange-100/70",
+      },
+      {
+        type: "lainnya",
+        label: "Lainnya",
+        desc: "Insiden kedaruratan umum, cuaca ekstrem, pohon tumbang, & darurat lain",
+        iconUrl: "/icon%20bencana/disaster-management.png",
+        badgeColor: "bg-cyan-50 text-cyan-700 border-cyan-200",
+        borderColor: "hover:border-cyan-400 hover:shadow-cyan-500/10",
+        bgAccent: "group-hover:bg-cyan-50/50",
+        iconColor: "text-cyan-600 bg-cyan-100/70",
+      },
+    ];
 
   // GSAP Eye-catching & Scroll-Triggered Reveal Animations
   useEffect(() => {
@@ -1256,11 +1256,10 @@ export default function HomePage() {
                 key={tab.id}
                 type="button"
                 onClick={() => setSelectedDisasterFilter(tab.id)}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold transition-all shrink-0 cursor-pointer ${
-                  selectedDisasterFilter === tab.id
-                    ? "bg-ink text-white shadow-xs"
-                    : "bg-surface hover:bg-bg text-ink-soft border border-line"
-                }`}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold transition-all shrink-0 cursor-pointer ${selectedDisasterFilter === tab.id
+                  ? "bg-ink text-white shadow-xs"
+                  : "bg-surface hover:bg-bg text-ink-soft border border-line"
+                  }`}
               >
                 {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
                 <span>{tab.label}</span>
@@ -1314,13 +1313,12 @@ export default function HomePage() {
                     </div>
 
                     <span
-                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize ${
-                        report.status === "selesai"
-                          ? "bg-success-soft text-success-text"
-                          : report.status === "ditindaklanjuti"
+                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize ${report.status === "selesai"
+                        ? "bg-success-soft text-success-text"
+                        : report.status === "ditindaklanjuti"
                           ? "bg-warning-soft text-warning-text"
                           : "bg-info-soft text-info-text"
-                      }`}
+                        }`}
                     >
                       {report.status}
                     </span>
