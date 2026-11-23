@@ -28,6 +28,7 @@ import {
 import { TimelineStatus, type TimelineStep } from "@/components/laporan/TimelineStatus";
 import type { DisasterType, ReportStatus, SosAssistanceType } from "@/types";
 import { fetchReportDetail, vouchReportLive, cleanReportDescription, extractPhotoFromDescription } from "@/lib/services/reports";
+import { supabase } from "@/lib/supabase/client";
 import DisasterIcon, { getDisasterLabel } from "@/components/common/DisasterIcon";
 
 interface ReportDetail {
@@ -253,6 +254,54 @@ function LacakContent() {
     }, 100);
     return () => clearTimeout(timer);
   }, [urlKode, performSearch]);
+
+  // Sinkronisasi Realtime saat laporan di-update posko di dashboard
+  useEffect(() => {
+    if (!activeReport?.tracking_code) return;
+    const currentCode = activeReport.tracking_code;
+
+    const handleUpdate = () => {
+      performSearch(currentCode);
+    };
+
+    window.addEventListener("sigapbumi:report-updated", handleUpdate);
+    window.addEventListener("sigapbumi:sos-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+
+    const channel = supabase
+      .channel(`lacak_realtime_${currentCode}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "reports",
+          filter: `tracking_code=eq.${currentCode}`,
+        },
+        () => {
+          performSearch(currentCode);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "report_status_logs",
+        },
+        () => {
+          performSearch(currentCode);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      window.removeEventListener("sigapbumi:report-updated", handleUpdate);
+      window.removeEventListener("sigapbumi:sos-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+      supabase.removeChannel(channel);
+    };
+  }, [activeReport?.tracking_code, performSearch]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

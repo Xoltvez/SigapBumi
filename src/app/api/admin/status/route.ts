@@ -104,31 +104,66 @@ export async function POST(request: Request) {
         // Lanjut ke fallback direct
       }
 
-      // 3. Update langsung tabel reports jika UUID
+      // 3. Update tabel reports (dukung ID UUID maupun tracking_code seperti SOS-7340)
       const isUUID =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
           reportId
         );
 
-      if (isUUID) {
+      let targetReportUuid = isUUID ? reportId : null;
+
+      if (!targetReportUuid) {
+        const { data: found } = await supabase
+          .from("reports")
+          .select("id")
+          .eq("tracking_code", reportId)
+          .maybeSingle();
+        if (found?.id) {
+          targetReportUuid = found.id;
+        }
+      }
+
+      if (targetReportUuid) {
         await supabase
           .from("reports")
           .update({
             status,
             updated_at: nowIso,
           })
-          .eq("id", reportId);
+          .eq("id", targetReportUuid);
 
         // Catat timeline ke report_status_logs
         try {
           await supabase.from("report_status_logs").insert({
-            report_id: reportId,
+            report_id: targetReportUuid,
             status,
             note: finalNote,
             created_at: nowIso,
           });
         } catch {
           // Abaikan jika trigger sudah menangani
+        }
+
+        // Sinkronkan juga ke tabel sos_alerts jika ada
+        try {
+          const sosStatus =
+            status === "ditolak"
+              ? "selesai"
+              : status === "ditindaklanjuti"
+              ? "ditangani"
+              : status === "selesai"
+              ? "selesai"
+              : "aktif";
+          const sosPayload: Record<string, unknown> = { status: sosStatus };
+          if (status === "selesai" || status === "ditolak") {
+            sosPayload.resolved_at = nowIso;
+          }
+          await supabase
+            .from("sos_alerts")
+            .update(sosPayload)
+            .eq("id", targetReportUuid);
+        } catch {
+          // Abaikan jika bukan SOS
         }
       }
     }

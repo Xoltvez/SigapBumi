@@ -40,6 +40,7 @@ import { supabase } from "@/lib/supabase/client";
 
 interface DisplaySosItem {
   id: string;
+  trackingCode?: string;
   displayCode: string;
   type: SosAssistanceType;
   title: string;
@@ -113,9 +114,15 @@ export default function AdminSosPage() {
         else if (type === "polisi") title = "Bantuan Keamanan";
         else title = "Bantuan SAR / Lainnya";
 
+        const trackingCode =
+          e.tracking_code ||
+          (e.note ? (e.note.match(/SOS-\d+/)?.[0]) : undefined) ||
+          (e.id.startsWith("SOS") ? e.id : undefined);
+
         return {
           id: e.id,
-          displayCode: e.id.startsWith("SOS") ? e.id : `SOS #${100 + index + 3}`,
+          trackingCode,
+          displayCode: trackingCode || (e.id.startsWith("SOS") ? e.id : `SOS #${100 + index + 3}`),
           type,
           title,
           address: e.address || "Titik Darurat Warga",
@@ -205,29 +212,33 @@ export default function AdminSosPage() {
   }, [loadData]);
 
   // Actions
-  const handleMarkProcessing = async (id: string) => {
+  const handleMarkProcessing = async (id: string, trackingCode?: string) => {
     setSosList((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: "ditangani" } : item))
     );
     try {
-      await updateSosAlertStatus(id, "ditangani", "Tim Siaga Posko");
+      await updateSosAlertStatus(id, "ditangani", "Tim Siaga Posko", trackingCode);
+      setToastMessage("Panggilan SOS ditandai DIPROSES dan disinkronkan ke pelacakan laporan.");
+      setTimeout(() => setToastMessage(null), 3500);
     } catch {
       // Local fallback
     }
   };
 
-  const handleMarkResolved = async (id: string) => {
+  const handleMarkResolved = async (id: string, trackingCode?: string) => {
     setSosList((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: "selesai" } : item))
     );
     try {
-      await updateSosAlertStatus(id, "selesai");
+      await updateSosAlertStatus(id, "selesai", undefined, trackingCode);
+      setToastMessage("Panggilan SOS ditandai SELESAI DITANGANI.");
+      setTimeout(() => setToastMessage(null), 3500);
     } catch {
       // Local fallback
     }
   };
 
-  const handleMarkFake = async (id: string) => {
+  const handleMarkFake = async (id: string, trackingCode?: string) => {
     if (!confirm("Tandai sinyal SOS ini sebagai PALSU / HOAKS? Sinyal akan dibatalkan dan catatan disimpan.")) {
       return;
     }
@@ -235,7 +246,7 @@ export default function AdminSosPage() {
       prev.map((item) => (item.id === id ? { ...item, status: "palsu" } : item))
     );
     try {
-      await updateSosAlertStatus(id, "palsu", "Posko Terpadu (Verifikasi Gagal/Prank)");
+      await updateSosAlertStatus(id, "palsu", "Posko Terpadu (Verifikasi Gagal/Prank)", trackingCode);
       setToastMessage("Sinyal SOS ditandai sebagai HOAKS / PALSU. Laporan darurat ditolak.");
       setTimeout(() => setToastMessage(null), 3500);
     } catch (err) {
@@ -913,7 +924,7 @@ export default function AdminSosPage() {
                   {item.status !== "palsu" && item.status !== "selesai" && (
                     <button
                       type="button"
-                      onClick={() => handleMarkFake(item.id)}
+                      onClick={() => handleMarkFake(item.id, item.displayCode)}
                       className="h-9 px-2.5 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                       title="Tandai sebagai panggilan palsu / prank"
                     >
@@ -927,7 +938,7 @@ export default function AdminSosPage() {
                   {isAktif && (
                     <button
                       type="button"
-                      onClick={() => handleMarkProcessing(item.id)}
+                      onClick={() => handleMarkProcessing(item.id, item.displayCode)}
                       className="h-9 px-3 sm:px-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                     >
                       <Pause className="w-3.5 h-3.5 text-slate-500" />
@@ -938,7 +949,7 @@ export default function AdminSosPage() {
                   {!isAktif && !isResolved && (
                     <button
                       type="button"
-                      onClick={() => handleMarkResolved(item.id)}
+                      onClick={() => handleMarkResolved(item.id, item.displayCode)}
                       className="h-9 px-3.5 sm:px-4 rounded-xl bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5 text-white" />

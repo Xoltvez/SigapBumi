@@ -7,11 +7,13 @@ import {
   getLocalReports,
   registerMyReportTrackingCode,
   cleanReportDescription,
+  updateReportStatusLive,
 } from "@/lib/services/reports";
 import { getCurrentUser } from "@/lib/auth";
 
 export interface LiveSosItem {
   id: string;
+  tracking_code?: string;
   source: string;
   assistance_type: SosAssistanceType;
   address: string;
@@ -564,6 +566,7 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
 
         supabaseItems.push({
           id: row.id,
+          tracking_code: row.tracking_code,
           source: "Ponsel Warga (GPS Sensor)",
           assistance_type: aType,
           address: row.address || `Koordinat GPS (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`,
@@ -670,17 +673,21 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
 export async function updateSosAlertStatus(
   id: string,
   newStatus: "aktif" | "ditangani" | "selesai" | "palsu",
-  dispatchedTeam?: string
+  dispatchedTeam?: string,
+  trackingCode?: string
 ): Promise<{ success: boolean; error?: string }> {
   // Update local cache
   const localItems = getLocalSosCache();
-  const existingIndex = localItems.findIndex((x) => x.id === id);
+  const existingIndex = localItems.findIndex(
+    (x) => x.id === id || (trackingCode && (x.tracking_code === trackingCode || x.note?.includes(trackingCode)))
+  );
   if (existingIndex >= 0) {
     localItems[existingIndex].status = newStatus;
     if (dispatchedTeam) localItems[existingIndex].dispatched_team = dispatchedTeam;
   } else {
     localItems.push({
       id,
+      tracking_code: trackingCode,
       source: "Ponsel Warga (GPS Sensor)",
       assistance_type: "damkar",
       address: "Titik Darurat Warga",
@@ -695,54 +702,67 @@ export async function updateSosAlertStatus(
   }
   saveLocalSosCache(localItems);
 
-  // Coba update ke Supabase
+  // Map ke status laporan resmi: aktif -> diterima, ditangani -> ditindaklanjuti, selesai -> selesai, palsu -> ditolak
+  const reportStatus: "diterima" | "diverifikasi" | "ditindaklanjuti" | "selesai" | "ditolak" =
+    newStatus === "selesai" || newStatus === "palsu"
+      ? (newStatus === "palsu" ? "ditolak" : "selesai")
+      : newStatus === "ditangani"
+      ? "ditindaklanjuti"
+      : "diterima";
+
+  const note =
+    newStatus === "ditangani"
+      ? "Tim operasional siaga dan unit penolong telah dikerahkan ke lokasi darurat warga."
+      : newStatus === "selesai"
+      ? "Penanganan panggilan darurat SOS telah selesai ditangani secara tuntas oleh posko."
+      : newStatus === "palsu"
+      ? "Laporan SOS ditolak (terindikasi panggilan palsu / prank)."
+      : "Panggilan darurat SOS diterima oleh posko siaga.";
+
+  // 1. Sinkronkan ke tabel reports, report_status_logs, dan cache laporan warga
+  const targetKey = trackingCode || id;
   try {
-    const updatePayload: Record<string, unknown> = {
+    await updateReportStatusLive(targetKey, reportStatus, note, dispatchedTeam || "Tim Siaga Posko");
+  } catch (err) {
+    console.warn("updateReportStatusLive from sos error:", err);
+  }
+
+  if (trackingCode && id && trackingCode !== id) {
+    try {
+      await updateReportStatusLive(id, reportStatus, note, dispatchedTeam || "Tim Siaga Posko");
+    } catch {}
+  }
+
+  // 2. Update tabel sos_alerts (hanya field yang valid di database)
+  try {
+    const sosPayload: Record<string, unknown> = {
       status: newStatus === "palsu" ? "selesai" : newStatus,
     };
-    if (newStatus === "ditangani" && dispatchedTeam) {
-      updatePayload.acknowledged_by = dispatchedTeam;
-      updatePayload.acknowledged_at = new Date().toISOString();
-    }
     if (newStatus === "selesai" || newStatus === "palsu") {
-      updatePayload.resolved_at = new Date().toISOString();
-      if (newStatus === "palsu") {
-        updatePayload.closing_note = "Ditolak: Terindikasi Panggilan Palsu / False Alarm";
-      }
+      sosPayload.resolved_at = new Date().toISOString();
     }
-
-    const { error } = await supabase
-      .from("sos_alerts")
-      .update(updatePayload)
-      .eq("id", id);
-
-    if (error) {
-      console.warn("updateSosAlertStatus Supabase warning:", error.message);
-    }
-  } catch (err) {
-    console.warn("updateSosAlertStatus network error:", err);
-  }
-
-  // Juga sinkronkan status ke tabel reports
-  try {
-    const reportStatus =
-      newStatus === "selesai" || newStatus === "palsu"
-        ? (newStatus === "palsu" ? "ditolak" : "selesai")
-        : newStatus === "ditangani"
-        ? "ditindaklanjuti"
-        : "diterima";
 
     await supabase
-      .from("reports")
-      .update({ status: reportStatus, updated_at: new Date().toISOString() })
+      .from("sos_alerts")
+      .update(sosPayload)
       .eq("id", id);
   } catch (err) {
-    console.warn("updateSosAlertStatus reports update error:", err);
+    console.warn("updateSosAlertStatus sos_alerts error:", err);
   }
 
+  // 3. Broadcast update ke seluruh tab & browser
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("storage"));
-    window.dispatchEvent(new CustomEvent("sigapbumi:sos-updated", { detail: { id, status: newStatus } }));
+    window.dispatchEvent(
+      new CustomEvent("sigapbumi:sos-updated", {
+        detail: { id, trackingCode, status: newStatus },
+      })
+    );
+    window.dispatchEvent(
+      new CustomEvent("sigapbumi:report-updated", {
+        detail: { id, trackingCode, status: reportStatus },
+      })
+    );
   }
 
   return { success: true };
