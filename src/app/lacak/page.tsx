@@ -27,9 +27,6 @@ import {
   Share2,
   MessageCircle,
   Send,
-  Truck,
-  PhoneCall,
-  ShieldAlert,
 } from "lucide-react";
 import { TimelineStatus, type TimelineStep } from "@/components/laporan/TimelineStatus";
 import type { DisasterType, ReportStatus, SosAssistanceType } from "@/types";
@@ -709,61 +706,6 @@ function LacakContent() {
               </div>
             );
           })()}
-
-          {/* Estimasi Waktu Respon Petugas Saat 'Dalam Proses / Menuju Lokasi' */}
-          {activeReport.status === "ditindaklanjuti" && (
-            <div className="rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 p-4 sm:p-5 text-slate-800 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 -mt-3 -mr-3 w-32 h-32 bg-amber-400/10 rounded-full blur-xl pointer-events-none" />
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-                  </span>
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-200/80 px-2.5 py-1 rounded-full border border-amber-300">
-                    Tim Respon Lapangan Sedang Menuju Lokasi
-                  </span>
-                </div>
-                <div className="inline-flex items-center gap-2 text-xs font-bold text-amber-950 bg-white/95 px-3.5 py-1.5 rounded-lg border border-amber-300/80 shadow-2xs">
-                  <Clock className="w-4 h-4 text-amber-600 animate-spin" />
-                  <span>Perkiraan Tiba (ETA): <strong className="text-amber-700 font-extrabold">~15 - 25 Menit</strong></span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 text-xs">
-                <div className="bg-white/90 rounded-xl p-3.5 border border-amber-200/80 shadow-2xs space-y-1">
-                  <div className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
-                    <Truck className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Armada Diberangkatkan</span>
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Unit evakuasi & personil siaga posko terdekat telah meluncur ke koordinat kejadian.
-                  </p>
-                </div>
-
-                <div className="bg-white/90 rounded-xl p-3.5 border border-amber-200/80 shadow-2xs space-y-1">
-                  <div className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
-                    <PhoneCall className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Kesiapan Kontak Pelapor</span>
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Pastikan nomor telepon pelapor <strong className="text-slate-800">{activeReport.phone_number || "Anda"}</strong> tetap aktif untuk panduan arah gang.
-                  </p>
-                </div>
-
-                <div className="bg-white/90 rounded-xl p-3.5 border border-amber-200/80 shadow-2xs space-y-1">
-                  <div className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
-                    <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Keselamatan Warga</span>
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Tetap di titik aman yang tinggi/terbuka, dahulukan lansia & anak-anak, siapkan senter jika malam.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Foto Bukti Kejadian dari Kamera (Jika Ada) */}
           {activeReport.image_url && (
