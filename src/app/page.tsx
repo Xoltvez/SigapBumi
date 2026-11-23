@@ -140,6 +140,82 @@ export default function HomePage() {
   const resolvedCount = liveReports.filter((r) => r.status === "selesai").length;
   const resolvedRate = totalCount > 0 ? ((resolvedCount / totalCount) * 100).toFixed(1) : "0";
 
+  // Cuaca Lokal Realtime Sesuai Kabupaten/Kota Warga (Live BMKG)
+  const [localWeather, setLocalWeather] = useState<{
+    cityName: string;
+    temp: number;
+    weatherDesc: string;
+    weatherIcon?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchWeather = async (lat?: number, lng?: number) => {
+      try {
+        let url = "/api/bmkg?type=cuaca";
+        if (lat !== undefined && lng !== undefined) {
+          url += `&lat=${lat}&lng=${lng}`;
+        } else {
+          url += "&adm4=33.02.24.1001"; // Default Banyumas / Jawa Tengah
+        }
+
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const json = await res.json();
+        const raw = json.cuaca?.data?.[0];
+        const matched = json.matchedCity;
+        const firstPeriod = raw?.cuaca?.[0]?.[0];
+
+        if (isMounted && firstPeriod) {
+          const resolvedCity = raw?.lokasi?.kotkab || matched?.name || "Wilayah Warga";
+          setLocalWeather({
+            cityName: resolvedCity.replace(/^Kota Adm\.\s*/i, "").replace(/^Kabupaten\s*/i, "Kab. "),
+            temp: firstPeriod.t,
+            weatherDesc: firstPeriod.weather_desc,
+            weatherIcon: firstPeriod.image,
+          });
+        }
+      } catch (err) {
+        console.warn("Gagal memuat cuaca lokal warga:", err);
+      }
+    };
+
+    // 1. Cek apakah ada riwayat lokasi tersimpan di browser
+    let hasCoords = false;
+    if (typeof window !== "undefined") {
+      try {
+        const rawAddr = localStorage.getItem("sigapbumi_last_valid_address");
+        if (rawAddr) {
+          const parsed = JSON.parse(rawAddr);
+          if (parsed.lat && parsed.lng) {
+            hasCoords = true;
+            fetchWeather(parsed.lat, parsed.lng);
+          }
+        }
+      } catch {}
+
+      // 2. Jika izin lokasi geolocation sudah aktif di browser
+      if (!hasCoords && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            fetchWeather(pos.coords.latitude, pos.coords.longitude);
+          },
+          () => {
+            fetchWeather();
+          },
+          { timeout: 6000, maximumAge: 300000 }
+        );
+      } else if (!hasCoords) {
+        fetchWeather();
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Filtered reports
   const filteredReports =
     selectedDisasterFilter === "semua"
@@ -1003,13 +1079,30 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+          <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto flex-wrap">
+            {localWeather && (
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-line text-xs font-semibold shadow-2xs">
+                <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span className="font-bold text-ink">{localWeather.cityName}</span>
+                <span className="font-extrabold text-ink">{localWeather.temp}°C</span>
+                {localWeather.weatherIcon && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={localWeather.weatherIcon}
+                    alt={localWeather.weatherDesc}
+                    className="w-4 h-4 object-contain shrink-0"
+                  />
+                )}
+                <span className="text-ink-soft text-[11px] hidden sm:inline">{localWeather.weatherDesc}</span>
+              </div>
+            )}
+
             <Link
               href="/cuaca"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface text-amber-900 hover:bg-amber-50 border border-amber-200/80 text-xs font-bold transition-all shadow-xs hover:shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-surface hover:bg-slate-50 border border-line hover:border-slate-300 text-ink text-xs font-bold transition-all shadow-2xs hover:shadow-xs"
             >
               <span>Radar Cuaca &amp; InaTEWS</span>
-              <ChevronRight className="w-3.5 h-3.5 text-amber-700" />
+              <ChevronRight className="w-3.5 h-3.5 text-ink-soft" />
             </Link>
           </div>
         </div>
