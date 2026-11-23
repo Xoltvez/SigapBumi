@@ -41,12 +41,15 @@ interface DisasterMapProps {
  */
 function createBaseTileLayer(layerType: "light" | "dark" | "satellite"): L.TileLayer {
   if (layerType === "dark") {
-    return L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> kontributor &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
-      maxZoom: 20,
-      subdomains: "abcd",
-    });
+    return L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      {
+        attribution:
+          'Mode Malam Taktis &copy; <a href="https://www.esri.com" target="_blank" rel="noopener noreferrer">Esri</a>, HERE, Garmin, USGS',
+        maxNativeZoom: 16,
+        maxZoom: 19,
+      }
+    );
   }
 
   if (layerType === "satellite") {
@@ -55,6 +58,7 @@ function createBaseTileLayer(layerType: "light" | "dark" | "satellite"): L.TileL
       {
         attribution:
           'Citra Satelit &copy; <a href="https://www.esri.com" target="_blank" rel="noopener noreferrer">Esri</a>, Maxar, Earthstar Geographics',
+        maxNativeZoom: 18,
         maxZoom: 19,
       }
     );
@@ -306,7 +310,7 @@ export default function DisasterMap({
       worldCopyJump: false,
     });
 
-    // Ubin peta Leaflet dinamis sesuai mode (OpenStreetMap Terang, Carto Dark Mode Malam, atau Citra Satelit)
+    // Ubin peta Leaflet dinamis sesuai mode (OpenStreetMap Terang, Mode Malam Taktis Dark Canvas, atau Citra Satelit)
     const initialLayerType =
       mapLayer ||
       (typeof window !== "undefined" ? getAdminSettings().defaultMapLayer || "light" : "light") ||

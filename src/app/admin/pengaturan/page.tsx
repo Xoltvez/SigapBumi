@@ -1139,7 +1139,7 @@ export default function AdminPengaturanPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
                     { id: "light", label: "OpenStreetMap Terang", desc: "Kontras tinggi siang hari" },
-                    { id: "dark", label: "Carto Dark (Mode Malam)", desc: "Ramah mata di ruang kendali" },
+                    { id: "dark", label: "Mode Malam Taktis (Dark Canvas)", desc: "Ramah mata di ruang kendali posko" },
                     { id: "satellite", label: "Citra Satelit Topografi", desc: "Detail kontur dan vegetasi" },
                   ].map((layer) => {
                     const isSelected = settings.defaultMapLayer === layer.id;

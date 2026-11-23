@@ -541,7 +541,7 @@ export default function AdminPetaPage() {
                   ? "bg-slate-900 text-white"
                   : "text-slate-600 hover:bg-slate-100"
               }`}
-              title="Mode Malam (Carto Dark)"
+              title="Mode Malam Taktis (Dark Canvas)"
             >
               🌙
             </button>
@@ -1445,7 +1445,7 @@ export default function AdminPetaPage() {
                       ? "bg-slate-900 text-white shadow-2xs"
                       : "text-slate-600 hover:bg-slate-100"
                   }`}
-                  title="Gaya Carto Dark (Mode Malam)"
+                  title="Gaya Mode Malam Taktis (Dark Canvas)"
                 >
                   <span>🌙</span>
                   <span>Malam</span>
