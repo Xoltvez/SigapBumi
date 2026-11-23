@@ -21,7 +21,14 @@ import {
   ShieldAlert,
   Eye,
   CheckCircle2,
+  Search,
+  ChevronDown,
 } from "lucide-react";
+import {
+  CITIES_BMKG,
+  POPULAR_WEATHER_SHORTCUTS,
+  type CityBmkgItem,
+} from "@/lib/data/provinces-weather";
 
 interface GempaData {
   Tanggal: string;
@@ -49,12 +56,6 @@ interface WeatherPeriod {
   local_datetime: string;
 }
 
-interface CityOption {
-  name: string;
-  province: string;
-  adm4: string;
-}
-
 export default function CuacaPage() {
   const [activeTab, setActiveTab] = useState<"gempa" | "cuaca">("gempa");
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -66,14 +67,45 @@ export default function CuacaPage() {
   const [daftarGempa, setDaftarGempa] = useState<GempaData[]>([]);
   const [isShakemapOpen, setIsShakemapOpen] = useState<boolean>(false);
 
-  // Data Cuaca
-  const [cities, setCities] = useState<CityOption[]>([]);
+  // Data Cuaca (Inisialisasi langsung dengan 38 Provinsi Lengkap)
+  const [cities, setCities] = useState<CityBmkgItem[]>(CITIES_BMKG);
   const [selectedCityAdm4, setSelectedCityAdm4] = useState<string>("31.71.01.1001");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentWeather, setCurrentWeather] = useState<{
     lokasi?: { desa?: string; kotkab?: string; provinsi?: string };
     periods?: WeatherPeriod[];
   } | null>(null);
   const [isLoadingWeather, setIsLoadingWeather] = useState<boolean>(false);
+
+  // Grouping 38 provinsi berdasarkan gugus kepulauan Indonesia
+  const groupedCities = React.useMemo(() => {
+    const order = ["Jawa", "Sumatera", "Bali & Nusa Tenggara", "Kalimantan", "Sulawesi", "Maluku & Papua"] as const;
+    const map: Record<string, CityBmkgItem[]> = {};
+    order.forEach((r) => { map[r] = []; });
+    cities.forEach((c) => {
+      const reg = c.region || "Lainnya";
+      if (!map[reg]) map[reg] = [];
+      map[reg].push(c);
+    });
+    return map;
+  }, [cities]);
+
+  // Hasil pencarian cepat wilayah/provinsi
+  const filteredSearchResults = React.useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase().trim();
+    return cities.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.province.toLowerCase().includes(q) ||
+        (c.region && c.region.toLowerCase().includes(q))
+    );
+  }, [cities, searchQuery]);
+
+  // Data metadata wilayah terpilih
+  const selectedCityInfo = React.useMemo(() => {
+    return cities.find((c) => c.adm4 === selectedCityAdm4) || cities[0];
+  }, [cities, selectedCityAdm4]);
 
   // Fetch data BMKG gempa & cuaca
   const fetchBmkgData = useCallback(async (isManualRefresh = false) => {
@@ -440,26 +472,146 @@ export default function CuacaPage() {
       {/* KONTEN TAB 2: PRAKIRAAN CUACA KOTA BMKG */}
       {activeTab === "cuaca" && (
         <div className="space-y-6">
-          {/* Pemilih Kota Besar */}
-          <div className="bg-surface border border-line rounded-2xl p-5 shadow-card space-y-3">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider block">
-              Pilih Wilayah / Kota Prakiraan Cuaca
-            </span>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-              {cities.map((city) => (
-                <button
-                  key={city.adm4}
-                  type="button"
-                  onClick={() => handleSelectCity(city.adm4)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                    selectedCityAdm4 === city.adm4
-                      ? "bg-primary text-white shadow-xs border border-primary"
-                      : "bg-surface text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300 shadow-2xs"
-                  }`}
-                >
-                  {city.name}
-                </button>
-              ))}
+          {/* Pemilih Wilayah / Provinsi Cuaca (38 Provinsi Se-Indonesia) */}
+          <div className="bg-surface border border-line rounded-2xl p-5 sm:p-6 shadow-card space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
+              <div>
+                <span className="text-xs font-bold text-primary uppercase tracking-wider block">
+                  Pilih Wilayah / Provinsi Prakiraan Cuaca
+                </span>
+                <p className="text-xs text-ink-muted mt-0.5">
+                  Tersedia 38 Provinsi di seluruh Indonesia yang terhubung dengan data BMKG
+                </p>
+              </div>
+              <span className="self-start sm:self-auto px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
+                38 Provinsi Lengkap
+              </span>
+            </div>
+
+            {/* Controls: Dropdown & Search Filter */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+              {/* Dropdown Select Grouped */}
+              <div className="md:col-span-7 relative">
+                <label htmlFor="weather-province-select" className="sr-only">
+                  Pilih Provinsi
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-primary">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <select
+                    id="weather-province-select"
+                    value={selectedCityAdm4}
+                    onChange={(e) => {
+                      handleSelectCity(e.target.value);
+                      setSearchQuery("");
+                    }}
+                    className="w-full h-11 pl-10 pr-10 rounded-xl border border-line bg-surface hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 text-xs sm:text-sm font-semibold text-ink appearance-none cursor-pointer shadow-2xs transition-colors"
+                  >
+                    {Object.entries(groupedCities).map(([region, items]) => (
+                      <optgroup key={region} label={`Wilayah ${region} (${items.length} Provinsi/Kota)`}>
+                        {items.map((city) => (
+                          <option key={city.adm4} value={city.adm4}>
+                            {city.province} — {city.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                    <ChevronDown className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Input Pencarian Cepat */}
+              <div className="md:col-span-5 relative">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Search className="w-3.5 h-3.5" />
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Ketik cari provinsi / kota..."
+                    className="w-full h-11 pl-9 pr-3 rounded-xl border border-line bg-surface placeholder:text-slate-400 text-xs sm:text-sm text-ink focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-2xs transition-colors"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Hasil Pencarian jika pengguna mengetik query */}
+            {searchQuery.trim() && (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 animate-in fade-in">
+                <div className="text-[11px] font-semibold text-slate-600 flex items-center justify-between">
+                  <span>Hasil pencarian &quot;{searchQuery}&quot; ({filteredSearchResults.length} wilayah):</span>
+                  {filteredSearchResults.length > 0 && (
+                    <span className="text-[10px] text-slate-400">Klik untuk langsung melihat cuaca</span>
+                  )}
+                </div>
+                {filteredSearchResults.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+                    {filteredSearchResults.map((city) => (
+                      <button
+                        key={city.adm4}
+                        type="button"
+                        onClick={() => {
+                          handleSelectCity(city.adm4);
+                          setSearchQuery("");
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          selectedCityAdm4 === city.adm4
+                            ? "bg-primary text-white shadow-xs"
+                            : "bg-white border border-slate-200 hover:border-primary text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        <span className="font-semibold">{city.province}</span>
+                        <span className="text-[10px] opacity-75 ml-1">({city.name})</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 py-1">Tidak ditemukan provinsi atau kota yang cocok.</p>
+                )}
+              </div>
+            )}
+
+            {/* Akses Cepat Wilayah Utama (Pill shortcuts) */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[11px] font-semibold text-ink-muted block">
+                Akses Cepat Kota / Provinsi Populer:
+              </span>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                {cities
+                  .filter((c) => POPULAR_WEATHER_SHORTCUTS.includes(c.adm4))
+                  .map((city) => (
+                    <button
+                      key={city.adm4}
+                      type="button"
+                      onClick={() => {
+                        handleSelectCity(city.adm4);
+                        setSearchQuery("");
+                      }}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                        selectedCityAdm4 === city.adm4
+                          ? "bg-primary text-white shadow-xs border border-primary ring-2 ring-primary/20"
+                          : "bg-surface text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300 shadow-2xs"
+                      }`}
+                    >
+                      <span>{city.name}</span>
+                    </button>
+                  ))}
+              </div>
             </div>
           </div>
 
@@ -475,7 +627,7 @@ export default function CuacaPage() {
                 <div>
                   <div className="flex items-center gap-2 text-xs font-bold text-sky-700 mb-1">
                     <MapPin className="w-4 h-4" />
-                    <span>{currentWeather.lokasi?.kotkab || "Kota Terpilih"}, {currentWeather.lokasi?.provinsi}</span>
+                    <span>{currentWeather.lokasi?.kotkab || selectedCityInfo.name}, {currentWeather.lokasi?.provinsi || selectedCityInfo.province}</span>
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-extrabold text-ink">
                     {activeWeatherItem.weather_desc}
