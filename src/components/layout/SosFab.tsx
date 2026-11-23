@@ -259,6 +259,9 @@ export function SosFab() {
         if (savedSession) {
           const parsed = JSON.parse(savedSession);
           if (parsed && parsed.code && parsed.time && Date.now() - parsed.time < 3 * 3600 * 1000) {
+            const isDismissed =
+              typeof window !== "undefined" &&
+              sessionStorage.getItem(`sigapbumi_sos_dismissed_${parsed.code}`) === "1";
             setTrackingCode(parsed.code);
             setActiveSosId(parsed.id);
             activeSosIdRef.current = parsed.id;
@@ -266,7 +269,9 @@ export function SosFab() {
             if (parsed.phone) setPhoneNumber(parsed.phone);
             if (parsed.photo) setCameraPhotoUrl(parsed.photo);
             setIsSent(true);
-            setIsMinimized(true);
+            if (!isDismissed) {
+              setIsMinimized(true);
+            }
           }
         }
       } catch {}
@@ -731,6 +736,19 @@ export function SosFab() {
     }
   };
 
+  // Tutup / silang notifikasi floating mini-tracker SOS
+  const handleDismissMiniTracker = () => {
+    setIsMinimized(false);
+    try {
+      if (trackingCode) {
+        sessionStorage.setItem(`sigapbumi_sos_dismissed_${trackingCode}`, "1");
+      }
+      if (sosStatus === "selesai") {
+        localStorage.removeItem("sigapbumi_active_sos_tracking");
+      }
+    } catch {}
+  };
+
   if (pathname.startsWith("/admin")) {
     return null;
   }
@@ -769,17 +787,28 @@ export function SosFab() {
               {trackingCode}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setIsTrackingOpen(true);
-              setIsMinimized(false);
-            }}
-            className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer ml-1 inline-flex items-center gap-1"
-          >
-            <span>Lacak</span>
-            <ArrowRight className="w-3 h-3" />
-          </button>
+          <div className="flex items-center gap-1.5 ml-1">
+            <button
+              type="button"
+              onClick={() => {
+                setIsTrackingOpen(true);
+                setIsMinimized(false);
+              }}
+              className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer inline-flex items-center gap-1"
+            >
+              <span>Lacak</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              onClick={handleDismissMiniTracker}
+              className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              title="Tutup notifikasi SOS (Silang)"
+              aria-label="Tutup notifikasi SOS"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </aside>
       )}
 
