@@ -101,6 +101,7 @@ function LaporForm() {
   const errorRef = useRef<HTMLDivElement>(null);
   const [customNeed, setCustomNeed] = useState<string>("");
   const [customNeedError, setCustomNeedError] = useState<string | null>(null);
+  const [currentUser, setCurrentUserState] = useState<ReturnType<typeof getCurrentUser>>(null);
 
   const [formData, setFormData] = useState<FormData>({
     disaster_type: initialType,
@@ -116,6 +117,19 @@ function LaporForm() {
     reporter_phone: "",
     urgent_needs: [],
   });
+
+  // Deteksi otomatis akun warga yang sedang login di website
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUserState(user);
+      setFormData((prev) => ({
+        ...prev,
+        reporter_name: prev.reporter_name || user.full_name || "",
+        reporter_phone: prev.reporter_phone || user.phone_number || "",
+      }));
+    }
+  }, []);
 
   const priorityOptions: {
     key: "Tinggi" | "Sedang" | "Rendah";
@@ -345,6 +359,19 @@ function LaporForm() {
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id)
     );
 
+    // Deteksi identitas pelapor: input form (jika diisi) atau otomatis dari akun login
+    const finalReporterName = formData.reporter_name.trim() || currentUser?.full_name?.trim() || undefined;
+    const finalReporterPhone = formData.reporter_phone.trim() || currentUser?.phone_number?.trim() || undefined;
+
+    // Tambahkan tag metadata ke teks deskripsi agar tersimpan permanen di database dan dapat dibaca posko admin
+    let richDescription = formData.description;
+    if (finalReporterName) {
+      richDescription += `\n[Pelapor: ${finalReporterName}]`;
+    }
+    if (finalReporterPhone) {
+      richDescription += `\n[Kontak: ${finalReporterPhone}]`;
+    }
+
     const priorityScoreMap: Record<PriorityLabel, number> = {
       Kritis: 95,
       Tinggi: 75,
@@ -359,7 +386,7 @@ function LaporForm() {
       disaster_type: formData.disaster_type,
       target_agency: inferAgencyFromDisaster(formData.disaster_type),
       title: formData.title,
-      description: formData.description,
+      description: richDescription,
       address: formData.address,
       province: formData.province,
       regency: formData.regency,
@@ -374,6 +401,8 @@ function LaporForm() {
       is_demo: false,
       reporter_id: currentUser?.id,
       user_email: currentUser?.email,
+      reporter_name: finalReporterName,
+      phone_number: finalReporterPhone,
       timeline: [
         {
           status: "diterima",
@@ -396,7 +425,7 @@ function LaporForm() {
         tracking_code: trackingCode,
         disaster_type: formData.disaster_type,
         title: formData.title,
-        description: formData.description,
+        description: richDescription,
         location: `POINT(${formData.longitude} ${formData.latitude})`,
         address: formData.address,
         province: formData.province,
@@ -991,8 +1020,37 @@ function LaporForm() {
               )}
             </div>
 
-            {/* Reporter Contact Info (Optional) */}
+            {/* Reporter Contact Info */}
             <div className="space-y-4 pt-2">
+              {currentUser ? (
+                <div className="p-3 bg-emerald-50/70 border border-emerald-200/80 rounded-xl text-xs flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                      ✓
+                    </div>
+                    <div>
+                      <p className="font-bold text-emerald-950 text-xs">
+                        Terhubung dengan Akun: {currentUser.full_name}
+                      </p>
+                      <p className="text-[11px] text-emerald-800">
+                        Nama dan kontak otomatis terdeteksi dari registrasi akun Anda
+                        {currentUser.phone_number ? ` (${currentUser.phone_number})` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
+                    Akun Warga
+                  </span>
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-50 border border-line rounded-xl text-xs text-ink-soft flex items-start gap-2.5">
+                  <ShieldAlert className="w-4 h-4 text-ink-soft shrink-0 mt-0.5" />
+                  <p className="leading-relaxed text-[11px]">
+                    <strong>Pelapor Belum Masuk:</strong> Anda dapat mengisi nama dan kontak di bawah ini, atau biarkan kosong untuk mengirim laporan secara anonim tanpa identitas.
+                  </p>
+                </div>
+              )}
+
               <div className="p-3 bg-primary-soft/40 border border-primary/20 rounded-md text-xs text-ink-soft flex items-start gap-2">
                 <ShieldAlert className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <p className="leading-relaxed">
@@ -1003,7 +1061,7 @@ function LaporForm() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-ink mb-1.5">
-                    Nama Pelapor (Opsional)
+                    Nama Pelapor {currentUser ? "(Terdeteksi dari Akun)" : "(Opsional)"}
                   </label>
                   <input
                     type="text"
@@ -1018,7 +1076,7 @@ function LaporForm() {
 
                 <div>
                   <label className="block text-xs font-semibold text-ink mb-1.5">
-                    Nomor WhatsApp / HP (Opsional)
+                    Nomor WhatsApp / HP {currentUser ? "(Terdeteksi dari Akun)" : "(Opsional)"}
                   </label>
                   <input
                     type="tel"

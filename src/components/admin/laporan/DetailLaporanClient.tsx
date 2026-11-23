@@ -34,6 +34,7 @@ import {
   cleanReportDescription,
   extractPhotoFromDescription,
   extractPhoneFromDescription,
+  extractReporterNameFromDescription,
 } from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 
@@ -61,6 +62,26 @@ interface ReportDetailState {
     note?: string;
     actor?: string;
   }>;
+}
+
+function getMaskedName(name?: string): string {
+  if (!name || !name.trim()) return "-";
+  const trimmed = name.trim();
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) {
+    const single = parts[0];
+    return single.length <= 3 ? single : single.substring(0, 3) + "***";
+  }
+  return `${parts[0]} ${parts[1].charAt(0)}***`;
+}
+
+function getMaskedPhone(phone?: string): string {
+  if (!phone || !phone.trim()) return "-";
+  const clean = phone.replace(/\D/g, "");
+  if (clean.length < 8) return phone;
+  const prefix = clean.substring(0, 4);
+  const suffix = clean.substring(clean.length - 4);
+  return `${prefix}-****-${suffix}`;
 }
 
 export default function DetailLaporanClient({ reportId }: { reportId: string }) {
@@ -209,7 +230,41 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
           const rawDesc = detail?.description || found.description || "";
           const cleanDesc = cleanReportDescription(rawDesc);
           const photoUrl = detail?.image_url || extractPhotoFromDescription(found.description) || found.image_url;
-          const phoneNum = detail?.phone_number || extractPhoneFromDescription(found.description) || found.phone_number || "0812-8899-2345";
+
+          // 1. Deteksi nama & nomor telepon: dari detail / found / tag deskripsi
+          let reporterName = detail?.reporter_name || found.reporter_name || extractReporterNameFromDescription(rawDesc);
+          let phoneNum = detail?.phone_number || found.phone_number || extractPhoneFromDescription(rawDesc);
+
+          // 2. Jika ada reporter_id di database Supabase, coba ambil nama & nomor telepon dari tabel profiles
+          if ((!reporterName || !phoneNum) && found.reporter_id) {
+            try {
+              const { data: prof } = await supabase
+                .from("profiles")
+                .select("full_name, phone_number")
+                .eq("id", found.reporter_id)
+                .maybeSingle();
+              if (prof?.full_name && !reporterName) {
+                reporterName = prof.full_name;
+              }
+              if (prof?.phone_number && !phoneNum) {
+                phoneNum = prof.phone_number;
+              }
+            } catch {}
+          }
+
+          // 3. Jika tersimpan di browser warga (localStorage) dengan email yang sama
+          if ((!reporterName || !phoneNum) && typeof window !== "undefined" && found.user_email) {
+            try {
+              const stored = localStorage.getItem("sigapbumi_current_user");
+              if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed.email === found.user_email) {
+                  if (!reporterName && parsed.full_name) reporterName = parsed.full_name;
+                  if (!phoneNum && parsed.phone_number) phoneNum = parsed.phone_number;
+                }
+              }
+            } catch {}
+          }
 
           setReport({
             id: found.id,
@@ -225,8 +280,8 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
             confirmation_count: found.confirmation_count,
             created_at: found.created_at,
             version: 1,
-            reporter_name: "Warga SigapBumi (Terverifikasi)",
-            reporter_phone: phoneNum,
+            reporter_name: reporterName || undefined,
+            reporter_phone: phoneNum || undefined,
             image_url: photoUrl,
             timeline: (detail?.timeline && detail.timeline.length > 0) ? detail.timeline : found.timeline || [
               {
@@ -565,34 +620,56 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
               <div className="p-3 bg-bg rounded-md border border-line space-y-1">
                 <span className="text-ink-muted block text-[11px]">Nama Pelapor:</span>
                 <p className="font-semibold text-ink font-mono text-sm">
-                  {isContactRevealed ? report.reporter_name : "Budi S***"}
+                  {report.reporter_name
+                    ? isContactRevealed
+                      ? report.reporter_name
+                      : getMaskedName(report.reporter_name)
+                    : "-"}
                 </p>
+                {!report.reporter_name && (
+                  <span className="text-[10px] text-ink-muted italic block">
+                    (Warga belum login / tidak mencantumkan nama)
+                  </span>
+                )}
               </div>
 
               <div className="p-3 bg-bg rounded-md border border-line space-y-1">
                 <span className="text-ink-muted block text-[11px]">Nomor Telepon:</span>
                 <p className="font-semibold text-ink font-mono text-sm">
-                  {isContactRevealed ? report.reporter_phone : "0812-****-7890"}
+                  {report.reporter_phone
+                    ? isContactRevealed
+                      ? report.reporter_phone
+                      : getMaskedPhone(report.reporter_phone)
+                    : "-"}
                 </p>
+                {!report.reporter_phone && (
+                  <span className="text-[10px] text-ink-muted italic block">
+                    (Tidak dicantumkan)
+                  </span>
+                )}
               </div>
             </div>
 
-            {!isContactRevealed && (
-              <button
-                type="button"
-                onClick={() => setIsRevealModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-line bg-surface hover:bg-bg text-xs font-semibold text-ink transition-colors shadow-xs"
-              >
-                <Eye className="w-3.5 h-3.5 text-primary" />
-                <span>Buka Kontak Lengkap (Dicatat Audit Log)</span>
-              </button>
-            )}
-
-            {isContactRevealed && (
-              <p className="text-[11px] text-success-text font-medium flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                Kontak berhasil dibuka. Akses petugas telah terekam pada audit log sistem.
-              </p>
+            {report.reporter_name || report.reporter_phone ? (
+              !isContactRevealed ? (
+                <button
+                  type="button"
+                  onClick={() => setIsRevealModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-line bg-surface hover:bg-bg text-xs font-semibold text-ink transition-colors shadow-xs cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5 text-primary" />
+                  <span>Buka Kontak Lengkap (Dicatat Audit Log)</span>
+                </button>
+              ) : (
+                <p className="text-[11px] text-success-text font-medium flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                  Kontak berhasil dibuka. Akses petugas telah terekam pada audit log sistem.
+                </p>
+              )
+            ) : (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 border border-slate-200 text-xs text-ink-muted font-medium">
+                <span>Pelapor anonim (warga belum login / identitas tidak disertakan)</span>
+              </div>
             )}
           </section>
         </div>

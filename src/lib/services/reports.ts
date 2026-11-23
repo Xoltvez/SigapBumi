@@ -25,6 +25,7 @@ export interface LiveReportItem {
   raw_created_at?: string;
   image_url?: string;
   phone_number?: string;
+  reporter_name?: string;
   timeline?: TimelineStep[];
   is_demo?: boolean;
   reporter_id?: string;
@@ -97,6 +98,19 @@ export function extractPhotoFromDescription(rawDesc?: string): string | undefine
 }
 
 /**
+ * Ekstraksi nama pelapor dari teks deskripsi (format: [Pelapor: <nama>])
+ */
+export function extractReporterNameFromDescription(rawDesc?: string): string | undefined {
+  if (!rawDesc) return undefined;
+  const match = rawDesc.match(/\[Pelapor:\s*([\s\S]*?)\]/i);
+  if (match && match[1]) {
+    const val = match[1].trim();
+    return val.length > 0 ? val : undefined;
+  }
+  return undefined;
+}
+
+/**
  * Ekstraksi nomor telepon kontak dari teks deskripsi (format: [Kontak: <nomor>])
  */
 export function extractPhoneFromDescription(rawDesc?: string): string | undefined {
@@ -123,7 +137,7 @@ export function extractGpsAccuracyFromDescription(rawDesc?: string): string | un
 }
 
 /**
- * Membersihkan teks deskripsi laporan dari tag teknis [Foto: ...], [Kontak: ...], [Akurasi GPS: ...] serta emoji
+ * Membersihkan teks deskripsi laporan dari tag teknis [Foto: ...], [Kontak: ...], [Pelapor: ...], [Akurasi GPS: ...] serta emoji
  */
 export function cleanReportDescription(rawDesc?: string): string {
   if (!rawDesc) return "";
@@ -134,6 +148,9 @@ export function cleanReportDescription(rawDesc?: string): string {
 
   // Hapus tag [Kontak: ...]
   cleaned = cleaned.replace(/\[Kontak:\s*[\s\S]*?\]/gi, "");
+
+  // Hapus tag [Pelapor: ...]
+  cleaned = cleaned.replace(/\[Pelapor:\s*[\s\S]*?\]/gi, "");
 
   // Hapus tag [Akurasi GPS: ...]
   cleaned = cleaned.replace(/\[Akurasi GPS:\s*[\s\S]*?\]/gi, "");
@@ -652,6 +669,7 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
           : undefined;
         const extractedPhoto = extractPhotoFromDescription(rawDesc) || mediaPhoto || row.image_url || undefined;
         const extractedPhone = extractPhoneFromDescription(rawDesc) || row.phone_number || undefined;
+        const extractedReporter = extractReporterNameFromDescription(rawDesc) || (row as any).reporter_name || undefined;
         const cleanDesc = cleanReportDescription(rawDesc);
         const { province: inferredProv, regency: inferredReg } = inferRegionFromAddress(row.address);
 
@@ -674,6 +692,7 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
           raw_created_at: row.created_at,
           image_url: extractedPhoto,
           phone_number: extractedPhone,
+          reporter_name: extractedReporter,
           is_demo: false,
         };
       });
@@ -702,6 +721,7 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
     const rawDesc = item.description || "";
     const extractedPhoto = extractPhotoFromDescription(rawDesc) || item.image_url;
     const extractedPhone = extractPhoneFromDescription(rawDesc) || item.phone_number;
+    const extractedReporter = extractReporterNameFromDescription(rawDesc) || item.reporter_name;
     const cleanDesc = cleanReportDescription(rawDesc);
 
     const sanitized: LiveReportItem = {
@@ -709,6 +729,7 @@ export async function fetchLiveReports(): Promise<LiveReportItem[]> {
       description: cleanDesc,
       image_url: extractedPhoto,
       phone_number: extractedPhone,
+      reporter_name: extractedReporter,
     };
     mergedMap.set(item.tracking_code, sanitized);
     mergedMap.set(item.id, sanitized);
@@ -806,8 +827,9 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         : undefined;
       const imageUrl = mediaPhoto || extractPhotoFromDescription(data.description) || data.image_url || undefined;
 
-      // Ekstraksi kontak jika ada
+      // Ekstraksi kontak & nama pelapor jika ada
       const phoneNumber = data.reporter_phone || extractPhoneFromDescription(data.description) || data.phone_number || undefined;
+      const reporterName = (data as any).reporter_name || extractReporterNameFromDescription(data.description) || undefined;
 
       // Bersihkan deskripsi dari string base64 / tag foto / metadata teknis
       const cleanDescription = cleanReportDescription(data.description);
@@ -891,6 +913,7 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         timeline,
         image_url: imageUrl,
         phone_number: phoneNumber,
+        reporter_name: reporterName,
         is_demo: false,
       };
     }
@@ -904,11 +927,15 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
   if (localFound) {
     const imageUrl = localFound.image_url || extractPhotoFromDescription(localFound.description);
     const cleanDescription = cleanReportDescription(localFound.description);
+    const reporterName = localFound.reporter_name || extractReporterNameFromDescription(localFound.description);
+    const phoneNum = localFound.phone_number || extractPhoneFromDescription(localFound.description);
 
     return {
       ...localFound,
       description: cleanDescription,
       image_url: imageUrl,
+      reporter_name: reporterName,
+      phone_number: phoneNum,
     };
   }
 
