@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -182,6 +183,11 @@ function LacakContent() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const getShareUrl = (trackingCode: string) => {
     if (typeof window !== "undefined") {
@@ -788,15 +794,15 @@ function LacakContent() {
       </div>
 
       {/* Lightbox Modal Fullscreen Image Preview */}
-      {selectedImage && (
+      {mounted && selectedImage && createPortal(
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
           onClick={() => setSelectedImage(null)}
         >
           <div
-            className="relative max-w-4xl w-full max-h-[92vh] flex flex-col items-center justify-center"
+            className="relative max-w-4xl w-full max-h-[92vh] flex flex-col items-center justify-center m-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-full flex items-center justify-between mb-2 text-white px-1">
@@ -820,19 +826,20 @@ function LacakContent() {
               className="max-h-[82vh] w-auto max-w-full object-contain rounded-lg border border-white/20 shadow-2xl"
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal Dialog Bagikan Tautan Laporan */}
-      {isShareModalOpen && activeReport && (
+      {mounted && isShareModalOpen && activeReport && createPortal(
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
           onClick={() => setIsShareModalOpen(false)}
         >
           <div
-            className="relative w-full max-w-lg bg-surface border border-line rounded-2xl p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200"
+            className="relative w-full max-w-lg bg-surface border border-line rounded-2xl p-6 sm:p-7 shadow-2xl space-y-5 m-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -896,7 +903,7 @@ function LacakContent() {
                 <button
                   type="button"
                   onClick={() => handleCopyShareLink(activeReport.tracking_code)}
-                  className="h-11 px-4 rounded-xl bg-ink hover:bg-ink-soft text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
+                  className="h-11 px-4 rounded-xl bg-ink hover:bg-ink-soft text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0 shadow-2xs"
                 >
                   {linkCopied ? (
                     <Check className="w-4 h-4 text-emerald-400" />
@@ -913,7 +920,8 @@ function LacakContent() {
               Penerima tautan dapat langsung melihat perkembangan tanpa perlu memasukkan kode lacak secara manual.
             </p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </main>
   );
