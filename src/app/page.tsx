@@ -243,13 +243,18 @@ export default function HomePage() {
   // GSAP Eye-catching & Scroll-Triggered Reveal Animations
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // 1. Ambient Background Glows Breathing Animation
-      if (heroGlow1Ref.current && heroGlow2Ref.current) {
+      // 1. Ambient Background Glows Breathing Animation (Desktop only agar mobile bebas silau)
+      if (
+        heroGlow1Ref.current &&
+        heroGlow2Ref.current &&
+        typeof window !== "undefined" &&
+        window.innerWidth >= 640
+      ) {
         gsap.to(heroGlow1Ref.current, {
-          scale: 1.25,
-          x: 20,
-          y: -15,
-          opacity: 0.8,
+          scale: 1.2,
+          x: 15,
+          y: -10,
+          opacity: 0.5,
           duration: 5,
           repeat: -1,
           yoyo: true,
@@ -257,10 +262,10 @@ export default function HomePage() {
         });
 
         gsap.to(heroGlow2Ref.current, {
-          scale: 1.3,
-          x: -25,
-          y: 20,
-          opacity: 0.7,
+          scale: 1.25,
+          x: -20,
+          y: 15,
+          opacity: 0.45,
           duration: 6,
           repeat: -1,
           yoyo: true,
@@ -662,17 +667,17 @@ export default function HomePage() {
       className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-8 pb-28 md:pb-16 space-y-8 md:space-y-12"
     >
       {/* 1. Hero Section: High Impact, Clean, Human-Centered, Action-Oriented (Dimuat Langsung) */}
-      <section className="relative overflow-hidden rounded-2xl border border-line bg-gradient-to-b from-white via-orange-50/20 to-white p-6 sm:p-8 lg:p-10 shadow-sm">
-        {/* Soft Background Radial Glow Accents (with GSAP Floating) */}
+      <section className="relative overflow-hidden rounded-2xl border border-line bg-white sm:bg-gradient-to-b sm:from-white sm:via-orange-50/20 sm:to-white p-5 sm:p-8 lg:p-10 shadow-sm">
+        {/* Soft Background Radial Glow Accents (Desktop only agar tampilan mobile bersih, clean, dan bebas silau) */}
         <div
           ref={heroGlow1Ref}
           aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -right-24 w-96 h-96 rounded-full bg-primary/15 blur-3xl"
+          className="pointer-events-none absolute -top-24 -right-24 w-96 h-96 rounded-full bg-primary/10 blur-3xl hidden sm:block"
         />
         <div
           ref={heroGlow2Ref}
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-amber-400/15 blur-3xl"
+          className="pointer-events-none absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-amber-400/10 blur-3xl hidden sm:block"
         />
 
         <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
@@ -973,7 +978,7 @@ export default function HomePage() {
       <section
         ref={warningSectionRef}
         aria-label="Peringatan Dini Cuaca & Gempa BMKG"
-        className="opacity-0 relative overflow-hidden bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-300/60 rounded-xl p-3.5 sm:p-4 shadow-sm backdrop-blur-sm"
+        className="opacity-0 relative overflow-hidden bg-white sm:bg-gradient-to-r sm:from-amber-500/10 sm:via-orange-500/10 sm:to-amber-500/5 border border-line sm:border-amber-300/60 rounded-xl p-3.5 sm:p-4 shadow-sm"
       >
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-start sm:items-center gap-3">
