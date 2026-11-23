@@ -8,12 +8,31 @@ interface GsapPageTransitionProps {
   children: React.ReactNode;
 }
 
+// Rute yang dikecualikan dari animasi transisi:
+// 1. Halaman Login & Register warga (/masuk, /daftar)
+// 2. Seluruh Dashboard Posko & login admin (/admin/*)
+const isRouteExcludedFromTransition = (pathname: string | null): boolean => {
+  if (!pathname) return false;
+  return (
+    pathname.startsWith("/admin") ||
+    pathname === "/masuk" ||
+    pathname === "/daftar" ||
+    pathname.includes("/login") ||
+    pathname.includes("/register")
+  );
+};
+
 export function GsapPageTransition({ children }: GsapPageTransitionProps) {
   const pathname = usePathname();
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
 
+  const isExcluded = isRouteExcludedFromTransition(pathname);
+
   useEffect(() => {
+    // Lewati seluruh animasi GSAP jika rute masuk dalam pengecualian (Login, Register, Dashboard Posko)
+    if (isExcluded) return;
+
     // Hormati preferensi aksesibilitas reduce-motion
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
@@ -140,11 +159,16 @@ export function GsapPageTransition({ children }: GsapPageTransitionProps) {
     }, container);
 
     return () => ctx.revert();
-  }, [pathname]);
+  }, [pathname, isExcluded]);
+
+  // Jika rute dikecualikan (login, register, dan seluruh dashboard posko), render secara langsung tanpa animasi dan tanpa progress bar
+  if (isExcluded) {
+    return <div className="flex-1 flex flex-col w-full">{children}</div>;
+  }
 
   return (
     <>
-      {/* Top Accent Progress Indicator saat navigasi antar menu/halaman */}
+      {/* Top Accent Progress Indicator saat navigasi antar menu/halaman publik */}
       <div
         aria-hidden="true"
         className="fixed top-0 left-0 right-0 z-50 pointer-events-none h-0.5 overflow-hidden"
