@@ -52,6 +52,7 @@ interface ReportDetailState {
   confirmation_count: number;
   created_at: string;
   version: number;
+  is_sos?: boolean;
   reporter_name?: string;
   reporter_phone?: string;
   image_url?: string;
@@ -106,6 +107,9 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Warning validasi tahapan (verifikasi wajib untuk laporan biasa)
+  const [verificationWarning, setVerificationWarning] = useState<string | null>(null);
 
   // Lightbox foto bukti
   const [isPhotoOpen, setIsPhotoOpen] = useState(false);
@@ -210,6 +214,13 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
             found.target_agency === "bnpb_bpbd"
           );
 
+          const isActualSos = Boolean(
+            found.tracking_code?.toUpperCase().startsWith("SOS-") ||
+            found.title?.toUpperCase().includes("SOS") ||
+            (found as any).is_sos === true ||
+            (detail as any)?.is_sos === true
+          );
+
           const p = String(found.priority || "").toLowerCase();
           if (isSos || p === "kritis" || found.priority_label === "Kritis") {
             pLabel = "Kritis";
@@ -280,6 +291,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
             confirmation_count: found.confirmation_count,
             created_at: found.created_at,
             version: 1,
+            is_sos: isActualSos,
             reporter_name: reporterName || undefined,
             reporter_phone: phoneNum || undefined,
             image_url: photoUrl,
@@ -330,6 +342,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
   }, [reportId]);
 
   const openActionDialog = (newStatus: ReportStatus) => {
+    setVerificationWarning(null);
     setTargetStatus(newStatus);
     const defaultNote =
       newStatus === "selesai"
@@ -342,6 +355,23 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
     setActionNote(defaultNote);
     setNoteError("");
     setIsDialogOpen(true);
+  };
+
+  // Handler klik tombol "Tandai Diproses / Tugaskan Tim"
+  const handleTandaiProsesClick = () => {
+    if (!report) return;
+    // Khusus laporan warga biasa (non-SOS) dan status masih "diterima": wajib diverifikasi terlebih dahulu
+    if (!report.is_sos && report.status === "diterima") {
+      const msg = "Verifikasi laporan dahulu sebelum menugaskan tim!";
+      setVerificationWarning(msg);
+      setToastMessage(msg);
+      setTimeout(() => {
+        setVerificationWarning(null);
+      }, 5000);
+      return;
+    }
+    setVerificationWarning(null);
+    openActionDialog("ditindaklanjuti");
   };
 
   // Eksekusi Konfirmasi Aksi Ubah Status
@@ -686,10 +716,27 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
               {/* Tombol transisi sesuai status saat ini */}
               {report.status === "diterima" && (
                 <>
+                  {/* Warning banner jika petugas mencoba klik proses sebelum verifikasi */}
+                  {verificationWarning && (
+                    <div className="p-2.5 rounded-md bg-amber-50 border border-amber-300 text-amber-900 text-xs font-semibold flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p>{verificationWarning}</p>
+                        <p className="text-[11px] font-normal text-amber-700 mt-0.5">
+                          Silakan klik tombol <strong>&ldquo;Verifikasi Laporan Dahulu&rdquo;</strong> di bawah terlebih dahulu.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     type="button"
-                    onClick={() => openActionDialog("ditindaklanjuti")}
-                    className="w-full h-10 px-4 rounded-md bg-warning hover:bg-warning/90 text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-2"
+                    onClick={handleTandaiProsesClick}
+                    className={`w-full h-10 px-4 rounded-md text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer ${
+                      !report.is_sos
+                        ? "bg-warning/80 hover:bg-warning active:scale-98"
+                        : "bg-warning hover:bg-warning/90 active:scale-98"
+                    }`}
                   >
                     <Send className="w-4 h-4" />
                     <span>Tandai Diproses / Tugaskan Tim</span>
@@ -698,7 +745,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
                   <button
                     type="button"
                     onClick={() => openActionDialog("selesai")}
-                    className="w-full h-9 px-4 rounded-md bg-success hover:bg-success/90 text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-2"
+                    className="w-full h-9 px-4 rounded-md bg-success hover:bg-success/90 text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     <span>Tandai Selesai Ditangani</span>
@@ -707,16 +754,16 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
                   <button
                     type="button"
                     onClick={() => openActionDialog("diverifikasi")}
-                    className="w-full h-9 px-4 rounded-md border border-line bg-surface hover:bg-bg text-ink text-xs font-semibold transition-colors flex items-center justify-center gap-2"
+                    className="w-full h-9 px-4 rounded-md border-2 border-blue-400 bg-blue-50/80 hover:bg-blue-100 text-blue-800 text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-2xs cursor-pointer"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-info" />
+                    <CheckCircle2 className="w-4 h-4 text-blue-600" />
                     <span>Verifikasi Laporan Dahulu</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => openActionDialog("ditolak")}
-                    className="w-full h-8 px-4 rounded-md border border-danger/40 text-danger-text hover:bg-danger-soft text-xs font-semibold transition-colors flex items-center justify-center gap-2"
+                    className="w-full h-8 px-4 rounded-md border border-danger/40 text-danger-text hover:bg-danger-soft text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <XCircle className="w-3.5 h-3.5" />
                     <span>Tolak (Laporan Palsu/Duplikat)</span>
@@ -726,19 +773,29 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
 
               {report.status === "diverifikasi" && (
                 <>
+                  {/* Tombol Verifikasi yang sudah selesai: berwarna buram / opacity berkurang */}
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full h-8.5 px-4 rounded-md border border-slate-200 bg-slate-100 text-slate-500 text-xs font-semibold flex items-center justify-center gap-2 opacity-50 cursor-not-allowed select-none"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+                    <span>✓ Laporan Sudah Diverifikasi</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => openActionDialog("ditindaklanjuti")}
-                    className="w-full h-10 px-4 rounded-md bg-warning hover:bg-warning/90 text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-2"
+                    className="w-full h-10 px-4 rounded-md bg-warning hover:bg-warning/90 text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Send className="w-4 h-4" />
-                    <span>Tandai Diproses (Tugaskan Tim)</span>
+                    <span>Tandai Diproses / Tugaskan Tim</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => openActionDialog("selesai")}
-                    className="w-full h-9 px-4 rounded-md bg-success hover:bg-success/90 text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-2"
+                    className="w-full h-9 px-4 rounded-md bg-success hover:bg-success/90 text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     <span>Tandai Selesai Ditangani</span>
@@ -747,7 +804,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
                   <button
                     type="button"
                     onClick={() => openActionDialog("ditolak")}
-                    className="w-full h-8 px-4 rounded-md border border-danger/40 text-danger-text hover:bg-danger-soft text-xs font-semibold transition-colors flex items-center justify-center gap-2"
+                    className="w-full h-8 px-4 rounded-md border border-danger/40 text-danger-text hover:bg-danger-soft text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <XCircle className="w-3.5 h-3.5" />
                     <span>Tolak Laporan</span>
