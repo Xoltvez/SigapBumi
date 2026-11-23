@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { SosFab } from "@/components/layout/SosFab";
 import { ToastContainer } from "@/components/ui/Toast";
 import { GsapPageTransition } from "@/components/common/GsapPageTransition";
+import { IdleSessionManager } from "@/components/common/IdleSessionManager";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -35,6 +36,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans bg-bg text-ink pb-20 md:pb-0">
         <Suspense fallback={null}>
           <Header />
+        </Suspense>
+        <Suspense fallback={null}>
+          <IdleSessionManager />
         </Suspense>
         <ToastContainer />
         <GsapPageTransition>{children}</GsapPageTransition>

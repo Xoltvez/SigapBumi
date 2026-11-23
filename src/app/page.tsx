@@ -172,7 +172,7 @@ export default function HomePage() {
         const res = await fetch(url);
         if (!res.ok) return;
         const json = await res.json();
-        
+
         // 1. Cuaca Lokal
         const raw = json.cuaca?.data?.[0];
         const matched = json.matchedCity;
