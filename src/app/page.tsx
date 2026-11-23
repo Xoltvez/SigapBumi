@@ -59,15 +59,6 @@ export default function HomePage() {
   const [trackingInput, setTrackingInput] = useState("");
   const [selectedDisasterFilter, setSelectedDisasterFilter] = useState<string>("semua");
 
-  // State interaktif checklist Tas Siaga Bencana (TSB)
-  const [checkedTsb, setCheckedTsb] = useState<Record<string, boolean>>({
-    dokumen: true,
-    p3k: true,
-    air: false,
-    senter: false,
-    peluit: false,
-  });
-
   // Checklist Tas Siaga Bencana (TSB) standar BPBD
   const tsbItems = [
     {
@@ -96,32 +87,6 @@ export default function HomePage() {
       desc: "Sinyal suara penolong SOS dan daya komunikasi ponsel",
     },
   ];
-
-  // Handler interaktif centang TSB dengan tactile spring & tas 3D react
-  const handleToggleTsb = (id: string) => {
-    setCheckedTsb((prev) => {
-      const nextVal = !prev[id];
-      // Animasi tactile bounce pada item TSB yang diklik
-      const el = document.getElementById(`tsb-item-${id}`);
-      if (el) {
-        gsap.fromTo(
-          el,
-          { scale: 0.96 },
-          { scale: 1, duration: 0.45, ease: "elastic.out(1.2, 0.4)" }
-        );
-      }
-      // Animasi guncangan kesiapan pada tas siaga 3D
-      const bagBox = mitigasiSectionRef.current?.querySelector(".gsap-bag-box");
-      if (bagBox) {
-        gsap.fromTo(
-          bagBox,
-          { rotation: nextVal ? 3 : -3, y: -6 },
-          { rotation: 0, y: 0, duration: 0.6, ease: "elastic.out(1.2, 0.35)" }
-        );
-      }
-      return { ...prev, [id]: nextVal };
-    });
-  };
 
   const handleTrackingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1285,63 +1250,35 @@ export default function HomePage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Bento 1: Checklist Tas Siaga Bencana (TSB) Standar BPBD (7 cols) */}
           <div className="gsap-tsb-box opacity-0 lg:col-span-7 bg-surface border border-line rounded-2xl p-6 shadow-card space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                  Checklist Kesiapsiagaan
-                </span>
-                <h3 className="text-lg font-bold text-ink mt-0.5">
-                  Tas Siaga Bencana (TSB) Keluarga
-                </h3>
-              </div>
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100/80 text-emerald-800 border border-emerald-200">
-                {Object.values(checkedTsb).filter(Boolean).length}/{tsbItems.length} Siap
+            <div>
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                Checklist Kesiapsiagaan
               </span>
+              <h3 className="text-lg font-bold text-ink mt-0.5">
+                Tas Siaga Bencana (TSB) Keluarga
+              </h3>
             </div>
 
             <p className="text-xs text-ink-soft leading-relaxed">
-              Pastikan tas siaga berisi kebutuhan pokok bertahan hidup minimal untuk 72 jam pertama pasca bencana (klik untuk menandai):
+              Pastikan tas siaga berisi kebutuhan pokok bertahan hidup minimal untuk 72 jam pertama pasca bencana:
             </p>
 
-            {/* Checklist Items Interaktif */}
+            {/* Checklist Items */}
             <div className="space-y-2.5 pt-1">
-              {tsbItems.map((item) => {
-                const isChecked = Boolean(checkedTsb[item.id]);
-                return (
-                  <button
-                    key={item.id}
-                    id={`tsb-item-${item.id}`}
-                    type="button"
-                    onClick={() => handleToggleTsb(item.id)}
-                    className={`gsap-tsb-item opacity-0 w-full p-3 rounded-xl border text-left flex items-start gap-3 transition-all duration-200 cursor-pointer ${
-                      isChecked
-                        ? "bg-emerald-50/70 border-emerald-300 text-emerald-950"
-                        : "bg-slate-50/70 border-line/80 hover:border-slate-300 text-ink"
-                    }`}
-                  >
-                    <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                        isChecked
-                          ? "bg-emerald-500 text-white shadow-xs"
-                          : "bg-slate-200 text-slate-400"
-                      }`}
-                    >
-                      <CheckCircle2 className={`w-3.5 h-3.5 ${isChecked ? "text-white" : "opacity-0"}`} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className={`text-xs font-bold ${isChecked ? "text-emerald-900" : "text-ink"}`}>
-                          {item.label}
-                        </p>
-                        <span className={`text-[10px] font-semibold shrink-0 ${isChecked ? "text-emerald-700" : "text-slate-400"}`}>
-                          {isChecked ? "Siap ✓" : "Centang"}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-ink-muted mt-0.5 leading-snug">{item.desc}</p>
-                    </div>
-                  </button>
-                );
-              })}
+              {tsbItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="gsap-tsb-item opacity-0 w-full p-3 rounded-xl border border-line/80 bg-slate-50/70 flex items-start gap-3 hover:border-emerald-300 transition-colors"
+                >
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-ink">{item.label}</p>
+                    <p className="text-[11px] text-ink-muted mt-0.5 leading-snug">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="pt-2 flex items-center justify-between text-xs text-ink-soft">
