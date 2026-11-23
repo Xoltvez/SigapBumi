@@ -19,10 +19,9 @@ export interface TimelineStep {
 interface TimelineStatusProps {
   currentStatus: ReportStatus;
   logs: TimelineStep[];
-  eta?: string;
 }
 
-export function TimelineStatus({ currentStatus, logs, eta = "~15 - 25 Menit" }: TimelineStatusProps) {
+export function TimelineStatus({ currentStatus, logs }: TimelineStatusProps) {
   const isRejected = currentStatus === "ditolak";
 
   const standardSteps: { status: ReportStatus; label: string; icon: React.ElementType }[] = [
@@ -100,12 +99,6 @@ export function TimelineStatus({ currentStatus, logs, eta = "~15 - 25 Menit" }: 
                       }`}
                     >
                       Status Saat Ini
-                    </span>
-                  )}
-                  {isCurrent && step.status === "ditindaklanjuti" && (
-                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1.5 shadow-2xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                      Estimasi Tiba: {eta}
                     </span>
                   )}
                 </div>

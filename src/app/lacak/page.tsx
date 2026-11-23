@@ -474,8 +474,7 @@ function LacakContent() {
         );
       case "ditindaklanjuti":
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 inline-flex items-center gap-1.5 shadow-2xs">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-warning-soft text-warning-text border border-warning">
             Dalam Proses / Menuju Lokasi
           </span>
         );
