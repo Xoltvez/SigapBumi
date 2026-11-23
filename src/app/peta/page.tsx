@@ -261,7 +261,7 @@ function PetaContent() {
     }
   }, [selectedPoint]);
 
-  // Animasi halus Maximize & Minimize panel filter desktop via GSAP
+  // Animasi halus Maximize & Minimize panel filter desktop via GSAP (Smooth Scale & Bloom)
   useEffect(() => {
     const panel = desktopPanelRef.current;
     const trigger = desktopTriggerContainerRef.current;
@@ -270,65 +270,71 @@ function PetaContent() {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       if (isDesktopPanelOpen) {
-        gsap.set(panel, { x: 0, opacity: 1, pointerEvents: "auto", display: "flex" });
-        gsap.set(trigger, { x: -25, opacity: 0, pointerEvents: "none", display: "none" });
+        gsap.set(panel, { opacity: 1, scale: 1, y: 0, x: 0, pointerEvents: "auto", display: "flex", transformOrigin: "top left" });
+        gsap.set(trigger, { opacity: 0, scale: 0.96, y: 0, x: 0, pointerEvents: "none", display: "none", transformOrigin: "top left" });
       } else {
-        gsap.set(panel, { x: -45, opacity: 0, pointerEvents: "none", display: "none" });
-        gsap.set(trigger, { x: 0, opacity: 1, pointerEvents: "auto", display: "block" });
+        gsap.set(panel, { opacity: 0, scale: 0.95, y: -6, x: 0, pointerEvents: "none", display: "none", transformOrigin: "top left" });
+        gsap.set(trigger, { opacity: 1, scale: 1, y: 0, x: 0, pointerEvents: "auto", display: "block", transformOrigin: "top left" });
       }
       return;
     }
 
     if (isDesktopPanelOpen) {
-      // 1. Sembunyikan trigger pill ke arah kiri
+      gsap.killTweensOf([panel, trigger]);
+
+      // 1. Sembunyikan trigger pill secara halus di tempatnya
       gsap.to(trigger, {
-        x: -25,
         opacity: 0,
-        duration: 0.18,
-        ease: "power2.in",
+        scale: 0.96,
+        duration: 0.16,
+        ease: "power2.inOut",
         onComplete: () => {
           gsap.set(trigger, { display: "none", pointerEvents: "none" });
         },
       });
 
-      // 2. Tampilkan panel meluncur mulus dari kiri ke kanan dengan kurva spring halus
-      gsap.set(panel, { display: "flex", pointerEvents: "auto" });
+      // 2. Tampilkan panel dengan efek bloom/scale expansion natural dari posisi tombol (tanpa geser kaku dari kiri ke kanan)
+      gsap.set(panel, { display: "flex", pointerEvents: "auto", transformOrigin: "top left" });
       gsap.fromTo(
         panel,
-        { x: -50, opacity: 0, scale: 0.97 },
+        { opacity: 0, scale: 0.95, y: -8, x: 0 },
         {
-          x: 0,
           opacity: 1,
           scale: 1,
-          duration: 0.38,
+          y: 0,
+          x: 0,
+          duration: 0.36,
           ease: "power3.out",
         }
       );
     } else {
-      // 1. Sembunyikan panel meluncur kembali ke arah kiri
+      gsap.killTweensOf([panel, trigger]);
+
+      // 1. Sembunyikan panel dengan menciut lembut kembali ke posisi pill
       gsap.to(panel, {
-        x: -40,
         opacity: 0,
-        scale: 0.97,
-        duration: 0.24,
-        ease: "power2.in",
+        scale: 0.96,
+        y: -6,
+        duration: 0.22,
+        ease: "power2.inOut",
         onComplete: () => {
           gsap.set(panel, { display: "none", pointerEvents: "none" });
         },
       });
 
-      // 2. Munculkan kembali tombol trigger pill dengan bouncy halus
-      gsap.set(trigger, { display: "block", pointerEvents: "auto" });
+      // 2. Munculkan kembali tombol trigger pill dengan transisi mulus
+      gsap.set(trigger, { display: "block", pointerEvents: "auto", transformOrigin: "top left" });
       gsap.fromTo(
         trigger,
-        { x: -25, opacity: 0, scale: 0.92 },
+        { opacity: 0, scale: 0.96, y: -4, x: 0 },
         {
-          x: 0,
           opacity: 1,
           scale: 1,
-          duration: 0.3,
-          ease: "back.out(1.4)",
-          delay: 0.06,
+          y: 0,
+          x: 0,
+          duration: 0.28,
+          ease: "power3.out",
+          delay: 0.04,
         }
       );
     }
