@@ -85,6 +85,24 @@ async function compressImageForAi(file: File): Promise<Blob> {
   });
 }
 
+// Helper konversi dataURL base64 ke File secara murni tanpa fetch (100% andal di semua browser mobile/desktop)
+function dataUrlToFile(dataUrl: string, filename: string): File {
+  try {
+    const arr = dataUrl.split(",");
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+    const bstr = atob(arr[arr.length - 1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  } catch {
+    return new File([], filename, { type: "image/jpeg" });
+  }
+}
+
 export function SosFab() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
@@ -553,15 +571,9 @@ export function SosFab() {
     if (rawPhotoFileRef.current) {
       await verifyDisasterPhotoWithAi(rawPhotoFileRef.current, selectedAssistance || "lainnya");
     } else if (cameraPhotoUrl) {
-      try {
-        const res = await fetch(cameraPhotoUrl);
-        const blob = await res.blob();
-        const file = new File([blob], "sos_photo.jpg", { type: "image/jpeg" });
-        rawPhotoFileRef.current = file;
-        await verifyDisasterPhotoWithAi(file, selectedAssistance || "lainnya");
-      } catch (err) {
-        console.error("Gagal verifikasi ulang:", err);
-      }
+      const file = dataUrlToFile(cameraPhotoUrl, "sos_photo.jpg");
+      rawPhotoFileRef.current = file;
+      await verifyDisasterPhotoWithAi(file, selectedAssistance || "lainnya");
     }
   };
 
@@ -668,14 +680,9 @@ export function SosFab() {
     if (rawPhotoFileRef.current) {
       verifyDisasterPhotoWithAi(rawPhotoFileRef.current, type);
     } else if (cameraPhotoUrl) {
-      fetch(cameraPhotoUrl)
-        .then((r) => r.blob())
-        .then((b) => {
-          const f = new File([b], "sos_photo.jpg", { type: "image/jpeg" });
-          rawPhotoFileRef.current = f;
-          verifyDisasterPhotoWithAi(f, type);
-        })
-        .catch(() => {});
+      const file = dataUrlToFile(cameraPhotoUrl, "sos_photo.jpg");
+      rawPhotoFileRef.current = file;
+      verifyDisasterPhotoWithAi(file, type);
     }
     if (activeSosId) {
       updateSosAssistanceType(activeSosId, type);
@@ -1384,15 +1391,20 @@ export function SosFab() {
                           <span>Lihat Pratinjau Foto</span>
                         </button>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {aiResult?.status !== "lolos_foto" && !isVerifyingAi && (
+                          {aiResult?.status !== "lolos_foto" && (
                             <button
                               type="button"
                               onClick={handleRetryAiVerification}
-                              className="px-2.5 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
+                              disabled={isVerifyingAi}
+                              className={`px-2.5 py-1.5 rounded-xl text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs ${
+                                isVerifyingAi
+                                  ? "bg-orange-400 cursor-not-allowed opacity-90"
+                                  : "bg-orange-600 hover:bg-orange-700 active:scale-95 cursor-pointer"
+                              }`}
                               title="Picu verifikasi AI ulang secara instan"
                             >
-                              <RefreshCw className="w-3 h-3" />
-                              <span>Verifikasi Ulang AI</span>
+                              <RefreshCw className={`w-3 h-3 ${isVerifyingAi ? "animate-spin" : ""}`} />
+                              <span>{isVerifyingAi ? "Memeriksa AI..." : "Verifikasi Ulang AI"}</span>
                             </button>
                           )}
                           <button
