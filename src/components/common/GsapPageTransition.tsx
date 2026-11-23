@@ -14,60 +14,130 @@ export function GsapPageTransition({ children }: GsapPageTransitionProps) {
   const progressBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Hormati preferensi reduce-motion dari sistem pengguna
+    // Hormati preferensi aksesibilitas reduce-motion
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
+
+    const container = pageContainerRef.current;
+    if (!container) return;
 
     const ctx = gsap.context(() => {
       // 1. Top progress bar meluncur cepat di bagian paling atas layar setiap ganti halaman/menu
       if (progressBarRef.current) {
         gsap.killTweensOf(progressBarRef.current);
-        const tl = gsap.timeline();
-        tl.fromTo(
-          progressBarRef.current,
-          { width: "0%", opacity: 1 },
-          {
-            width: "65%",
-            duration: 0.22,
-            ease: "power2.out",
-          }
-        )
+        const barTl = gsap.timeline();
+        barTl
+          .fromTo(
+            progressBarRef.current,
+            { width: "0%", opacity: 1 },
+            {
+              width: "70%",
+              duration: 0.22,
+              ease: "power2.out",
+            }
+          )
           .to(progressBarRef.current, {
             width: "100%",
-            duration: 0.25,
+            duration: 0.22,
             ease: "power3.inOut",
           })
           .to(progressBarRef.current, {
             opacity: 0,
-            duration: 0.2,
+            duration: 0.18,
             ease: "power1.in",
           });
       }
 
-      // 2. Animasi masuk konten halaman (smooth reveal, subtle lift & blur dissolve)
-      if (pageContainerRef.current) {
-        gsap.killTweensOf(pageContainerRef.current);
+      // 2. Animasi PER ELEMEN berjenjang (Cascade & Stagger) seperti di Beranda
+      const titles = container.querySelectorAll(
+        "h1, h2, .page-title, [data-animate='title']"
+      );
+      const descriptions = container.querySelectorAll(
+        "main > div:first-child p, .page-desc, main > header p, [data-animate='desc']"
+      );
+      const gridCards = container.querySelectorAll(
+        ".grid > div, .grid > a, article, .stat-card, [data-animate='card']"
+      );
+      const actionItems = container.querySelectorAll(
+        "form, .filter-bar, [data-animate='action']"
+      );
+
+      // Timeline GSAP bertingkat per elemen
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+
+      // Jika di halaman beranda ("/"), biarkan timeline internal ScrollTrigger beranda berjalan
+      if (pathname === "/") {
         gsap.fromTo(
-          pageContainerRef.current,
-          {
-            opacity: 0,
-            y: 18,
-            scale: 0.996,
-            filter: "blur(4px)",
-          },
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            filter: "blur(0px)",
-            duration: 0.4,
-            ease: "power2.out",
-            clearProps: "filter,transform",
-          }
+          container,
+          { opacity: 0.4 },
+          { opacity: 1, duration: 0.35, ease: "power2.out" }
         );
+      } else {
+        // Kontainer utama sedikit mengangkat
+        tl.fromTo(
+          container,
+          { opacity: 0.85, y: 12 },
+          { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }
+        );
+
+        // A. Judul & Header Halaman Masuk Duluan
+        if (titles.length > 0) {
+          tl.fromTo(
+            titles,
+            { opacity: 0, y: 26, filter: "blur(2px)" },
+            {
+              opacity: 1,
+              y: 0,
+              filter: "blur(0px)",
+              duration: 0.45,
+              stagger: 0.08,
+              clearProps: "filter",
+            },
+            "-=0.2"
+          );
+        }
+
+        // B. Deskripsi / Subtitle Mengikuti
+        if (descriptions.length > 0) {
+          tl.fromTo(
+            descriptions,
+            { opacity: 0, y: 16 },
+            { opacity: 1, y: 0, duration: 0.4, stagger: 0.05 },
+            "-=0.3"
+          );
+        }
+
+        // C. Kartu-kartu Grid Masuk Bertingkat (Staggered Bento/Cards ala Beranda)
+        if (gridCards.length > 0) {
+          const cardsSlice = Array.from(gridCards).slice(0, 12);
+          tl.fromTo(
+            cardsSlice,
+            { opacity: 0, y: 32, scale: 0.96 },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.48,
+              stagger: 0.06,
+              ease: "back.out(1.15)",
+              clearProps: "transform",
+            },
+            "-=0.25"
+          );
+        }
+
+        // D. Form / Tombol Aksi Menyusul
+        if (actionItems.length > 0) {
+          tl.fromTo(
+            actionItems,
+            { opacity: 0, y: 18 },
+            { opacity: 1, y: 0, duration: 0.4, stagger: 0.06 },
+            "-=0.2"
+          );
+        }
       }
-    });
+    }, container);
 
     return () => ctx.revert();
   }, [pathname]);
@@ -85,7 +155,7 @@ export function GsapPageTransition({ children }: GsapPageTransitionProps) {
         />
       </div>
 
-      {/* Konten Halaman Teranimasi GSAP */}
+      {/* Konten Halaman Teranimasi Per Elemen */}
       <div ref={pageContainerRef} className="flex-1 flex flex-col w-full">
         {children}
       </div>
