@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   MapPin,
@@ -77,7 +78,13 @@ const PROVINCE_OPTIONS = [
   "Sulawesi Selatan",
 ];
 
-export default function AdminPetaPage() {
+function AdminPetaContent() {
+  const searchParams = useSearchParams();
+  const urlId = searchParams?.get("id");
+  const urlKode = searchParams?.get("kode");
+  const urlLat = searchParams?.get("lat");
+  const urlLng = searchParams?.get("lng");
+
   const { activeUnit, activeUnitName, toggleMobileSidebar, activeSosCount } = useAdmin();
   const [points, setPoints] = useState<MapPoint[]>(() => {
     return reportsToMapPoints(DEFAULT_MOCK_REPORTS);
@@ -85,11 +92,57 @@ export default function AdminPetaPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPointId, setSelectedPointId] = useState<string | undefined>(undefined);
+  const [selectedPointId, setSelectedPointId] = useState<string | undefined>(() => {
+    return urlId || urlKode || undefined;
+  });
   const [selectedProvince, setSelectedProvince] = useState<string>("Semua Provinsi");
   const [selectedDisaster, setSelectedDisaster] = useState<DisasterType | "semua">("semua");
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | "sos" | "semua">("semua");
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+
+  // Tangani parameter navigasi langsung dari Monitor SOS atau menu lain (?id=...&kode=...&lat=...&lng=...)
+  useEffect(() => {
+    if (!urlId && !urlKode && !urlLat) return;
+
+    const targetKey = urlId || urlKode;
+
+    let matched = points.find(
+      (p) =>
+        (targetKey && (p.id === targetKey || p.tracking_code === targetKey)) ||
+        (urlLat && urlLng && Math.abs(p.lat - parseFloat(urlLat)) < 0.0001 && Math.abs(p.lng - parseFloat(urlLng)) < 0.0001)
+    );
+
+    if (!matched && urlLat && urlLng) {
+      const latNum = parseFloat(urlLat);
+      const lngNum = parseFloat(urlLng);
+      if (!isNaN(latNum) && !isNaN(lngNum)) {
+        const instantPt: MapPoint = {
+          id: urlId || `sos-${Date.now()}`,
+          tracking_code: urlKode || "SOS",
+          disaster_type: "kebakaran",
+          title: `Panggilan Darurat SOS: ${urlKode || "Warga"}`,
+          location_name: `Titik Darurat Warga (${latNum.toFixed(4)}, ${lngNum.toFixed(4)})`,
+          lat: latNum,
+          lng: lngNum,
+          status: "diterima",
+          created_at: "Baru saja",
+          confirmation_count: 1,
+          is_sos: true,
+          is_demo: false,
+        };
+        setPoints((prev) => [instantPt, ...prev.filter((p) => p.id !== instantPt.id && p.tracking_code !== instantPt.tracking_code)]);
+        matched = instantPt;
+      }
+    }
+
+    if (matched) {
+      setSelectedPointId(matched.id);
+      setIsMobileSheetOpen(false);
+    } else if (targetKey) {
+      setSelectedPointId(targetKey);
+      setIsMobileSheetOpen(false);
+    }
+  }, [urlId, urlKode, urlLat, urlLng, points]);
 
   // State khusus drawer & filter mobile
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
@@ -282,16 +335,16 @@ export default function AdminPetaPage() {
         const reportPoints = reportsToMapPoints(liveReports);
         // Map live SOS alerts into MapPoints
         const activeSos: MapPoint[] = (liveSos || [])
-          .filter((s) => s.status === "aktif")
+          .filter((s) => s.status === "aktif" || s.status === "ditangani")
           .map((s) => ({
             id: s.id,
-            tracking_code: s.id.startsWith("SOS") ? s.id : `SOS-${s.id.slice(0, 4).toUpperCase()}`,
+            tracking_code: s.tracking_code || (s.id.startsWith("SOS") ? s.id : `SOS-${s.id.slice(0, 4).toUpperCase()}`),
             disaster_type: (s.assistance_type === "damkar" ? "kebakaran" : "lainnya") as DisasterType,
             title: `Panggilan Darurat: Bantuan ${s.assistance_type.toUpperCase()}`,
             location_name: s.address,
             lat: s.lat,
             lng: s.lng,
-            status: "ditindaklanjuti" as ReportStatus,
+            status: (s.status === "ditangani" ? "ditindaklanjuti" : "diterima") as ReportStatus,
             created_at: s.time_ago || "Baru saja",
             confirmation_count: 1,
             is_sos: true,
@@ -354,6 +407,11 @@ export default function AdminPetaPage() {
   const basePoints = useMemo(() => {
     if (activeUnit === "semua" || activeUnit === "pemerintahan") return points;
     return points.filter((pt) => {
+      // Jika titik ini adalah target navigasi terpilih, SELALU tampilkan
+      if (selectedPointId && (pt.id === selectedPointId || (pt.tracking_code && pt.tracking_code === selectedPointId))) {
+        return true;
+      }
+
       const titleLower = pt.title.toLowerCase();
       const isFire =
         pt.disaster_type === "kebakaran" ||
@@ -429,6 +487,11 @@ export default function AdminPetaPage() {
   // Filtered points
   const filteredPoints = useMemo(() => {
     return basePoints.filter((pt) => {
+      // Jika titik ini adalah target navigasi terpilih, SELALU tampilkan
+      if (selectedPointId && (pt.id === selectedPointId || (pt.tracking_code && pt.tracking_code === selectedPointId))) {
+        return true;
+      }
+
       if (selectedProvince !== "Semua Provinsi" && pt.province !== selectedProvince) {
         return false;
       }
@@ -449,11 +512,14 @@ export default function AdminPetaPage() {
       }
       return true;
     });
-  }, [basePoints, selectedProvince, selectedDisaster, selectedStatus, searchQuery]);
+  }, [basePoints, selectedProvince, selectedDisaster, selectedStatus, searchQuery, selectedPointId]);
 
   const selectedPoint = useMemo(() => {
-    return basePoints.find((p) => p.id === selectedPointId);
-  }, [basePoints, selectedPointId]);
+    return (
+      basePoints.find((p) => p.id === selectedPointId || (p.tracking_code && p.tracking_code === selectedPointId)) ||
+      points.find((p) => p.id === selectedPointId || (p.tracking_code && p.tracking_code === selectedPointId))
+    );
+  }, [basePoints, points, selectedPointId]);
 
   // Handle local and remote status transition
   const handleUpdateStatus = async (newStatus: ReportStatus) => {
@@ -1697,5 +1763,20 @@ export default function AdminPetaPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function AdminPetaPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full h-[600px] rounded-xl bg-slate-100 flex flex-col items-center justify-center text-slate-400 font-sans">
+          <RotateCw className="w-8 h-8 animate-spin text-orange-500 mb-2" />
+          <p className="text-sm font-bold text-slate-700">Memuat Peta Operasional...</p>
+        </div>
+      }
+    >
+      <AdminPetaContent />
+    </Suspense>
   );
 }

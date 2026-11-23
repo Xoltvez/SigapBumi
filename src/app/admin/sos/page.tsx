@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
 import {
   RotateCw,
   HeartPulse,
@@ -46,6 +47,8 @@ interface DisplaySosItem {
   title: string;
   address: string;
   coordinates: string;
+  lat?: number;
+  lng?: number;
   timeAgo: string;
   status: "aktif" | "ditangani" | "selesai" | "palsu";
   phoneNumber: string;
@@ -119,6 +122,10 @@ export default function AdminSosPage() {
           (e.note ? (e.note.match(/\[Kode:\s*([^\]]+)\]/)?.[1] || e.note.match(/SOS-\d+/)?.[0]) : undefined) ||
           (e.id.startsWith("SOS") ? e.id : undefined);
 
+        const [latStr, lngStr] = (e.coordinates || "").split(",").map((s) => s.trim());
+        const latVal = typeof e.lat === "number" ? e.lat : parseFloat(latStr) || -6.2088;
+        const lngVal = typeof e.lng === "number" ? e.lng : parseFloat(lngStr) || 106.8456;
+
         return {
           id: e.id,
           trackingCode,
@@ -126,7 +133,9 @@ export default function AdminSosPage() {
           type,
           title,
           address: e.address || "Titik Darurat Warga",
-          coordinates: e.coordinates || "-6.2088, 106.8456",
+          coordinates: e.coordinates || `${latVal.toFixed(4)}, ${lngVal.toFixed(4)}`,
+          lat: latVal,
+          lng: lngVal,
           timeAgo: e.time_ago || "Baru saja",
           status: e.status || "aktif",
           phoneNumber: e.phone_number || "0812-3456-7890",
@@ -925,15 +934,14 @@ export default function AdminSosPage() {
               {/* Bottom Action Buttons: Navigasi GPS, Hapus, & Process/Resolve */}
               <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-100">
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                  <a
-                    href={`https://www.google.com/maps?q=${encodeURIComponent(item.coordinates)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="h-9 px-3 sm:px-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 sm:gap-2 shadow-2xs transition-colors"
+                  <Link
+                    href={`/admin/peta?id=${encodeURIComponent(item.id)}&kode=${encodeURIComponent(item.trackingCode || item.displayCode)}&lat=${item.lat ?? ""}&lng=${item.lng ?? ""}`}
+                    className="h-9 px-3 sm:px-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 sm:gap-2 shadow-2xs transition-colors cursor-pointer"
+                    title="Buka dan arahkan ke pin kejadian di Peta Operasional"
                   >
-                    <Navigation className="w-3.5 h-3.5 text-slate-600" />
+                    <Navigation className="w-3.5 h-3.5 text-blue-600" />
                     <span>Navigasi</span>
-                  </a>
+                  </Link>
 
                   <button
                     type="button"

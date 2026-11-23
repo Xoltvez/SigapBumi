@@ -581,7 +581,7 @@ export default function DisasterMap({
 
     prevSelectedPointIdRef.current = selectedPointId;
     if (!mapInstanceRef.current) return;
-    const pt = points.find((p) => p.id === selectedPointId);
+    const pt = points.find((p) => p.id === selectedPointId || (p.tracking_code && p.tracking_code === selectedPointId));
     if (pt && isValidCoord(pt.lat, pt.lng)) {
       const latNum = Number(pt.lat);
       const lngNum = Number(pt.lng);
@@ -589,7 +589,7 @@ export default function DisasterMap({
       // Beri sedikit jeda agar DOM Leaflet stabil jika baru di-mount
       const timer = setTimeout(() => {
         if (!mapInstanceRef.current) return;
-        safeNavigateMap(mapInstanceRef.current, latNum, lngNum, 15, true);
+        safeNavigateMap(mapInstanceRef.current, latNum, lngNum, 16, true);
 
         // Buka popup titik kejadian secara otomatis jika tidak di-disable
         if (!disablePopup) {
@@ -613,7 +613,7 @@ export default function DisasterMap({
     markersMapRef.current.forEach((marker, id) => {
       const pt = points.find((p) => p.id === id);
       if (pt) {
-        const isSelected = id === selectedPointId;
+        const isSelected = Boolean(id === selectedPointId || (pt.tracking_code && pt.tracking_code === selectedPointId));
         marker.setIcon(createPinIcon(pt.status, pt.is_sos, isSelected, pt.tracking_code));
         marker.setZIndexOffset(isSelected ? 1000 : 0);
       }
@@ -743,7 +743,7 @@ export default function DisasterMap({
         if (Math.abs(curLatLng.lat - latNum) > 0.00001 || Math.abs(curLatLng.lng - lngNum) > 0.00001) {
           existingMarker.setLatLng([latNum, lngNum]);
         }
-        const isSelected = pt.id === selectedPointId;
+        const isSelected = Boolean(pt.id === selectedPointId || (pt.tracking_code && pt.tracking_code === selectedPointId));
         // Perbarui icon jika status/sos berubah
         existingMarker.setIcon(createPinIcon(pt.status, pt.is_sos, isSelected, pt.tracking_code));
         existingMarker.setZIndexOffset(isSelected ? 1000 : 0);
@@ -752,7 +752,7 @@ export default function DisasterMap({
           existingMarker.setPopupContent(popupHtml);
         }
       } else {
-        const isSelected = pt.id === selectedPointId;
+        const isSelected = Boolean(pt.id === selectedPointId || (pt.tracking_code && pt.tracking_code === selectedPointId));
         // Buat marker baru
         const marker = L.marker([latNum, lngNum], {
           icon: createPinIcon(pt.status, pt.is_sos, isSelected, pt.tracking_code),
