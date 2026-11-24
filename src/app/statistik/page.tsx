@@ -24,7 +24,7 @@ import {
   Info,
   Layers,
 } from "lucide-react";
-import { fetchLiveReports, type LiveReportItem } from "@/lib/services/reports";
+import { fetchLiveReports, parseReportTimestamp, type LiveReportItem } from "@/lib/services/reports";
 
 export default function StatistikPage() {
   const [reports, setReports] = useState<LiveReportItem[]>([]);
@@ -43,17 +43,41 @@ export default function StatistikPage() {
     loadLiveData();
   }, []);
 
-  // Total and status breakdown
-  const totalReports = reports.length;
-  const selesaiCount = reports.filter((r) => r.status === "selesai").length;
-  const ongoingCount = reports.filter((r) => r.status === "ditindaklanjuti").length;
-  const verifCount = reports.filter((r) => r.status === "diverifikasi").length;
-  const terimaCount = reports.filter((r) => r.status === "diterima").length;
+  // Filter laporan berdasarkan periode yang dipilih warga (30 Hari Terakhir vs Tahun 2026)
+  const filteredReports = useMemo(() => {
+    if (period === "30hari") {
+      const now = Date.now();
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      return reports.filter((r) => {
+        const time = parseReportTimestamp(r.raw_created_at || r.created_at);
+        if (!time) return true;
+        return now - time <= thirtyDaysMs;
+      });
+    }
+
+    if (period === "2026") {
+      return reports.filter((r) => {
+        const time = parseReportTimestamp(r.raw_created_at || r.created_at);
+        if (!time) return true;
+        const d = new Date(time);
+        return d.getFullYear() === 2026;
+      });
+    }
+
+    return reports;
+  }, [reports, period]);
+
+  // Total and status breakdown sesuai periode aktif
+  const totalReports = filteredReports.length;
+  const selesaiCount = filteredReports.filter((r) => r.status === "selesai").length;
+  const ongoingCount = filteredReports.filter((r) => r.status === "ditindaklanjuti").length;
+  const verifCount = filteredReports.filter((r) => r.status === "diverifikasi").length;
+  const terimaCount = filteredReports.filter((r) => r.status === "diterima").length;
 
   const resolvedPct = totalReports > 0 ? ((selesaiCount / totalReports) * 100).toFixed(1) : "0";
-  const totalConfirmations = reports.reduce((acc, r) => acc + (r.confirmation_count || 0), 0);
+  const totalConfirmations = filteredReports.reduce((acc, r) => acc + (r.confirmation_count || 0), 0);
 
-  // Disaster distribution for PieChart
+  // Disaster distribution for PieChart sesuai periode aktif
   const disasterDistribution = useMemo(() => {
     const counts: Record<string, { count: number; color: string; label: string }> = {
       banjir: { count: 0, color: "#2563EB", label: "Banjir" },
@@ -64,7 +88,7 @@ export default function StatistikPage() {
       lainnya: { count: 0, color: "#6B7280", label: "Lainnya" },
     };
 
-    reports.forEach((r) => {
+    filteredReports.forEach((r) => {
       const type = r.disaster_type in counts ? r.disaster_type : "lainnya";
       counts[type].count += 1;
     });
@@ -76,13 +100,13 @@ export default function StatistikPage() {
         value: c.count,
         color: c.color,
       }));
-  }, [reports]);
+  }, [filteredReports]);
 
-  // Regional breakdown by province
+  // Regional breakdown by province sesuai periode aktif
   const regionalStats = useMemo(() => {
     const groups: Record<string, { total: number; selesai: number }> = {};
 
-    reports.forEach((r) => {
+    filteredReports.forEach((r) => {
       const prov = r.province || "Lainnya";
       if (!groups[prov]) {
         groups[prov] = { total: 0, selesai: 0 };
@@ -105,17 +129,53 @@ export default function StatistikPage() {
         };
       })
       .sort((a, b) => b.total - a.total);
-  }, [reports]);
+  }, [filteredReports]);
 
-  // Distribusi tren bulanan murni dari data laporan riil
-  const monthlyData = useMemo(() => {
+  // Distribusi tren kejadian adaptif sesuai periode (Mingguan untuk 30 Hari, Bulanan untuk 2026)
+  const trendChartData = useMemo(() => {
+    if (period === "30hari") {
+      const intervals = [
+        { label: "Mgg 4 Lalu", minDays: 22, maxDays: 30, laporan: 0, selesai: 0 },
+        { label: "Mgg 3 Lalu", minDays: 15, maxDays: 21, laporan: 0, selesai: 0 },
+        { label: "Mgg 2 Lalu", minDays: 8, maxDays: 14, laporan: 0, selesai: 0 },
+        { label: "Mgg Ini", minDays: 0, maxDays: 7, laporan: 0, selesai: 0 },
+      ];
+
+      const now = Date.now();
+      const oneDayMs = 24 * 60 * 60 * 1000;
+
+      filteredReports.forEach((r) => {
+        const time = parseReportTimestamp(r.raw_created_at || r.created_at);
+        if (time) {
+          const diffDays = Math.floor((now - time) / oneDayMs);
+          const target = intervals.find((intv) => diffDays >= intv.minDays && diffDays <= intv.maxDays);
+          if (target) {
+            target.laporan += 1;
+            if (r.status === "selesai") {
+              target.selesai += 1;
+            }
+          } else if (diffDays <= 7) {
+            intervals[3].laporan += 1;
+            if (r.status === "selesai") intervals[3].selesai += 1;
+          }
+        }
+      });
+
+      return intervals.map((i) => ({
+        bulan: i.label,
+        laporan: i.laporan,
+        selesai: i.selesai,
+      }));
+    }
+
     const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
     const counts = months.map((m) => ({ bulan: m, laporan: 0, selesai: 0 }));
 
-    reports.forEach((r) => {
+    filteredReports.forEach((r) => {
       try {
-        const d = new Date(r.raw_created_at || r.created_at);
-        if (!isNaN(d.getTime())) {
+        const time = parseReportTimestamp(r.raw_created_at || r.created_at);
+        if (time) {
+          const d = new Date(time);
           const mIdx = d.getMonth();
           if (mIdx >= 0 && mIdx < 12) {
             counts[mIdx].laporan += 1;
@@ -128,7 +188,7 @@ export default function StatistikPage() {
     });
 
     return counts;
-  }, [reports]);
+  }, [filteredReports, period]);
 
   return (
     <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 pb-28 md:pb-12 space-y-8">
@@ -246,22 +306,26 @@ export default function StatistikPage() {
 
       {/* Visual Charts Grid: Bar Chart & Donut Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Monthly Trend (7 Cols) */}
+        {/* Monthly / Period Trend (7 Cols) */}
         <div className="lg:col-span-7 bg-surface border border-line rounded-lg p-5 md:p-6 shadow-card space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-ink">Tren Kejadian per Bulan</h2>
+              <h2 className="text-base font-bold text-ink">
+                {period === "30hari" ? "Tren Kejadian (30 Hari Terakhir)" : "Tren Kejadian per Bulan"}
+              </h2>
               <p className="text-xs text-ink-soft">
-                Perbandingan jumlah laporan masuk vs laporan yang selesai ditangani
+                Perbandingan jumlah laporan masuk vs laporan yang selesai ditangani ({period === "30hari" ? "Interval Mingguan" : "Tahun 2026"})
               </p>
             </div>
-            <span className="text-xs text-ink-muted font-mono">Tahun 2026</span>
+            <span className="text-xs text-primary font-mono bg-primary-soft/80 px-2.5 py-1 rounded-md border border-primary/20 font-bold">
+              {period === "30hari" ? "30 Hari Terakhir" : "Tahun 2026"}
+            </span>
           </div>
 
           <div className="h-[280px] w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={monthlyData}
+                data={trendChartData}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
@@ -298,7 +362,7 @@ export default function StatistikPage() {
           <div>
             <h2 className="text-base font-bold text-ink">Distribusi Jenis Bencana</h2>
             <p className="text-xs text-ink-soft">
-              Sebaran kategori bencana dari total {totalReports} laporan terverifikasi
+              Sebaran kategori bencana dari total {totalReports} laporan ({period === "30hari" ? "30 hari terakhir" : "Tahun 2026"})
             </p>
           </div>
 
@@ -362,7 +426,7 @@ export default function StatistikPage() {
               <span>Tabel Kinerja & Waktu Respons per Wilayah</span>
             </h2>
             <p className="text-xs text-ink-soft">
-              Data kecepatan verifikasi posko dan rasio penuntasan penanganan di 9 wilayah provinsi Indonesia.
+              Data kecepatan verifikasi posko dan rasio penuntasan penanganan di wilayah Indonesia ({period === "30hari" ? "30 hari terakhir" : "sepanjang tahun 2026"}).
             </p>
           </div>
           <span className="text-xs text-ink-muted">Cakupan Wilayah Nasional</span>
