@@ -564,7 +564,7 @@ function AdminPetaContent() {
       {/* ============================================================== */}
       {/* 1. TAMPILAN MOBILE: EDGE-TO-EDGE FULL SCREEN MAP + BOTTOM SHEET */}
       {/* ============================================================== */}
-      <div className="md:hidden relative w-full h-[100dvh] overflow-hidden bg-slate-900 select-none">
+      <div className="md:hidden fixed inset-0 bottom-16 z-10 w-full overflow-hidden bg-slate-900 select-none overscroll-none">
         {/* Peta Layar Penuh */}
         <div className="absolute inset-0 w-full h-full z-0">
           <DisasterMap
@@ -667,7 +667,7 @@ function AdminPetaContent() {
             </div>
 
             {/* Bottom Tactical Mission Dock (Mobile) */}
-            <div className="absolute bottom-4 left-3 right-3 z-40 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_12px_36px_rgba(0,0,0,0.18)] p-3 text-slate-900 select-none animate-in slide-in-from-bottom-3 duration-300 pointer-events-auto">
+            <div className="absolute bottom-3 left-3 right-3 z-40 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_12px_36px_rgba(0,0,0,0.18)] p-3 text-slate-900 select-none animate-in slide-in-from-bottom-3 duration-300 pointer-events-auto">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl px-2.5 py-1.5 flex flex-col items-center justify-center min-w-[70px]">
@@ -801,8 +801,12 @@ function AdminPetaContent() {
         {/* Floating Bottom Sheet (Filter & Info Titik di Bawah Peta Mobile) */}
         {!isLiveNavigating && (
         <div
-          className={`absolute inset-x-0 bottom-16 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 transition-all duration-300 flex flex-col ${
-            isMobileSheetOpen ? "max-h-[calc(85vh-4rem)]" : "max-h-[74px]"
+          className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 transition-all duration-300 flex flex-col ${
+            isMobileSheetOpen
+              ? "max-h-[75vh]"
+              : selectedPoint
+              ? "max-h-[82px]"
+              : "max-h-[58px]"
           }`}
         >
           {/* Handle Bar Drag Pill */}
@@ -815,11 +819,7 @@ function AdminPetaContent() {
 
           {/* Header Bottom Sheet */}
           <div
-            onClick={() => {
-              if (!isMobileSheetOpen) {
-                setIsMobileSheetOpen(true);
-              }
-            }}
+            onClick={() => setIsMobileSheetOpen((prev) => !prev)}
             className="px-4 py-2 flex items-center justify-between gap-3 border-b border-slate-100 cursor-pointer select-none"
           >
             {selectedPoint ? (
