@@ -64,8 +64,8 @@ export function AdminSidebar({
       )}
 
       <aside
-        className={`bg-white text-slate-800 font-sans flex flex-col shrink-0 min-h-screen transition-all duration-300 border-r border-slate-200/80 shadow-[1px_0_10px_rgba(0,0,0,0.02)] select-none
-          fixed md:relative inset-y-0 left-0 z-50 md:z-30
+        className={`bg-white text-slate-800 font-sans flex flex-col shrink-0 h-full h-[100dvh] max-h-[100dvh] transition-all duration-300 border-r border-slate-200/80 shadow-[1px_0_10px_rgba(0,0,0,0.02)] select-none
+          fixed md:relative inset-y-0 left-0 z-50 md:z-30 overflow-hidden
           ${isMobileOpen ? "translate-x-0 w-72" : "-translate-x-full md:translate-x-0"}
           ${isCollapsed ? "md:w-[76px]" : "md:w-64"}
         `}
@@ -205,7 +205,7 @@ export function AdminSidebar({
         </nav>
 
         {/* Mobile Drawer Body: Hanya Menu Pengaturan & Profil sesuai instruksi */}
-        <div className="md:hidden flex-1 py-6 px-4 flex flex-col justify-between overflow-y-auto">
+        <div className="md:hidden flex-1 py-5 px-4 flex flex-col justify-between overflow-y-auto pb-10">
           <div className="space-y-2">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
               Menu Pengaturan
@@ -228,7 +228,7 @@ export function AdminSidebar({
             </Link>
           </div>
 
-          <div className="space-y-2.5 pt-4 border-t border-slate-100">
+          <div className="space-y-3 pt-4 border-t border-slate-100 shrink-0">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
               Profil Petugas
             </span>
@@ -259,9 +259,9 @@ export function AdminSidebar({
                 if (onCloseMobile) onCloseMobile();
                 logout("manual");
               }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-600 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
             >
-              <LogOut className="w-4 h-4 text-rose-500" />
+              <LogOut className="w-4 h-4 text-rose-500 shrink-0" />
               <span>Keluar Sesi</span>
             </button>
           </div>
