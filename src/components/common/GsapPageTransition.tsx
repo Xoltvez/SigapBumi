@@ -92,7 +92,7 @@ export function GsapPageTransition({ children }: GsapPageTransitionProps) {
         gsap.fromTo(
           container,
           { opacity: 0.4 },
-          { opacity: 1, duration: 0.35, ease: "power2.out" }
+          { opacity: 1, duration: 0.35, ease: "power2.out", clearProps: "all" }
         );
       } else {
         // Kontainer utama sedikit mengangkat

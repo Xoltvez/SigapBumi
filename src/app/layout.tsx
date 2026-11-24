@@ -33,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={`${plusJakartaSans.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans bg-bg text-ink pb-20 md:pb-0">
+      <body className="min-h-full flex flex-col font-sans bg-bg text-ink pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
         <Suspense fallback={null}>
           <Header />
         </Suspense>
