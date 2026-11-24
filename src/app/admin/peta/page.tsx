@@ -1364,19 +1364,19 @@ function AdminPetaContent() {
                   </div>
                 </div>
 
-                {/* Bottom Center: Tactical Telemetry Dock (Lebih ramping, mudah dibaca, kontras optimal) */}
+                {/* Bottom Center: Tactical Telemetry Dock (Warna Oranye Tema, Bersih, dan Terstruktur) */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[550] bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_12px_36px_rgba(0,0,0,0.18)] p-2.5 px-4 flex items-center gap-4 select-none animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto max-w-[calc(100%-2rem)]">
                   {/* Telemetri Waktu & ETA */}
                   <div className="flex items-center gap-2.5 border-r border-slate-200 pr-4 shrink-0">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-                      <Clock className="w-4 h-4 text-emerald-600" />
+                    <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
+                      <Clock className="w-4 h-4 text-orange-600" />
                     </div>
                     <div className="shrink-0">
                       <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">
                         Estimasi Tiba
                       </span>
                       <div className="flex items-baseline gap-1.5 mt-0.5">
-                        <span className="text-base font-black text-emerald-600 leading-none">
+                        <span className="text-base font-black text-orange-600 leading-none">
                           {activeRoute.durationFormattedShort}
                         </span>
                         <span className="text-[11px] font-semibold text-slate-500">
@@ -1388,8 +1388,8 @@ function AdminPetaContent() {
 
                   {/* Telemetri Jarak & Rute */}
                   <div className="flex items-center gap-2.5 border-r border-slate-200 pr-4 shrink-0">
-                    <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
-                      <Route className="w-4 h-4 text-blue-600" />
+                    <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
+                      <Route className="w-4 h-4 text-orange-600" />
                     </div>
                     <div className="shrink-0">
                       <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">
@@ -1412,7 +1412,7 @@ function AdminPetaContent() {
                       className="h-8.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
                       title="Pusatkan Kamera ke Posisi Armada"
                     >
-                      <Crosshair className="w-3.5 h-3.5 text-blue-600" />
+                      <Crosshair className="w-3.5 h-3.5 text-orange-600" />
                       <span className="whitespace-nowrap hidden sm:inline">Fokus Armada</span>
                     </button>
 
