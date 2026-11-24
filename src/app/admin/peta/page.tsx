@@ -1364,11 +1364,11 @@ function AdminPetaContent() {
                   </div>
                 </div>
 
-                {/* Bottom Center: Tactical Telemetry Dock (Warna Oranye Tema, Bersih, dan Terstruktur) */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[550] bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_12px_36px_rgba(0,0,0,0.18)] p-2.5 px-4 flex items-center gap-4 select-none animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto max-w-[calc(100%-2rem)]">
+                {/* Bottom Center: Tactical Telemetry Dock (Desain Terpadu, Rapi, Lengkap dalam 1 Kapsul) */}
+                <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[550] bg-white/95 backdrop-blur-xl rounded-full border border-slate-200/90 shadow-[0_12px_36px_rgba(0,0,0,0.18)] p-2 px-5 flex items-center gap-4 select-none animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto max-w-[calc(100%-2rem)]">
                   {/* Telemetri Waktu & ETA */}
                   <div className="flex items-center gap-2.5 border-r border-slate-200 pr-4 shrink-0">
-                    <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
                       <Clock className="w-4 h-4 text-orange-600" />
                     </div>
                     <div className="shrink-0">
@@ -1376,7 +1376,7 @@ function AdminPetaContent() {
                         Estimasi Tiba
                       </span>
                       <div className="flex items-baseline gap-1.5 mt-0.5">
-                        <span className="text-base font-black text-orange-600 leading-none">
+                        <span className="text-sm font-black text-orange-600 leading-none">
                           {activeRoute.durationFormattedShort}
                         </span>
                         <span className="text-[11px] font-semibold text-slate-500">
@@ -1388,7 +1388,7 @@ function AdminPetaContent() {
 
                   {/* Telemetri Jarak & Rute */}
                   <div className="flex items-center gap-2.5 border-r border-slate-200 pr-4 shrink-0">
-                    <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
                       <Route className="w-4 h-4 text-orange-600" />
                     </div>
                     <div className="shrink-0">
@@ -1396,7 +1396,7 @@ function AdminPetaContent() {
                         Jarak Tempuh
                       </span>
                       <div className="flex items-baseline gap-1 mt-0.5">
-                        <span className="text-base font-black text-slate-900 leading-none">
+                        <span className="text-sm font-black text-slate-900 leading-none">
                           {activeRoute.distanceKm}
                         </span>
                         <span className="text-[10px] text-slate-500 font-bold">km</span>
@@ -1404,22 +1404,23 @@ function AdminPetaContent() {
                     </div>
                   </div>
 
-                  {/* Tombol Aksi Armada */}
+                  {/* Tombol Aksi Armada (Di dalam satu kapsul rapi) */}
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={triggerLocate}
-                      className="h-8.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
+                      className="h-8.5 px-3.5 rounded-full border border-slate-200/90 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs whitespace-nowrap shrink-0"
                       title="Pusatkan Kamera ke Posisi Armada"
                     >
                       <Crosshair className="w-3.5 h-3.5 text-orange-600" />
-                      <span className="whitespace-nowrap hidden sm:inline">Fokus Armada</span>
+                      <span className="whitespace-nowrap">Fokus Armada</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={handleExitLiveNavigation}
-                      className="h-8.5 px-3.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap shrink-0"
+                      className="h-8.5 px-3.5 rounded-full bg-rose-50 hover:bg-rose-100 active:bg-rose-200 border border-rose-200 text-rose-600 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-95 whitespace-nowrap shrink-0"
+                      title="Akhiri Navigasi Rute"
                     >
                       <X className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
                       <span className="whitespace-nowrap">Akhiri</span>
