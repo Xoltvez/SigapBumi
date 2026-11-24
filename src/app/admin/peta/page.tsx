@@ -1338,34 +1338,29 @@ function AdminPetaContent() {
             {/* ============================================================== */}
             {isLiveNavigating && activeRoute && (
               <>
-                {/* Top Left: Tactical Emergency Command HUD (Ukuran kompak, ramping & tidak menutupi peta) */}
-                <div className="absolute top-3.5 left-3.5 z-[550] bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-blue-500/30 shadow-[0_12px_32px_rgba(15,23,42,0.4)] p-3 text-white w-[300px] sm:w-[320px] animate-in slide-in-from-top-4 duration-300 pointer-events-auto select-none">
+                {/* Top Left: Tactical Emergency Command HUD (Warna tema oranye, ramping & tanpa ikon bulat) */}
+                <div className="absolute top-3.5 left-3.5 z-[550] bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-orange-500/30 shadow-[0_12px_32px_rgba(15,23,42,0.4)] p-3 text-white w-[280px] sm:w-[300px] animate-in slide-in-from-top-4 duration-300 pointer-events-auto select-none">
                   {/* Operation Status Bar Bersih */}
                   <div className="flex items-center gap-2 pb-2 mb-2 border-b border-slate-800 min-w-0">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+                    <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shrink-0" />
                     <span className="text-xs text-slate-300 font-semibold truncate min-w-0 flex-1">
                       {selectedPoint?.location_name || "Menuju Titik Sasaran"}
                     </span>
                   </div>
 
-                  {/* Turn-by-Turn Instruction Kompak */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600/25 border border-blue-400/40 text-blue-400 flex items-center justify-center shrink-0 shadow-inner">
-                      {renderManeuverIcon(activeRoute.steps?.[0]?.modifier)}
+                  {/* Turn-by-Turn Instruction Langsung Bersih */}
+                  <div className="min-w-0">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-xl font-black text-white tracking-tight leading-none">
+                        {activeRoute.steps?.[0]?.distanceFormatted || activeRoute.distanceFormatted}
+                      </span>
+                      <span className="text-[10px] text-orange-400 font-bold uppercase tracking-wider">
+                        Manuver
+                      </span>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-xl font-black text-white tracking-tight leading-none">
-                          {activeRoute.steps?.[0]?.distanceFormatted || activeRoute.distanceFormatted}
-                        </span>
-                        <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">
-                          Manuver
-                        </span>
-                      </div>
-                      <p className="text-xs font-semibold text-slate-200 truncate mt-0.5">
-                        {activeRoute.steps?.[0]?.instruction || `Menuju ${selectedPoint?.location_name || "Lokasi Kejadian"}`}
-                      </p>
-                    </div>
+                    <p className="text-xs font-semibold text-slate-200 truncate mt-1">
+                      {activeRoute.steps?.[0]?.instruction || `Menuju ${selectedPoint?.location_name || "Lokasi Kejadian"}`}
+                    </p>
                   </div>
                 </div>
 
