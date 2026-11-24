@@ -30,47 +30,80 @@ export const SUPPORTED_CATEGORIES = [
 
 export type SupportedCategory = (typeof SUPPORTED_CATEGORIES)[number];
 
-// Helper membaca kunci API dan model secara tangguh dari process.env atau .env.local
-function getGeminiConfig(): { apiKey: string; model: string } {
-  let apiKey =
+// Helper membaca konfigurasi AI dari process.env atau .env.local
+function getAiConfig(): {
+  geminiApiKey: string;
+  geminiModel: string;
+  groqApiKey: string;
+  groqModel: string;
+  huggingFaceApiKey: string;
+} {
+  let geminiApiKey =
     process.env.GEMINI_API_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_GEMINI_API_KEY?.trim();
-  let model = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
+    process.env.NEXT_PUBLIC_GEMINI_API_KEY?.trim() ||
+    "";
+  let geminiModel = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
+
+  let groqApiKey = process.env.GROQ_API_KEY?.trim() || "";
+  let groqModel = process.env.GROQ_MODEL?.trim() || "llama-3.2-11b-vision-preview";
+
+  let huggingFaceApiKey = process.env.HUGGINGFACE_API_KEY?.trim() || "";
 
   // Jika Next.js belum me-reload memory environment, baca langsung dari .env.local
-  if (!apiKey) {
-    const candidatePaths = [
-      path.join(process.cwd(), ".env.local"),
-      path.resolve(".env.local"),
-      path.join(process.cwd(), ".env"),
-    ];
+  const candidatePaths = [
+    path.join(process.cwd(), ".env.local"),
+    path.resolve(".env.local"),
+    path.join(process.cwd(), ".env"),
+  ];
 
-    for (const envPath of candidatePaths) {
-      try {
-        if (fs.existsSync(envPath)) {
-          const content = fs.readFileSync(envPath, "utf8");
-          const keyMatch = content.match(/GEMINI_API_KEY\s*=\s*([^\r\n]+)/);
-          const modelMatch = content.match(/GEMINI_MODEL\s*=\s*([^\r\n]+)/);
-          if (keyMatch && keyMatch[1]?.trim()) {
-            apiKey = keyMatch[1].trim();
-          }
-          if (modelMatch && modelMatch[1]?.trim()) {
-            model = modelMatch[1].trim();
-          }
-          if (apiKey) break;
+  for (const envPath of candidatePaths) {
+    try {
+      if (fs.existsSync(envPath)) {
+        const content = fs.readFileSync(envPath, "utf8");
+        const gKeyMatch = content.match(/GEMINI_API_KEY\s*=\s*([^\r\n]+)/);
+        const gModelMatch = content.match(/GEMINI_MODEL\s*=\s*([^\r\n]+)/);
+        const grKeyMatch = content.match(/GROQ_API_KEY\s*=\s*([^\r\n]+)/);
+        const grModelMatch = content.match(/GROQ_MODEL\s*=\s*([^\r\n]+)/);
+        const hfKeyMatch = content.match(/HUGGINGFACE_API_KEY\s*=\s*([^\r\n]+)/);
+
+        if (!geminiApiKey && gKeyMatch && gKeyMatch[1]?.trim()) {
+          geminiApiKey = gKeyMatch[1].trim();
         }
-      } catch { }
-    }
+        if (gModelMatch && gModelMatch[1]?.trim()) {
+          geminiModel = gModelMatch[1].trim();
+        }
+        if (!groqApiKey && grKeyMatch && grKeyMatch[1]?.trim()) {
+          groqApiKey = grKeyMatch[1].trim();
+        }
+        if (grModelMatch && grModelMatch[1]?.trim()) {
+          groqModel = grModelMatch[1].trim();
+        }
+        if (!huggingFaceApiKey && hfKeyMatch && hfKeyMatch[1]?.trim()) {
+          huggingFaceApiKey = hfKeyMatch[1].trim();
+        }
+      }
+    } catch {}
   }
 
   // Fallback cadangan encoded dari konfigurasi lokal pengguna agar tidak gagal saat worker restart
-  if (!apiKey) {
+  if (!geminiApiKey) {
     try {
-      apiKey = Buffer.from("QVEuQWI4Uk42S05iSFRoNXpIX2NGRzZYamNqaURaM0UxdVZfcUFSWFhyQzlGLUZfb3d0c3c=", "base64").toString("utf8").trim();
-    } catch { }
+      geminiApiKey = Buffer.from(
+        "QVEuQWI4Uk42S05iSFRoNXpIX2NGRzZYamNqaURaM0UxdVZfcUFSWFhyQzlGLUZfb3d0c3c=",
+        "base64"
+      )
+        .toString("utf8")
+        .trim();
+    } catch {}
   }
 
-  return { apiKey: apiKey || "", model };
+  return {
+    geminiApiKey,
+    geminiModel,
+    groqApiKey,
+    groqModel,
+    huggingFaceApiKey,
+  };
 }
 
 const visionSchema = z.object({
@@ -233,39 +266,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const { apiKey, model: rawModel } = getGeminiConfig();
-    const configuredModel = rawModel || "gemini-3.1-flash-lite";
-
-    console.log("[DEBUG-AI] Memproses verifikasi. Key terdeteksi:", Boolean(apiKey), "Panjang key:", apiKey?.length, "Model:", configuredModel, "Kategori:", category);
-
-    // Fail-Safe: Jika GEMINI_API_KEY benar-benar belum diisi sama sekali
-    if (!apiKey) {
-      console.warn("[DEBUG-AI] GEMINI_API_KEY kosong! Mengembalikan lolos berbasis metadata kamera lapangan.");
-      return NextResponse.json({
-        status: "lolos_foto",
-        pesan: "Bukti visual kamera lapangan valid. Terverifikasi koordinat GPS & waktu riil untuk respon cepat posko.",
-        category,
-        visual: {
-          kondisi: "bencana_jelas",
-          tipe: category === "bnpb_bpbd" ? "banjir" : category,
-          bukti: ["Foto kamera berstempel koordinat GPS & waktu riil", "Integritas metadata valid"],
-          penjelasan: "Pemeriksaan otomatis berbasis stempel waktu & geolokasi darurat.",
-        },
-        verificationScope: "offline_fallback",
-      });
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-    // Prioritaskan model aktif & cepat gemini-3.5-flash-lite lalu fallback model flash lainnya
-    const modelsToTry = [
-      configuredModel,
-      "gemini-3.5-flash-lite",
-      "gemini-3.5-flash",
-      "gemini-3.7-flash",
-      "gemini-3.8-flash",
-      "gemini-3.1-flash-lite",
-      "gemini-2.5-flash-lite",
-    ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
+    const aiConfig = getAiConfig();
+    console.log(
+      "[DEBUG-AI] Memproses verifikasi. Gemini key:",
+      Boolean(aiConfig.geminiApiKey),
+      "Groq key:",
+      Boolean(aiConfig.groqApiKey),
+      "Kategori:",
+      category
+    );
 
     const promptText = `Anda adalah sistem verifikasi visual darurat kebencanaan untuk platform SIGAP-BUMI.
 Tugas Anda adalah menilai bukti visual dari foto yang diunggah warga secara objektif dan akurat.
@@ -293,90 +302,223 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
   "penjelasan": "Deskripsi singkat 1 kalimat dalam bahasa Indonesia mengenai apa yang terlihat di foto"
 }`;
 
+    const base64Data = bytes.toString("base64");
     let outputText: string | undefined;
+    let providerUsed = "gemini";
 
-    // Helper timeout darurat per percobaan (8 detik per request)
-    const callWithTimeout = async (modelName: string): Promise<string | undefined> => {
-      const t0 = Date.now();
-      const generatePromise = ai.models
-        .generateContent({
-          model: modelName,
-          contents: [
-            promptText,
-            {
-              inlineData: {
-                data: bytes.toString("base64"),
-                mimeType: detected.mime,
-              },
-            },
-          ],
-          config: {
-            responseMimeType: "application/json",
+    // ==========================================
+    // PROVIDER 1: GROQ VISION (Llama 3.2 Vision)
+    // Kecepatan tinggi ~1-2 detik, andal & tidak mudah 503
+    // ==========================================
+    if (aiConfig.groqApiKey) {
+      try {
+        console.log(`[AI-VISION] Mencoba Provider Groq Vision (${aiConfig.groqModel})...`);
+        const groqController = new AbortController();
+        const groqTimeout = setTimeout(() => groqController.abort(), 7000);
+
+        const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${aiConfig.groqApiKey}`,
+            "Content-Type": "application/json",
           },
-        })
-        .then((res) => {
-          console.log(`[AI-VISION] Model ${modelName} berhasil dalam ${Date.now() - t0} ms`);
-          return res.text;
+          body: JSON.stringify({
+            model: aiConfig.groqModel,
+            messages: [
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: promptText },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: `data:${detected.mime};base64,${base64Data}`,
+                    },
+                  },
+                ],
+              },
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.1,
+            max_tokens: 300,
+          }),
+          signal: groqController.signal,
         });
 
-      const timeoutPromise = new Promise<undefined>((_, reject) =>
-        setTimeout(() => reject(new Error(`Timeout AI pada model ${modelName}`)), 4000)
-      );
+        clearTimeout(groqTimeout);
 
-      return Promise.race([generatePromise, timeoutPromise]);
-    };
-
-    for (const modelToTry of modelsToTry) {
-      try {
-        console.log(`[AI-VISION] Mencoba verifikasi visual dengan model ${modelToTry}...`);
-        const text = await callWithTimeout(modelToTry);
-        if (text) {
-          outputText = text;
-          break;
+        if (groqRes.ok) {
+          const groqData = await groqRes.json();
+          const groqContent = groqData.choices?.[0]?.message?.content;
+          if (groqContent) {
+            console.log("[AI-VISION] Berhasil verifikasi via Groq Vision!");
+            outputText = groqContent;
+            providerUsed = "groq_vision";
+          }
+        } else {
+          console.warn("[AI-VISION] Groq response error:", groqRes.status, await groqRes.text().catch(() => ""));
         }
-      } catch (err: unknown) {
-        console.warn(`[AI-VISION] Model ${modelToTry} mengalami kendala:`, (err as Error)?.message || err);
+      } catch (err) {
+        console.warn("[AI-VISION] Groq Vision mengalami kendala:", (err as Error)?.message || err);
       }
     }
 
-    // Jika semua model AI cloud sibuk (503/High Demand), timeout, atau offline:
-    // AKTIFKAN VERIFIKASI HYBRID CEPAT: Foto kamera berstempel GPS valid langsung berstatus LOLOS VALIDASI POSKO
-    if (!outputText) {
-      console.log(`[AI-VISION] Model cloud sibuk/timeout. Mengaktifkan verifikasi hybrid berbasis koordinat & bukti kamera.`);
+    // ==========================================
+    // PROVIDER 2: GOOGLE GEMINI REST v1beta
+    // Menggunakan fetch REST v1beta native dengan parts text concatenation
+    // ==========================================
+    if (!outputText && aiConfig.geminiApiKey) {
+      const geminiCandidateModels = [
+        aiConfig.geminiModel,
+        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash",
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.1-flash-lite",
+      ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
+
+      for (const modelToTry of geminiCandidateModels) {
+        try {
+          console.log(`[AI-VISION] Mencoba Gemini REST v1beta dengan model ${modelToTry}...`);
+          const gemController = new AbortController();
+          const gemTimeout = setTimeout(() => gemController.abort(), 7000);
+
+          const gemUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelToTry}:generateContent?key=${aiConfig.geminiApiKey}`;
+          const gemRes = await fetch(gemUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    { text: promptText },
+                    {
+                      inline_data: {
+                        mime_type: detected.mime,
+                        data: base64Data,
+                      },
+                    },
+                  ],
+                },
+              ],
+              generationConfig: {
+                maxOutputTokens: 1000,
+                temperature: 0.1,
+              },
+            }),
+            signal: gemController.signal,
+          });
+
+          clearTimeout(gemTimeout);
+
+          if (gemRes.ok) {
+            const gemData = await gemRes.json();
+            const parts = gemData.candidates?.[0]?.content?.parts || [];
+            const combinedText = parts
+              .map((p: { text?: string }) => p.text)
+              .filter(Boolean)
+              .join("");
+
+            if (combinedText && combinedText.trim().length > 0) {
+              console.log(`[AI-VISION] Berhasil via Gemini REST (${modelToTry})!`);
+              outputText = combinedText;
+              providerUsed = `gemini_${modelToTry}`;
+              break;
+            }
+          } else {
+            const errBody = await gemRes.json().catch(() => ({}));
+            console.warn(`[AI-VISION] Gemini model ${modelToTry} error HTTP ${gemRes.status}:`, errBody?.error?.message || errBody);
+          }
+        } catch (err) {
+          console.warn(`[AI-VISION] Gemini REST ${modelToTry} exception:`, (err as Error)?.message || err);
+        }
+      }
+    }
+
+    // ==========================================
+    // PROVIDER 3: GOOGLE GENAI SDK FALLBACK
+    // ==========================================
+    if (!outputText && aiConfig.geminiApiKey) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: aiConfig.geminiApiKey });
+        const sdkTimeout = new Promise<undefined>((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout SDK GenAI")), 6000)
+        );
+        const sdkCall = ai.models
+          .generateContent({
+            model: aiConfig.geminiModel || "gemini-3.5-flash-lite",
+            contents: [
+              promptText,
+              {
+                inlineData: {
+                  data: base64Data,
+                  mimeType: detected.mime,
+                },
+              },
+            ],
+          })
+          .then((r) => r.text);
+
+        const resText = await Promise.race([sdkCall, sdkTimeout]);
+        if (resText) {
+          outputText = resText;
+          providerUsed = "gemini_sdk";
+        }
+      } catch (err) {
+        console.warn("[AI-VISION] GoogleGenAI SDK fallback gagal:", (err as Error)?.message || err);
+      }
+    }
+
+    // ==========================================
+    // PARSING & EVALUASI
+    // ==========================================
+    let vision: VisionResult | null = null;
+
+    if (outputText) {
+      try {
+        const cleanJson = outputText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+        const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+        const toParse = jsonMatch ? jsonMatch[0] : cleanJson;
+        const rawParsed = JSON.parse(toParse);
+        vision = visionSchema.parse(rawParsed);
+      } catch (parseErr) {
+        console.warn("[AI-VISION] Gagal memparsing JSON dari AI:", parseErr, "Raw output:", outputText);
+      }
+    }
+
+    // Jika AI berhasil mengevaluasi objek bencana
+    if (vision) {
+      const evaluation = evaluate(vision, category);
       return NextResponse.json({
-        status: "lolos_foto",
-        pesan: "Bukti visual kamera lapangan valid. Terverifikasi koordinat GPS & waktu riil untuk respon cepat posko.",
+        ...evaluation,
         category,
         visual: {
-          kondisi: "bencana_jelas",
-          tipe: category === "bnpb_bpbd" ? "banjir" : category,
-          bukti: [
-            "Foto kamera berstempel koordinat GPS & waktu riil",
-            "Integritas citra lapangan valid dan siap direspons posko",
-          ],
-          penjelasan: "Verifikasi visual diprioritaskan otomatis untuk percepatan evakuasi tanggap darurat.",
+          kondisi: vision.kondisi,
+          tipe: vision.tipe_visual,
+          bukti: vision.bukti_visual.slice(0, 4),
+          penjelasan: vision.penjelasan,
         },
-        verificationScope: "hybrid_gps_fast_pass",
+        verificationScope: "ai_multimodal_vision",
+        provider: providerUsed,
       });
     }
 
-    // Bersihkan karakter markdown jika ada (misal ```json ... ```)
-    const cleanJson = outputText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-    const rawParsed = JSON.parse(cleanJson);
-    const vision = visionSchema.parse(rawParsed);
-
-    const evaluation = evaluate(vision, category);
-
+    // ==========================================
+    // FALLBACK POSKO: JIKA SEMUA AI OFFLINE / TIMEOUT
+    // Jangan pernah memblokir warga saat darurat bencana!
+    // ==========================================
     return NextResponse.json({
-      ...evaluation,
+      status: "perlu_review",
+      pesan: "Verifikasi visual otomatis dialihkan ke petugas posko agar bantuan segera meluncur.",
       category,
       visual: {
-        kondisi: vision.kondisi,
-        tipe: vision.tipe_visual,
-        bukti: vision.bukti_visual.slice(0, 4),
-        penjelasan: vision.penjelasan,
+        kondisi: "meragukan",
+        tipe: "lainnya",
+        bukti: ["Foto berstempel GPS & waktu riil siap diverifikasi tim posko"],
+        penjelasan: "Pemeriksaan dipercepat demi keselamatan korban darurat.",
       },
-      verificationScope: "ai_multimodal_vision",
+      verificationScope: "emergency_fast_pass",
+      provider: "fallback_posko",
     });
   } catch (error) {
     console.error("SIGAP-BUMI AI disaster photo verification failed:", error);

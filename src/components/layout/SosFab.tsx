@@ -538,17 +538,15 @@ export function SosFab() {
       }
     } catch (err: unknown) {
       console.warn("[SOS-AI] AI verification error / timeout fallback:", err);
-      // Mode Hybrid: Jika terjadi timeout atau error jaringan pada cloud AI,
-      // foto berstempel GPS riil langsung disahkan agar warga mendapatkan konfirmasi hijau valid
+      // Fast-Pass Darurat: jika AI offline atau timeout, sinyal darurat dialihkan ke posko
+      const isAbort = (err as { name?: string })?.name === "AbortError";
       setAiResult({
-        status: "lolos_foto",
-        pesan: "Bukti visual kamera lapangan valid. Terverifikasi koordinat GPS & waktu riil untuk respon cepat posko.",
-        tipe: selectedAssistance === "bnpb_bpbd" ? "banjir" : selectedAssistance || "lainnya",
-        bukti: [
-          "Foto kamera berstempel koordinat GPS & waktu riil",
-          "Integritas citra lapangan valid dan siap direspons posko",
-        ],
-        penjelasan: "Verifikasi visual disahkan otomatis berbasis geolokasi darurat.",
+        status: "perlu_review",
+        pesan: isAbort
+          ? "Pemeriksaan AI membutuhkan waktu lebih lama. Foto diteruskan ke petugas posko agar panggilan darurat tidak tertunda."
+          : "Verifikasi visual otomatis dialihkan ke posko agar panggilan darurat segera terkirim.",
+        tipe: "lainnya",
+        bukti: ["Foto berstempel GPS & waktu siap diverifikasi tim posko"],
       });
     } finally {
       clearTimeout(timeoutId);
