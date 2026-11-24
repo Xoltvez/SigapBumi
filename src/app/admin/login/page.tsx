@@ -38,9 +38,9 @@ const UNIT_OPTIONS: UnitOption[] = [
   },
   {
     id: "bnpb_bpbd",
-    name: "BNPB / BPBD (Badan Penanggulangan Bencana)",
-    shortName: "BPBD Komando",
-    demoNip: "BPBD-JKT-042",
+    name: "BNPB (Badan Penanggulangan Bencana)",
+    shortName: "BNPB Komando",
+    demoNip: "BNPB-JKT-042",
     demoOfficer: "Kapten Hendra Gunawan",
   },
   {
@@ -310,7 +310,7 @@ function AdminLoginContent() {
                     if (fieldErrors.nip) setFieldErrors((prev) => ({ ...prev, nip: undefined }));
                     setErrorMsg("");
                   }}
-                  placeholder="Contoh: BPBD-JKT-042"
+                  placeholder="Contoh: BNPB-JKT-042"
                   className={`w-full h-11 pl-10 pr-3.5 rounded-xl border bg-white text-xs font-mono uppercase text-slate-800 placeholder:text-slate-400 placeholder:font-sans focus:outline-none transition-all ${
                     fieldErrors.nip
                       ? "border-red-500 focus:border-red-500 ring-1 ring-red-500/20"

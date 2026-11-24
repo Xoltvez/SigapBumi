@@ -65,7 +65,7 @@ export default function AdminPengaturanPage() {
     email: "hendra.bpbd@sigapbumi.id",
     role: "Komandan Posko",
     unit: "bnpb_bpbd",
-    unitName: "BNPB / BPBD",
+    unitName: "BNPB",
   });
 
   // State UI interaktif
@@ -90,7 +90,7 @@ export default function AdminPengaturanPage() {
         email: adminUser.email || "hendra.bpbd@sigapbumi.id",
         role: adminUser.role || "Komandan Posko",
         unit: adminUser.unit || "bnpb_bpbd",
-        unitName: adminUser.unitName || "BNPB / BPBD",
+        unitName: adminUser.unitName || "BNPB",
       });
     }
   }, [adminUser]);
@@ -526,7 +526,7 @@ export default function AdminPengaturanPage() {
                       },
                       {
                         id: "bnpb_bpbd",
-                        label: "BNPB / BPBD",
+                        label: "BNPB",
                         sub: "Hidrometeorologi",
                         icon: LifeBuoy,
                         color: "text-[#EA580C]",

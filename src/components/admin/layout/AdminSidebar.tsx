@@ -353,7 +353,7 @@ export function AdminSidebar({
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-800 truncate leading-tight">
-                    {adminUser?.unitName || "BPBD Komando"}
+                    {adminUser?.unitName || "BNPB Komando"}
                   </p>
                   <p className="text-[10px] text-slate-400 truncate mt-0.5">
                     {adminUser?.name || "Kapten Hendra Gunawan"}

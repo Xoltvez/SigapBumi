@@ -327,7 +327,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const unitNames: Record<string, string> = {
     semua: "Pemerintahan (Semua Data)",
     pemerintahan: "Pemerintahan (Semua Data)",
-    bnpb_bpbd: "BNPB / BPBD",
+    bnpb_bpbd: "BNPB",
     damkar: "Dinas Pemadam Kebakaran",
     medis: "Dinas Kesehatan / RS",
     polisi: "Kepolisian (Polri)",

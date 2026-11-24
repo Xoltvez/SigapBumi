@@ -178,7 +178,7 @@ export function checkReportBelongsToUnit(r: AdminReportRow, unit: string): boole
     );
   }
 
-  // 6. ROLE BNPB / BPBD (Bencana hidrometeorologi & geologi: banjir, longsor, gempa, tsunami)
+  // 6. ROLE BNPB (Bencana hidrometeorologi & geologi: banjir, longsor, gempa, tsunami)
   if (unit === "bnpb_bpbd") {
     if (r.target_agency === "bnpb_bpbd") return true;
     return ["banjir", "longsor", "gempa", "tsunami"].includes(r.disaster_type);

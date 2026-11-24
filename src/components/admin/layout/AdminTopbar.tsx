@@ -186,7 +186,7 @@ export function AdminTopbar({
               ? "Dinas Kesehatan / Medis"
               : activeUnit === "polisi"
               ? "Kepolisian RI / Satgas Polri"
-              : "BNPB / BPBD"
+              : "BNPB"
           }. Untuk mengganti instansi, silakan logout terlebih dahulu.`}
           className="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-full border border-slate-200/90 bg-white shadow-2xs flex items-center gap-1.5 sm:gap-2 text-xs font-semibold text-slate-800 select-none cursor-default"
         >
@@ -197,7 +197,7 @@ export function AdminTopbar({
             {activeUnit === "pemerintahan" || activeUnit === "semua"
               ? "Pemerintahan"
               : activeUnit === "bnpb_bpbd"
-              ? "BNPB / BPBD"
+              ? "BNPB"
               : activeUnit === "damkar"
               ? "Dinas Damkar"
               : activeUnit === "medis"

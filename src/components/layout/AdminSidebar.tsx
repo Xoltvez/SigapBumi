@@ -33,7 +33,7 @@ export function AdminSidebar({ activeUnit, onSelectUnit }: AdminSidebarProps) {
 
   const units = [
     { id: "semua", name: "Posko Terpadu (Semua)", icon: LifeBuoy, color: "text-primary" },
-    { id: "bnpb_bpbd", name: "BNPB / BPBD", icon: LifeBuoy, color: "text-primary" },
+    { id: "bnpb_bpbd", name: "BNPB", icon: LifeBuoy, color: "text-primary" },
     { id: "damkar", name: "Dinas Damkar", icon: Flame, color: "text-danger" },
     { id: "medis", name: "Dinas Kesehatan / RS", icon: HeartPulse, color: "text-danger" },
     { id: "polisi", name: "Kepolisian (Polri)", icon: Shield, color: "text-info" },

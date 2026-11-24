@@ -553,7 +553,7 @@ export default function AdminStatistikPage() {
           resolvePct:
             bpbdTotal > 0 ? Math.round((bpbdResolved / bpbdTotal) * 100) : 0,
           gradient: "from-blue-500 to-indigo-600",
-          badge: "BPBD Komando",
+          badge: "BNPB Komando",
         },
         {
           name: "Dinas Pemadam Kebakaran",
@@ -767,10 +767,10 @@ export default function AdminStatistikPage() {
       ];
     }
 
-    // Default BNPB / BPBD
+    // Default BNPB
     if (totalReportsCount === 0) {
       return [
-        { name: "Tim Reaksi Cepat (TRC) Asesmen Lapangan", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-blue-600 to-indigo-700", badge: "TRC BPBD" },
+        { name: "Tim Reaksi Cepat (TRC) Asesmen Lapangan", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-blue-600 to-indigo-700", badge: "TRC BNPB" },
         { name: "Distribusi Tenda & Logistik Kedaruratan", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-orange-500 to-amber-600", badge: "Logistik" },
         { name: "Peralatan Evakuasi & Perahu Karet", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-emerald-500 to-teal-600", badge: "Armada Air" },
         { name: "Pusdalops & Manajemen Informasi Bencana", count: 0, resolved: 0, pct: 0, resolvePct: 0, gradient: "from-sky-500 to-blue-600", badge: "Pusdalops" },
@@ -934,17 +934,17 @@ export default function AdminStatistikPage() {
 
     if (activeUnit === "bnpb_bpbd") {
       return {
-        title: "Statistik Operasional Pusdalops BNPB / BPBD",
+        title: "Statistik Operasional Pusdalops BNPB",
         subtitle:
           "Analitik koordinasi kedaruratan hidrometeorologi dan geologi: banjir, tanah longsor, gempa bumi, dan tsunami.",
-        jurisdictionBadge: "Komando Penanggulangan Bencana (BNPB / BPBD)",
+        jurisdictionBadge: "Komando Penanggulangan Bencana (BNPB)",
         totalReportsLabel: "Total Bencana Alam",
         responseTime: avgResponseStats.time,
         responseComparison: avgResponseStats.comparison,
         fourthMetricLabel: "Warga Terbantu Evakuasi",
         fourthMetricValue: `${totalConfirmationsCount} Jiwa`,
         fourthMetricSub: "Tercatat di posko pengungsian",
-        agencySectionTitle: "Beban Operasi per Bidang BPBD",
+        agencySectionTitle: "Beban Operasi per Bidang BNPB",
         agencySectionSub:
           "Alokasi penugasan Tim Reaksi Cepat (TRC), logistik, dan operasi SAR",
       };
