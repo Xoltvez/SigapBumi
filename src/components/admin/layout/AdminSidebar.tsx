@@ -65,7 +65,7 @@ export function AdminSidebar({
 
       <aside
         className={`bg-white text-slate-800 font-sans flex flex-col shrink-0 h-full h-[100dvh] max-h-[100dvh] transition-all duration-300 border-r border-slate-200/80 shadow-[1px_0_10px_rgba(0,0,0,0.02)] select-none
-          fixed md:relative inset-y-0 left-0 z-50 md:z-30 overflow-hidden
+          fixed md:relative inset-y-0 left-0 z-50 md:z-30 overflow-hidden md:overflow-visible
           ${isMobileOpen ? "translate-x-0 w-72" : "-translate-x-full md:translate-x-0"}
           ${isCollapsed ? "md:w-[76px]" : "md:w-64"}
         `}
@@ -125,7 +125,7 @@ export function AdminSidebar({
               type="button"
               onClick={onToggleCollapse}
               title={isCollapsed ? "Perluas Sidebar" : "Ciutkan Sidebar"}
-              className="hidden md:flex absolute -right-3 top-7 z-40 w-6 h-6 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 items-center justify-center text-xs shadow-sm transition-all cursor-pointer"
+              className="hidden md:flex absolute -right-3 top-7 z-50 w-6 h-6 rounded-full border border-slate-200/90 bg-white hover:bg-orange-50 text-slate-500 hover:text-[#F97316] hover:border-orange-200 items-center justify-center text-xs shadow-sm hover:shadow transition-all cursor-pointer"
             >
               {isCollapsed ? (
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -138,7 +138,7 @@ export function AdminSidebar({
 
         {/* Main Navigation Menu (Hanya tampil di Desktop, di Mobile sudah ada di Bottom Navbar!) */}
         <nav
-          className={`hidden md:block flex-1 py-5 md:py-6 space-y-1.5 overflow-y-auto ${
+          className={`hidden md:block flex-1 py-5 md:py-6 space-y-1.5 overflow-y-auto overflow-x-hidden ${
             isCollapsed ? "px-2" : "px-4"
           }`}
         >
