@@ -13,6 +13,7 @@ import {
   ArrowRight,
   MapPin,
   Siren,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import type { ReportStatus, DisasterType, SosAssistanceType, PriorityLabel } from "@/types";
@@ -633,14 +634,30 @@ export default function AdminRingkasanPage() {
                     <div className="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
                       {/* Foto Thumbnail Kebencanaan Landscape */}
                       <div className="w-14 h-11 sm:w-16 sm:h-11 md:w-20 md:h-14 rounded-xl overflow-hidden bg-slate-100 shrink-0 relative shadow-2xs">
-                        <Image
-                          src={item.image}
-                          alt={item.title}
-                          fill
-                          unoptimized={item.isBase64OrRemote}
-                          sizes="80px"
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
+                        {r.image_url ? (
+                          <Image
+                            src={r.image_url}
+                            alt={item.title}
+                            fill
+                            unoptimized={
+                              r.image_url.startsWith("data:") ||
+                              r.image_url.startsWith("http:") ||
+                              r.image_url.startsWith("https:")
+                            }
+                            sizes="80px"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div
+                            className="w-full h-full flex flex-col items-center justify-center bg-slate-50 border border-dashed border-slate-200 text-slate-400 group-hover:bg-slate-100/70 transition-colors"
+                            title="Pelapor tidak melampirkan foto pada laporan ini"
+                          >
+                            <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
+                            <span className="text-[9px] font-semibold text-slate-400 mt-0.5 scale-90 sm:scale-100">
+                              Tanpa Foto
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Judul & Lokasi Waktu */}

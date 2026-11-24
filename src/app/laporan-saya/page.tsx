@@ -17,6 +17,7 @@ import {
   Camera,
   Maximize2,
   X,
+  Image as ImageIcon,
   RotateCw,
   Copy,
   Check,
@@ -497,7 +498,7 @@ export default function LaporanSayaPage() {
 
                 {/* Right Side: Photo Thumbnail & Action Button */}
                 <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
-                  {report.image_url && (
+                  {report.image_url ? (
                     <div
                       onClick={() => setSelectedImage(report.image_url || null)}
                       className="relative group w-14 h-14 rounded-md overflow-hidden border border-line cursor-zoom-in bg-black/5 hover:border-primary/50 transition-all shrink-0"
@@ -512,6 +513,14 @@ export default function LaporanSayaPage() {
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                         <Maximize2 className="w-3.5 h-3.5" />
                       </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="w-14 h-14 rounded-md border border-dashed border-line bg-bg flex flex-col items-center justify-center text-ink-muted shrink-0"
+                      title="Pelapor tidak melampirkan foto pada laporan ini"
+                    >
+                      <ImageIcon className="w-5 h-5 text-ink-muted opacity-60" />
+                      <span className="text-[9px] font-medium text-ink-muted mt-0.5">Tanpa Foto</span>
                     </div>
                   )}
 

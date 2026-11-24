@@ -21,6 +21,7 @@ import {
   Camera,
   Maximize2,
   X,
+  Image as ImageIcon,
   LifeBuoy,
   HeartPulse,
   Shield,
@@ -670,8 +671,8 @@ function LacakContent() {
             );
           })()}
 
-          {/* Foto Bukti Kejadian dari Kamera (Jika Ada) */}
-          {activeReport.image_url && (
+          {/* Foto Bukti Kejadian dari Kamera */}
+          {activeReport.image_url ? (
             <div className="bg-surface rounded-lg border border-line p-4 space-y-2.5 shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-ink flex items-center gap-1.5">
@@ -703,6 +704,14 @@ function LacakContent() {
                   <span>Klik untuk melihat foto resolusi penuh</span>
                 </div>
               </div>
+            </div>
+          ) : (
+            <div className="aspect-video w-full rounded-md bg-bg border border-line flex flex-col items-center justify-center text-ink-muted p-6 text-center">
+              <ImageIcon className="w-12 h-12 text-ink-muted mb-2 opacity-50" />
+              <p className="text-xs font-semibold text-ink">Belum Ada Foto Bukti Lapangan</p>
+              <p className="text-[11px] text-ink-muted mt-0.5">
+                Pelapor tidak melampirkan foto pada laporan ini.
+              </p>
             </div>
           )}
 
