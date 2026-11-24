@@ -35,7 +35,7 @@ function getGeminiConfig(): { apiKey: string; model: string } {
   let apiKey =
     process.env.GEMINI_API_KEY?.trim() ||
     process.env.NEXT_PUBLIC_GEMINI_API_KEY?.trim();
-  let model = process.env.GEMINI_MODEL?.trim() || "gemini-3.1-flash-lite";
+  let model = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
 
   // Jika Next.js belum me-reload memory environment, baca langsung dari .env.local
   if (!apiKey) {
@@ -138,10 +138,10 @@ function evaluate(vision: VisionResult, category: string) {
       "cuaca_ekstrem",
     ],
 
-    // Kategori Kebakaran
+    // Kategori Kebakaran & Penyelamatan Damkar
     kebakaran: ["kebakaran", "karhutla", "erupsi"],
     karhutla: ["kebakaran", "karhutla"],
-    damkar: ["kebakaran", "karhutla", "erupsi"],
+    damkar: ["kebakaran", "karhutla", "erupsi", "banjir", "longsor", "kerusakan_struktur", "cuaca_ekstrem"],
 
     // Kategori Gempa & Struktur
     gempa: ["kerusakan_struktur", "longsor"],
@@ -256,33 +256,32 @@ export async function POST(request: Request) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    // Prioritaskan model ultra-cepat gemini-3.1-flash-lite lalu fallback model flash lainnya
+    // Prioritaskan model aktif & cepat gemini-3.5-flash-lite lalu fallback model flash lainnya
     const modelsToTry = [
       configuredModel,
-      "gemini-3.1-flash-lite",
-      "gemini-2.5-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-3.5-flash",
+      "gemini-3.7-flash",
       "gemini-3.8-flash",
+      "gemini-3.1-flash-lite",
+      "gemini-2.5-flash-lite",
     ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
     const promptText = `Anda adalah sistem verifikasi visual darurat kebencanaan untuk platform SIGAP-BUMI.
-Tugas Anda adalah menilai bukti visual dari foto yang diunggah warga secara objektif dan independen.
-Patuhi panduan ketat berikut:
-1. Jika foto SAMA SEKALI BUKAN BENCANA (misalnya swafoto/selfie, foto makanan, hewan peliharaan, ruangan/lantai/dinding rumah normal tanpa kerusakan, screenshot dokumen/layar, pemandangan kota/jalan raya normal tanpa genangan air), Anda WAJIB menetapkan:
+Tugas Anda adalah menilai bukti visual dari foto yang diunggah warga secara objektif dan akurat.
+Catatan penting: Foto kamera lapangan sering memiliki stempel waktu, koordinat GPS, peta mini, atau kompas di sudutnya. Abaikan teks stempel tersebut dan fokuskan penilaian pada konten pemandangan lingkungan dan objek utama di foto.
+
+Panduan penilaian:
+1. Jika foto MENUNJUKKAN TANDA BENCANA / KEJADIAN DARURAT NYATA:
+   - Genangan air, banjir merendam jalan/rumah/pekarangan, perahu evakuasi, luapan sungai -> kondisi: "bencana_jelas", tipe_visual: "banjir"
+   - Asap tebal, kobaran api, puing/gosong sisa kebakaran -> kondisi: "bencana_jelas", tipe_visual: "kebakaran"
+   - Tebing longsor, tanah runtuh, pohon tumbang menutup jalan -> kondisi: "bencana_jelas", tipe_visual: "longsor"
+   - Bangunan roboh, retakan besar akibat gempa, reruntuhan gedung -> kondisi: "bencana_jelas", tipe_visual: "kerusakan_struktur"
+   - Angin kencang, atap terbang, badai, cuaca ekstrem -> kondisi: "bencana_jelas", tipe_visual: "cuaca_ekstrem"
+2. Jika foto SAMA SEKALI BUKAN BENCANA (misalnya swafoto/selfie, foto makanan, hewan peliharaan, ruangan/lantai/dinding rumah normal tanpa kerusakan, screenshot dokumen/layar, jalan raya normal tanpa genangan):
    - kondisi: "bukan_bencana"
    - tipe_visual: "tidak_terlihat"
-2. Jika foto menunjukkan GENANGAN AIR, luapan sungai, banjir merendam jalan, rumah, atau pekarangan:
-   - kondisi: "bencana_jelas"
-   - tipe_visual: "banjir"
-3. Jika foto menunjukkan ASAP TEBAL, KOBARAN API, atau puing bekas kebakaran:
-   - kondisi: "bencana_jelas"
-   - tipe_visual: "kebakaran"
-4. Jika foto menunjukkan TANAH LONGSOR, tebing runtuh, pohon tumbang menutup jalan, atau material longsor:
-   - kondisi: "bencana_jelas"
-   - tipe_visual: "longsor"
-5. Jika foto menunjukkan RETAKAN BESAR, bangunan runtuh/rusak parah:
-   - kondisi: "bencana_jelas"
-   - tipe_visual: "kerusakan_struktur"
-6. Jika foto sangat gelap (malam hari tanpa lampu), buram parah, atau tidak jelas:
+3. Jika foto sangat gelap (malam hari tanpa lampu), buram parah, atau tidak terlihat objeknya sama sekali:
    - kondisi: "meragukan"
    - tipe_visual: "tidak_terlihat"
 
