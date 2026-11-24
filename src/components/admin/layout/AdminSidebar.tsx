@@ -119,18 +119,18 @@ export function AdminSidebar({
             <X className="w-5 h-5" />
           </button>
 
-          {/* Circular Collapse/Expand Button positioned on border line for desktop */}
+          {/* Circular Collapse/Expand Button positioned on border line for desktop (Warna oranye solid tema) */}
           {onToggleCollapse && (
             <button
               type="button"
               onClick={onToggleCollapse}
               title={isCollapsed ? "Perluas Sidebar" : "Ciutkan Sidebar"}
-              className="hidden md:flex absolute -right-3 top-7 z-50 w-6 h-6 rounded-full border border-slate-200/90 bg-white hover:bg-orange-50 text-slate-500 hover:text-[#F97316] hover:border-orange-200 items-center justify-center text-xs shadow-sm hover:shadow transition-all cursor-pointer"
+              className="hidden md:flex absolute -right-3 top-7 z-50 w-6 h-6 rounded-full bg-orange-600 text-white border border-orange-500 items-center justify-center text-xs shadow-md cursor-pointer"
             >
               {isCollapsed ? (
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
               ) : (
-                <ChevronLeft className="w-3.5 h-3.5" />
+                <ChevronLeft className="w-3.5 h-3.5 stroke-[2.5]" />
               )}
             </button>
           )}
