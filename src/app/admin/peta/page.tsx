@@ -1157,213 +1157,191 @@ function AdminPetaContent() {
       </div>
 
       {/* ============================================================== */}
-      {/* 2. TAMPILAN DESKTOP (MD KE ATAS): DASHBOARD OPERASIONAL LENGKAP */}
+      {/* 2. TAMPILAN DESKTOP (MD KE ATAS): FULLSCREEN TACTICAL MAP DENGAN FLOATING LAYER */}
       {/* ============================================================== */}
-      <div className="hidden md:block space-y-6 w-full max-w-[1400px] mx-auto font-sans pb-12 select-none">
-        {/* 1. Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
-                Yurisdiksi: {activeUnitName}
-              </span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
-              Peta Operasional Taktis
-            </h1>
-            <p className="text-xs md:text-sm text-slate-500 font-normal mt-0.5">
-              Pantau sebaran titik bencana, panggilan darurat SOS, dan armada darurat secara geospasial real-time.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
-            {/* Segarkan Data Button */}
-            <button
-              type="button"
-              onClick={loadData}
-              disabled={isLoading}
-              className="px-4 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors inline-flex items-center gap-2 cursor-pointer"
-            >
-              <RotateCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-orange-500" : "text-slate-500"}`} />
-              <span>Segarkan Data</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 2. 4 Kartu Metrik KPI (Row 1) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-          {/* Card 1: Total Titik */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#2563EB] shrink-0 font-bold">
-              <Layers className="w-6 h-6 stroke-[2.2]" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Total Titik Terdata</p>
-              <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
-                {totalTitik}
-              </p>
-              <p className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 mt-0.5">
-                <span>9 Provinsi</span>
-                <span className="text-slate-400 font-normal">tercakup</span>
-              </p>
-            </div>
-          </div>
-
-          {/* Card 2: SOS Aktif */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-full bg-[#FEE2E2] flex items-center justify-center text-[#EF4444] shrink-0 font-bold">
-              <AlertCircle className="w-6 h-6 stroke-[2.5]" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Sinyal SOS Aktif</p>
-              <p className="text-2xl md:text-3xl font-extrabold text-rose-600 tracking-tight leading-tight mt-0.5">
-                {sosTotal}
-              </p>
-              <p className="text-[11px] text-rose-600 font-semibold mt-0.5">
-                Perlu tanggap cepat
-              </p>
-            </div>
-          </div>
-
-          {/* Card 3: Dalam Penanganan */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-full bg-[#FEF3C7] flex items-center justify-center text-[#D97706] shrink-0 font-bold">
-              <Clock className="w-6 h-6 stroke-[2.5]" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Dalam Penanganan</p>
-              <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
-                {prosesTotal}
-              </p>
-              <p className="text-[11px] text-slate-400 font-normal mt-0.5">
-                Regu di lapangan
-              </p>
-            </div>
-          </div>
-
-          {/* Card 4: Selesai */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-full bg-[#D1FAE5] flex items-center justify-center text-[#059669] shrink-0 font-bold">
-              <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Selesai Ditangani</p>
-              <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
-                {selesaiTotal}
-              </p>
-              <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">
-                Telah dievakuasi
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Filter Bar Horizontal */}
-        <div className="pt-1">
-          <div className="flex items-center justify-between gap-3 sm:gap-4 overflow-x-auto pb-1 scrollbar-none w-full">
-            {/* Search Input Box */}
-            <div className="relative w-48 sm:w-60 shrink-0">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari lokasi atau kode..."
-                className="w-full h-8.5 pl-9 pr-3 rounded-full bg-white border border-slate-200/90 text-xs placeholder:text-slate-400 text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-orange-500/30 transition-all"
-              />
-            </div>
-
-            {/* Filter Pills Controls */}
-            <div className="flex items-center gap-2.5 sm:gap-3 text-xs shrink-0 whitespace-nowrap">
-              {/* Filter Provinsi */}
-              <div className="relative shrink-0">
-                <select
-                  value={selectedProvince}
-                  onChange={(e) => setSelectedProvince(e.target.value)}
-                  className="h-8.5 pl-3 pr-7 rounded-full border border-slate-200/90 bg-white hover:border-slate-300 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none cursor-pointer appearance-none transition-all"
-                >
-                  {PROVINCE_OPTIONS.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                  <ChevronDown className="w-3 h-3" />
-                </div>
-              </div>
-
-              {/* Filter Bencana */}
-              <div className="relative shrink-0">
-                <select
-                  value={selectedDisaster}
-                  onChange={(e) => setSelectedDisaster(e.target.value as DisasterType | "semua")}
-                  className="h-8.5 pl-3 pr-7 rounded-full border border-slate-200/90 bg-white hover:border-slate-300 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none cursor-pointer appearance-none transition-all"
-                >
-                  <option value="semua">Semua Bencana</option>
-                  <option value="banjir">Banjir</option>
-                  <option value="longsor">Tanah Longsor</option>
-                  <option value="kebakaran">Kebakaran</option>
-                  <option value="gempa">Gempa Bumi</option>
-                  <option value="karhutla">Karhutla</option>
-                  <option value="lainnya">Lainnya</option>
-                </select>
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                  <ChevronDown className="w-3 h-3" />
-                </div>
-              </div>
-
-              {/* Filter Status */}
-              <div className="relative shrink-0">
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value as ReportStatus | "sos" | "semua")}
-                  className="h-8.5 pl-3 pr-7 rounded-full border border-slate-200/90 bg-white hover:border-slate-300 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none cursor-pointer appearance-none transition-all"
-                >
-                  <option value="semua">Semua Status</option>
-                  <option value="diterima">Status: Diterima</option>
-                  <option value="diverifikasi">Status: Diverifikasi</option>
-                  <option value="ditindaklanjuti">Status: Ditindaklanjuti</option>
-                  <option value="selesai">Status: Selesai</option>
-                  <option value="sos">Khusus Sinyal SOS Darurat</option>
-                </select>
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                  <ChevronDown className="w-3 h-3" />
-                </div>
-              </div>
-
-              {/* Reset Button */}
-              {(selectedProvince !== "Semua Provinsi" ||
-                selectedDisaster !== "semua" ||
-                selectedStatus !== "semua" ||
-                searchQuery.trim() !== "") && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedProvince("Semua Provinsi");
-                    setSelectedDisaster("semua");
-                    setSelectedStatus("semua");
-                    setSearchQuery("");
-                  }}
-                  className="text-xs font-bold text-orange-600 hover:text-orange-700 hover:underline px-2 py-1 cursor-pointer"
-                >
-                  Reset Filter
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
+      <div className="hidden md:block w-full max-w-[1400px] mx-auto font-sans pb-8 select-none">
         {actionNotice && (
-          <div className="p-3 px-4 bg-emerald-50 border border-emerald-200/80 rounded-xl text-emerald-700 text-xs font-semibold flex items-center gap-2 shadow-2xs animate-fade-in">
+          <div className="mb-3 p-3 px-4 bg-emerald-50 border border-emerald-200/80 rounded-xl text-emerald-700 text-xs font-semibold flex items-center gap-2 shadow-2xs animate-fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <span>{actionNotice}</span>
           </div>
         )}
 
-        {/* 4. Full-Width Tactical Map Container (Sesuai Batas Margin Dashboard) */}
-        <div className="w-full bg-white rounded-2xl border border-slate-100 p-3.5 sm:p-4 shadow-[0_2px_16px_rgba(0,0,0,0.02)] flex flex-col justify-between relative overflow-hidden">
-          <div className="w-full h-[540px] sm:h-[620px] lg:h-[700px] xl:h-[740px] relative rounded-xl overflow-hidden border border-slate-100">
+        {/* Tactical Map Container Berlayer */}
+        <div className="w-full bg-white rounded-2xl border border-slate-200/80 p-2 sm:p-2.5 shadow-[0_4px_24px_rgba(0,0,0,0.04)] relative overflow-hidden">
+          <div className="w-full h-[calc(100vh-8.5rem)] min-h-[640px] max-h-[880px] relative rounded-xl overflow-hidden border border-slate-100">
+            <DisasterMap
+              className="w-full h-full"
+              points={filteredPoints}
+              selectedPointId={selectedPointId}
+              onSelectPoint={(pt) => setSelectedPointId(pt.id)}
+              showLegend={false}
+              disablePopup={true}
+              routeCoords={activeRoute?.coordinates || null}
+              isLiveNavigating={isLiveNavigating}
+              userLocationCoords={userLocation ? [userLocation.lat, userLocation.lng] : null}
+              mapLayer={mapLayer}
+            />
+
+            {/* ============================================================== */}
+            {/* FLOATING LAYER ATAS: TITLE, KPI MINI & FILTER TAKTIS          */}
+            {/* ============================================================== */}
+            {!isLiveNavigating && (
+              <div className="absolute top-3.5 left-3.5 z-20 max-w-[calc(100%-1.75rem)] pointer-events-none flex flex-col gap-2.5 animate-in fade-in duration-300">
+                {/* 1. Header Bar Taktis (Layer Kiri Atas) */}
+                <div className="flex items-center gap-2.5 pointer-events-auto flex-wrap">
+                  <div className="bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[10px] font-bold tracking-wider uppercase text-slate-500">
+                          {activeUnitName}
+                        </span>
+                      </div>
+                      <h1 className="text-base font-black text-slate-900 tracking-tight leading-none">
+                        Peta Operasional Taktis
+                      </h1>
+                    </div>
+
+                    <div className="h-6 w-px bg-slate-200 mx-0.5" />
+
+                    {/* Tombol Segarkan */}
+                    <button
+                      type="button"
+                      onClick={loadData}
+                      disabled={isLoading}
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-xs font-bold text-slate-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                      title="Segarkan data titik bencana"
+                    >
+                      <RotateCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-orange-500" : "text-slate-500"}`} />
+                      <span className="hidden lg:inline text-[11px]">Segarkan</span>
+                    </button>
+                  </div>
+
+                  {/* 2. Mini KPI Badges di Sebelah Judul */}
+                  <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center gap-1.5">
+                    {/* Badge 1: Total */}
+                    <div className="px-2.5 py-1 rounded-xl bg-blue-50 text-blue-700 flex items-center gap-1.5 text-xs font-bold">
+                      <Layers className="w-3.5 h-3.5 text-blue-600" />
+                      <span>{totalTitik}</span>
+                      <span className="text-[10px] font-medium text-blue-600/80 hidden xl:inline">Titik</span>
+                    </div>
+
+                    {/* Badge 2: SOS Aktif */}
+                    <div className="px-2.5 py-1 rounded-xl bg-rose-50 text-rose-700 flex items-center gap-1.5 text-xs font-bold">
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                      <span>{sosTotal}</span>
+                      <span className="text-[10px] font-medium text-rose-600/80 hidden xl:inline">SOS</span>
+                    </div>
+
+                    {/* Badge 3: Ditangani */}
+                    <div className="px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 flex items-center gap-1.5 text-xs font-bold">
+                      <Clock className="w-3.5 h-3.5 text-amber-600" />
+                      <span>{prosesTotal}</span>
+                      <span className="text-[10px] font-medium text-amber-600/80 hidden xl:inline">Proses</span>
+                    </div>
+
+                    {/* Badge 4: Selesai */}
+                    <div className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 flex items-center gap-1.5 text-xs font-bold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{selesaiTotal}</span>
+                      <span className="text-[10px] font-medium text-emerald-600/80 hidden xl:inline">Selesai</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Filter Bar Floating Layer */}
+                <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center gap-2 pointer-events-auto flex-wrap">
+                  {/* Search Input Box */}
+                  <div className="relative w-44 sm:w-52 shrink-0">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Cari lokasi atau kode..."
+                      className="w-full h-8 pl-8.5 pr-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs placeholder:text-slate-400 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-orange-500/30 transition-all"
+                    />
+                  </div>
+
+                  {/* Filter Provinsi */}
+                  <div className="relative shrink-0">
+                    <select
+                      value={selectedProvince}
+                      onChange={(e) => setSelectedProvince(e.target.value)}
+                      className="h-8 pl-2.5 pr-6 rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-white text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none transition-all"
+                    >
+                      {PROVINCE_OPTIONS.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                      <ChevronDown className="w-3 h-3" />
+                    </div>
+                  </div>
+
+                  {/* Filter Bencana */}
+                  <div className="relative shrink-0">
+                    <select
+                      value={selectedDisaster}
+                      onChange={(e) => setSelectedDisaster(e.target.value as DisasterType | "semua")}
+                      className="h-8 pl-2.5 pr-6 rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-white text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none transition-all"
+                    >
+                      <option value="semua">Semua Bencana</option>
+                      <option value="banjir">Banjir</option>
+                      <option value="longsor">Tanah Longsor</option>
+                      <option value="kebakaran">Kebakaran</option>
+                      <option value="gempa">Gempa Bumi</option>
+                      <option value="karhutla">Karhutla</option>
+                      <option value="lainnya">Lainnya</option>
+                    </select>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                      <ChevronDown className="w-3 h-3" />
+                    </div>
+                  </div>
+
+                  {/* Filter Status */}
+                  <div className="relative shrink-0">
+                    <select
+                      value={selectedStatus}
+                      onChange={(e) => setSelectedStatus(e.target.value as ReportStatus | "sos" | "semua")}
+                      className="h-8 pl-2.5 pr-6 rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-white text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none transition-all"
+                    >
+                      <option value="semua">Semua Status</option>
+                      <option value="diterima">Status: Diterima</option>
+                      <option value="diverifikasi">Status: Diverifikasi</option>
+                      <option value="ditindaklanjuti">Status: Ditindaklanjuti</option>
+                      <option value="selesai">Status: Selesai</option>
+                      <option value="sos">Khusus Sinyal SOS Darurat</option>
+                    </select>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                      <ChevronDown className="w-3 h-3" />
+                    </div>
+                  </div>
+
+                  {/* Reset Button */}
+                  {(selectedProvince !== "Semua Provinsi" ||
+                    selectedDisaster !== "semua" ||
+                    selectedStatus !== "semua" ||
+                    searchQuery.trim() !== "") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedProvince("Semua Provinsi");
+                        setSelectedDisaster("semua");
+                        setSelectedStatus("semua");
+                        setSearchQuery("");
+                      }}
+                      className="text-xs font-bold text-orange-600 hover:text-orange-700 hover:underline px-2 py-1 cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             <DisasterMap
               className="w-full h-full"
               points={filteredPoints}
