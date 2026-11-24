@@ -34,9 +34,8 @@ export type SupportedCategory = (typeof SUPPORTED_CATEGORIES)[number];
 function getAiConfig(): {
   geminiApiKey: string;
   geminiModel: string;
-  groqApiKey: string;
-  groqModel: string;
-  huggingFaceApiKey: string;
+  anthropicApiKey: string;
+  anthropicModel: string;
 } {
   let geminiApiKey =
     process.env.GEMINI_API_KEY?.trim() ||
@@ -44,10 +43,14 @@ function getAiConfig(): {
     "";
   let geminiModel = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
 
-  let groqApiKey = process.env.GROQ_API_KEY?.trim() || "";
-  let groqModel = process.env.GROQ_MODEL?.trim() || "llama-3.2-11b-vision-preview";
-
-  let huggingFaceApiKey = process.env.HUGGINGFACE_API_KEY?.trim() || "";
+  let anthropicApiKey =
+    process.env.ANTHROPIC_API_KEY?.trim() ||
+    process.env.CLAUDE_API_KEY?.trim() ||
+    "";
+  let anthropicModel =
+    process.env.ANTHROPIC_MODEL?.trim() ||
+    process.env.CLAUDE_MODEL?.trim() ||
+    "claude-3-5-sonnet-20241022";
 
   // Jika Next.js belum me-reload memory environment, baca langsung dari .env.local
   const candidatePaths = [
@@ -62,9 +65,8 @@ function getAiConfig(): {
         const content = fs.readFileSync(envPath, "utf8");
         const gKeyMatch = content.match(/GEMINI_API_KEY\s*=\s*([^\r\n]+)/);
         const gModelMatch = content.match(/GEMINI_MODEL\s*=\s*([^\r\n]+)/);
-        const grKeyMatch = content.match(/GROQ_API_KEY\s*=\s*([^\r\n]+)/);
-        const grModelMatch = content.match(/GROQ_MODEL\s*=\s*([^\r\n]+)/);
-        const hfKeyMatch = content.match(/HUGGINGFACE_API_KEY\s*=\s*([^\r\n]+)/);
+        const antKeyMatch = content.match(/(?:ANTHROPIC_API_KEY|CLAUDE_API_KEY)\s*=\s*([^\r\n]+)/);
+        const antModelMatch = content.match(/(?:ANTHROPIC_MODEL|CLAUDE_MODEL)\s*=\s*([^\r\n]+)/);
 
         if (!geminiApiKey && gKeyMatch && gKeyMatch[1]?.trim()) {
           geminiApiKey = gKeyMatch[1].trim();
@@ -72,14 +74,11 @@ function getAiConfig(): {
         if (gModelMatch && gModelMatch[1]?.trim()) {
           geminiModel = gModelMatch[1].trim();
         }
-        if (!groqApiKey && grKeyMatch && grKeyMatch[1]?.trim()) {
-          groqApiKey = grKeyMatch[1].trim();
+        if (!anthropicApiKey && antKeyMatch && antKeyMatch[1]?.trim()) {
+          anthropicApiKey = antKeyMatch[1].trim();
         }
-        if (grModelMatch && grModelMatch[1]?.trim()) {
-          groqModel = grModelMatch[1].trim();
-        }
-        if (!huggingFaceApiKey && hfKeyMatch && hfKeyMatch[1]?.trim()) {
-          huggingFaceApiKey = hfKeyMatch[1].trim();
+        if (antModelMatch && antModelMatch[1]?.trim()) {
+          anthropicModel = antModelMatch[1].trim();
         }
       }
     } catch {}
@@ -100,9 +99,8 @@ function getAiConfig(): {
   return {
     geminiApiKey,
     geminiModel,
-    groqApiKey,
-    groqModel,
-    huggingFaceApiKey,
+    anthropicApiKey,
+    anthropicModel,
   };
 }
 
@@ -270,8 +268,8 @@ export async function POST(request: Request) {
     console.log(
       "[DEBUG-AI] Memproses verifikasi. Gemini key:",
       Boolean(aiConfig.geminiApiKey),
-      "Groq key:",
-      Boolean(aiConfig.groqApiKey),
+      "Claude key:",
+      Boolean(aiConfig.anthropicApiKey),
       "Kategori:",
       category
     );
@@ -307,59 +305,68 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
     let providerUsed = "gemini";
 
     // ==========================================
-    // PROVIDER 1: GROQ VISION (Llama 3.2 Vision)
-    // Kecepatan tinggi ~1-2 detik, andal & tidak mudah 503
+    // PROVIDER 1: ANTHROPIC CLAUDE VISION
+    // Menilai bukti visual secara akurat dan konsisten
     // ==========================================
-    if (aiConfig.groqApiKey) {
+    if (aiConfig.anthropicApiKey) {
       try {
-        console.log(`[AI-VISION] Mencoba Provider Groq Vision (${aiConfig.groqModel})...`);
-        const groqController = new AbortController();
-        const groqTimeout = setTimeout(() => groqController.abort(), 7000);
+        console.log(`[AI-VISION] Mencoba Provider Claude Vision (${aiConfig.anthropicModel})...`);
+        const claudeController = new AbortController();
+        const claudeTimeout = setTimeout(() => claudeController.abort(), 8000);
 
-        const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${aiConfig.groqApiKey}`,
+            "x-api-key": aiConfig.anthropicApiKey,
+            "anthropic-version": "2023-06-01",
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: aiConfig.groqModel,
+            model: aiConfig.anthropicModel,
+            max_tokens: 600,
+            temperature: 0.1,
             messages: [
               {
                 role: "user",
                 content: [
-                  { type: "text", text: promptText },
                   {
-                    type: "image_url",
-                    image_url: {
-                      url: `data:${detected.mime};base64,${base64Data}`,
+                    type: "image",
+                    source: {
+                      type: "base64",
+                      media_type: detected.mime,
+                      data: base64Data,
                     },
+                  },
+                  {
+                    type: "text",
+                    text: promptText,
                   },
                 ],
               },
             ],
-            response_format: { type: "json_object" },
-            temperature: 0.1,
-            max_tokens: 300,
           }),
-          signal: groqController.signal,
+          signal: claudeController.signal,
         });
 
-        clearTimeout(groqTimeout);
+        clearTimeout(claudeTimeout);
 
-        if (groqRes.ok) {
-          const groqData = await groqRes.json();
-          const groqContent = groqData.choices?.[0]?.message?.content;
-          if (groqContent) {
-            console.log("[AI-VISION] Berhasil verifikasi via Groq Vision!");
-            outputText = groqContent;
-            providerUsed = "groq_vision";
+        if (claudeRes.ok) {
+          const claudeData = await claudeRes.json();
+          const claudeText = claudeData.content?.[0]?.text;
+          if (claudeText) {
+            console.log("[AI-VISION] Berhasil verifikasi via Claude Vision!");
+            outputText = claudeText;
+            providerUsed = `claude_${aiConfig.anthropicModel}`;
           }
         } else {
-          console.warn("[AI-VISION] Groq response error:", groqRes.status, await groqRes.text().catch(() => ""));
+          console.warn(
+            "[AI-VISION] Claude response error:",
+            claudeRes.status,
+            await claudeRes.text().catch(() => "")
+          );
         }
       } catch (err) {
-        console.warn("[AI-VISION] Groq Vision mengalami kendala:", (err as Error)?.message || err);
+        console.warn("[AI-VISION] Claude Vision mengalami kendala:", (err as Error)?.message || err);
       }
     }
 
