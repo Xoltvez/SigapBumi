@@ -598,9 +598,9 @@ export default function AdminRingkasanPage() {
               unitReports.slice(0, 4).map((r, idx) => {
                 const fallbackImg =
                   r.disaster_type === "kebakaran" || r.disaster_type === "karhutla" || r.target_agency === "damkar"
-                    ? "/thumbnails/fire.jpg"
+                    ? "/thumbnails/wildfire.jpg"
                     : r.disaster_type === "gempa" || r.target_agency === "medis"
-                    ? "/thumbnails/quake.jpg"
+                    ? "/thumbnails/earthquake.jpg"
                     : r.disaster_type === "longsor"
                     ? "/thumbnails/landslide.jpg"
                     : "/thumbnails/flood.jpg";
