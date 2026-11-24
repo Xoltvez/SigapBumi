@@ -19,12 +19,13 @@ import { useAdmin } from "@/components/layout/AdminShell";
 import type { ReportStatus, DisasterType, SosAssistanceType, PriorityLabel } from "@/types";
 import {
   fetchLiveReports,
+  getCachedLiveReports,
   updateReportStatusLive,
   DEFAULT_MOCK_REPORTS,
   removeEmojis,
   parseReportTimestamp,
 } from "@/lib/services/reports";
-import { fetchLiveSosAlerts } from "@/lib/services/sos";
+import { fetchLiveSosAlerts, getCachedLiveSosAlerts } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
 
 interface AdminReportItem {
@@ -55,11 +56,92 @@ interface SosAlertItem {
 
 const INITIAL_SOS_ALERTS: SosAlertItem[] = [];
 
+function formatAdminReports(live: any[]): AdminReportItem[] {
+  const formatted: AdminReportItem[] = (live || []).map((r) => {
+    const isSos = Boolean(
+      r.tracking_code?.toUpperCase().startsWith("SOS-") ||
+      r.title?.toUpperCase().includes("SOS")
+    );
+
+    let pLabel: PriorityLabel = "Sedang";
+    if (isSos) {
+      pLabel = "Kritis";
+    } else if (r.status === "selesai") {
+      pLabel = "Rendah";
+    } else {
+      const p = String(r.priority || "").toLowerCase();
+      if (p === "tinggi" || r.priority_label === "Tinggi" || r.confirmation_count >= 10) {
+        pLabel = "Tinggi";
+      } else if (p === "rendah" || r.priority_label === "Rendah") {
+        pLabel = "Rendah";
+      } else {
+        pLabel = "Sedang";
+      }
+    }
+
+    return {
+      id: r.id,
+      tracking_code: r.tracking_code,
+      disaster_type: r.disaster_type,
+      target_agency: r.target_agency,
+      title: removeEmojis(r.title),
+      location: removeEmojis(r.address),
+      time: r.created_at,
+      raw_time: r.raw_created_at || r.created_at,
+      status: r.status,
+      priority: pLabel,
+      confirmation_count: r.confirmation_count,
+      image_url: r.image_url,
+    };
+  });
+
+  formatted.sort((a, b) => {
+    const timeA = parseReportTimestamp(a.raw_time || a.time);
+    const timeB = parseReportTimestamp(b.raw_time || b.time);
+    return timeB - timeA;
+  });
+
+  return formatted;
+}
+
 export default function AdminRingkasanPage() {
   const { activeUnit, activeUnitName, adminUser, setActiveSosCount, setIsLiveConnected } = useAdmin();
-  const [reports, setReports] = useState<AdminReportItem[]>([]);
-  const [sosAlerts, setSosAlerts] = useState<SosAlertItem[]>(INITIAL_SOS_ALERTS);
-  const [isLoading, setIsLoading] = useState(true);
+  const [reports, setReports] = useState<AdminReportItem[]>(() => {
+    const cached = getCachedLiveReports();
+    return cached && cached.length > 0 ? formatAdminReports(cached) : [];
+  });
+  const [sosAlerts, setSosAlerts] = useState<SosAlertItem[]>(() => {
+    const cachedSos = getCachedLiveSosAlerts();
+    if (cachedSos && cachedSos.length > 0) {
+      const cleanSos = cachedSos.filter(
+        (s) =>
+          s &&
+          s.id &&
+          !s.id.startsWith("sos-10") &&
+          s.id !== "sos-1" &&
+          s.id !== "sos-2" &&
+          s.id !== "sos-sample" &&
+          !s.address?.includes("Citra 2")
+      );
+      return cleanSos
+        .filter((s) => s.status !== "selesai")
+        .map((s) => ({
+          id: s.id,
+          sender_name: s.source,
+          assistance_type: s.assistance_type,
+          location: s.address,
+          coordinates: s.coordinates,
+          time: s.time_ago,
+          status: s.status as "aktif" | "ditangani",
+          created_at: s.created_at,
+        }));
+    }
+    return INITIAL_SOS_ALERTS;
+  });
+  const [isLoading, setIsLoading] = useState(() => {
+    const cached = getCachedLiveReports();
+    return !cached || cached.length === 0;
+  });
   const [updatingReportId, setUpdatingReportId] = useState<string | null>(null);
 
   const handleQuickStatusChange = async (
@@ -96,62 +178,22 @@ export default function AdminRingkasanPage() {
     let isMounted = true;
 
     async function loadData() {
-      setIsLoading(true);
+      // Jika data sudah terisi dari cache, jangan tampilkan loading blocking
+      if (reports.length === 0) {
+        setIsLoading(true);
+      }
       try {
-        const live = await fetchLiveReports();
+        // Ambil data laporan dan SOS secara PARALEL untuk kecepatan maksimal
+        const [live, liveSos] = await Promise.all([
+          fetchLiveReports(),
+          fetchLiveSosAlerts(),
+        ]);
+
         if (isMounted) {
-          const formatted: AdminReportItem[] = (live || []).map((r) => {
-            const isSos = Boolean(
-              r.tracking_code?.toUpperCase().startsWith("SOS-") ||
-              r.title?.toUpperCase().includes("SOS")
-            );
-
-            let pLabel: PriorityLabel = "Sedang";
-            if (isSos) {
-              pLabel = "Kritis";
-            } else if (r.status === "selesai") {
-              pLabel = "Rendah";
-            } else {
-              const p = String(r.priority || "").toLowerCase();
-              if (p === "tinggi" || r.priority_label === "Tinggi" || r.confirmation_count >= 10) {
-                pLabel = "Tinggi";
-              } else if (p === "rendah" || r.priority_label === "Rendah") {
-                pLabel = "Rendah";
-              } else {
-                pLabel = "Sedang";
-              }
-            }
-
-            return {
-              id: r.id,
-              tracking_code: r.tracking_code,
-              disaster_type: r.disaster_type,
-              target_agency: r.target_agency,
-              title: removeEmojis(r.title),
-              location: removeEmojis(r.address),
-              time: r.created_at,
-              raw_time: r.raw_created_at || r.created_at,
-              status: r.status,
-              priority: pLabel,
-              confirmation_count: r.confirmation_count,
-              image_url: r.image_url,
-            };
-          });
-
-          // Urutkan laporan dari data yang paling baru ke terlama
-          formatted.sort((a, b) => {
-            const timeA = parseReportTimestamp(a.raw_time || a.time);
-            const timeB = parseReportTimestamp(b.raw_time || b.time);
-            return timeB - timeA;
-          });
-
+          const formatted = formatAdminReports(live || []);
           setReports(formatted);
           setIsLiveConnected(true);
-        }
 
-        // Muat live SOS (hanya data darurat riil warga)
-        const liveSos = await fetchLiveSosAlerts();
-        if (isMounted) {
           const cleanSos = (liveSos || []).filter(
             (s) =>
               s &&

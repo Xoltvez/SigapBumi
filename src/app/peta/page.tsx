@@ -47,6 +47,7 @@ import {
   fetchLiveReports,
   reportsToMapPoints,
   DEFAULT_MOCK_REPORTS,
+  getCachedLiveReports,
 } from "@/lib/services/reports";
 import { fetchLiveSosAlerts } from "@/lib/services/sos";
 import DisasterIcon, { getDisasterLabel } from "@/components/common/DisasterIcon";
@@ -74,7 +75,13 @@ function PetaContent() {
   const urlLat = searchParams.get("lat");
   const urlLng = searchParams.get("lng");
 
-  const [points, setPoints] = useState<MapPoint[]>(INITIAL_POINTS);
+  const [points, setPoints] = useState<MapPoint[]>(() => {
+    const cached = getCachedLiveReports();
+    if (cached && cached.length > 0) {
+      return reportsToMapPoints(cached);
+    }
+    return INITIAL_POINTS;
+  });
   const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<"peta" | "daftar">("peta");
   const [selectedCategory, setSelectedCategory] = useState<DisasterType | "semua">("semua");
@@ -429,8 +436,10 @@ function PetaContent() {
 
     async function loadData() {
       try {
-        const liveReports = await fetchLiveReports();
-        const liveSos = await fetchLiveSosAlerts();
+        const [liveReports, liveSos] = await Promise.all([
+          fetchLiveReports(),
+          fetchLiveSosAlerts(),
+        ]);
 
         const reportPoints = (liveReports && liveReports.length > 0)
           ? reportsToMapPoints(liveReports)

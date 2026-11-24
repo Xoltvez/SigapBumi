@@ -475,74 +475,98 @@ export async function updateSosLocation(
 }
 
 
+let cachedLiveSosAlerts: LiveSosItem[] | null = null;
+let cachedLiveSosAlertsTime = 0;
+let inFlightSosPromise: Promise<LiveSosItem[]> | null = null;
+const SOS_CACHE_TTL_MS = 12000; // Cache in-memory 12 detik
+
+export function getCachedLiveSosAlerts(): LiveSosItem[] | null {
+  return cachedLiveSosAlerts;
+}
+
+export function invalidateLiveSosCache(): void {
+  cachedLiveSosAlerts = null;
+  cachedLiveSosAlertsTime = 0;
+  inFlightSosPromise = null;
+}
+
 /**
  * Mengambil daftar panggilan SOS live dari Supabase dan sinkron dengan mock/cache
  */
-export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
-  const localItems = getLocalSosCache();
-  let supabaseItems: LiveSosItem[] = [];
-
-  // 1. Ambil dari tabel sos_alerts
-  try {
-    const { data, error } = await supabase
-      .from("sos_alerts")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (!error && data && data.length > 0) {
-      supabaseItems = data.map((row) => {
-        const coords = parsePostGISPoint(row.location) || { lat: -6.155, lng: 106.723 };
-        const phoneMatch = row.note ? (row.note as string).match(/\[Kontak:\s*([^\]]+)\]/) : null;
-        const extractedPhone = phoneMatch ? phoneMatch[1].trim() : undefined;
-        const photoMatch = row.note ? (row.note as string).match(/\[Foto:\s*([^\]]+)\]/) : null;
-        const extractedPhoto = photoMatch ? photoMatch[1].trim() : (row.photo_url || undefined);
-        const codeMatch = row.note ? (row.note as string).match(/\[Kode:\s*([^\]]+)\]/) : null;
-        const extractedCode = codeMatch ? codeMatch[1].trim() : (row.note ? (row.note as string).match(/SOS-\d+/)?.[0] : undefined);
-
-        const isHoax = Boolean(
-          (row as any).closing_note?.includes("HOAKS") ||
-          (row as any).closing_note?.includes("PALSU") ||
-          row.note?.includes("HOAKS") ||
-          row.note?.includes("PALSU") ||
-          row.status === "palsu"
-        );
-        const statusVal: "aktif" | "ditangani" | "selesai" | "palsu" = isHoax
-          ? "palsu"
-          : (row.status as "aktif" | "ditangani" | "selesai") || "aktif";
-
-        return {
-          id: row.id,
-          tracking_code: extractedCode,
-          source: "Ponsel Warga (GPS Sensor)",
-          assistance_type: (row.assistance_type as SosAssistanceType) || "damkar",
-          address: row.note ? `${row.note.replace(/\[(Kontak|Foto|Kode):[^\]]+\]/g, "").trim()}` : `Lokasi GPS (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`,
-          coordinates: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
-          lat: coords.lat,
-          lng: coords.lng,
-          time_ago: timeAgo(row.created_at),
-          battery_level: "85%",
-          status: statusVal,
-          phone_number: extractedPhone,
-          photo_url: extractedPhoto,
-          dispatched_team: row.acknowledged_by || undefined,
-          note: row.note || undefined,
-          created_at: row.created_at,
-        };
-      });
-    }
-  } catch (err) {
-    console.warn("fetchLiveSosAlerts Supabase error:", err);
+export async function fetchLiveSosAlerts(forceRefresh = false): Promise<LiveSosItem[]> {
+  // SWR: Jika data cache memori masih segar (< 12 detik) dan tidak dipaksa refresh, kembalikan seketika (0ms)
+  if (!forceRefresh && cachedLiveSosAlerts && Date.now() - cachedLiveSosAlertsTime < SOS_CACHE_TTL_MS) {
+    return cachedLiveSosAlerts;
   }
 
-  // 2. Ambil juga dari tabel reports (laporan darurat dengan kode/judul SOS)
-  try {
-    const { data: repData } = await supabase
-      .from("reports")
-      .select("*, report_media(*)")
-      .or("tracking_code.ilike.SOS-%,title.ilike.%SOS%")
-      .order("created_at", { ascending: false });
+  // Deduplikasi panggilan paralel
+  if (inFlightSosPromise) {
+    return inFlightSosPromise;
+  }
 
-    if (repData && repData.length > 0) {
+  inFlightSosPromise = (async () => {
+    const localItems = getLocalSosCache();
+    let supabaseItems: LiveSosItem[] = [];
+
+    // 1 & 2. Ambil dari tabel sos_alerts & reports secara PARALEL untuk kecepatan maksimal
+    try {
+      const [sosRes, repRes] = await Promise.all([
+        supabase
+          .from("sos_alerts")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("reports")
+          .select("*, report_media(*)")
+          .or("tracking_code.ilike.SOS-%,title.ilike.%SOS%")
+          .order("created_at", { ascending: false }),
+      ]);
+
+      const { data, error } = sosRes;
+      if (!error && data && data.length > 0) {
+        supabaseItems = data.map((row) => {
+          const coords = parsePostGISPoint(row.location) || { lat: -6.155, lng: 106.723 };
+          const phoneMatch = row.note ? (row.note as string).match(/\[Kontak:\s*([^\]]+)\]/) : null;
+          const extractedPhone = phoneMatch ? phoneMatch[1].trim() : undefined;
+          const photoMatch = row.note ? (row.note as string).match(/\[Foto:\s*([^\]]+)\]/) : null;
+          const extractedPhoto = photoMatch ? photoMatch[1].trim() : (row.photo_url || undefined);
+          const codeMatch = row.note ? (row.note as string).match(/\[Kode:\s*([^\]]+)\]/) : null;
+          const extractedCode = codeMatch ? codeMatch[1].trim() : (row.note ? (row.note as string).match(/SOS-\d+/)?.[0] : undefined);
+
+          const isHoax = Boolean(
+            (row as any).closing_note?.includes("HOAKS") ||
+            (row as any).closing_note?.includes("PALSU") ||
+            row.note?.includes("HOAKS") ||
+            row.note?.includes("PALSU") ||
+            row.status === "palsu"
+          );
+          const statusVal: "aktif" | "ditangani" | "selesai" | "palsu" = isHoax
+            ? "palsu"
+            : (row.status as "aktif" | "ditangani" | "selesai") || "aktif";
+
+          return {
+            id: row.id,
+            tracking_code: extractedCode,
+            source: "Ponsel Warga (GPS Sensor)",
+            assistance_type: (row.assistance_type as SosAssistanceType) || "damkar",
+            address: row.note ? `${row.note.replace(/\[(Kontak|Foto|Kode):[^\]]+\]/g, "").trim()}` : `Lokasi GPS (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`,
+            coordinates: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
+            lat: coords.lat,
+            lng: coords.lng,
+            time_ago: timeAgo(row.created_at),
+            battery_level: "85%",
+            status: statusVal,
+            phone_number: extractedPhone,
+            photo_url: extractedPhoto,
+            dispatched_team: row.acknowledged_by || undefined,
+            note: row.note || undefined,
+            created_at: row.created_at,
+          };
+        });
+      }
+
+      const { data: repData } = repRes;
+      if (repData && repData.length > 0) {
       repData.forEach((row) => {
         // Cek apakah sinyal SOS ini sudah ada di supabaseItems agar tidak duplikat
         const existingIdx = supabaseItems.findIndex(
@@ -710,12 +734,22 @@ export async function fetchLiveSosAlerts(): Promise<LiveSosItem[]> {
     }
   }
 
-  const deletedIds = getDeletedSosIds();
-  return deduplicated.filter(
-    (item) =>
-      !deletedIds.has(item.id) &&
-      !Array.from(deletedIds).some((delId) => item.note && item.note.includes(delId))
-  );
+    const deletedIds = getDeletedSosIds();
+    const finalSos = deduplicated.filter(
+      (item) =>
+        !deletedIds.has(item.id) &&
+        !Array.from(deletedIds).some((delId) => item.note && item.note.includes(delId))
+    );
+
+    // Simpan ke cache in-memory untuk akses instan berikutnya
+    cachedLiveSosAlerts = finalSos;
+    cachedLiveSosAlertsTime = Date.now();
+    inFlightSosPromise = null;
+
+    return finalSos;
+  })();
+
+  return inFlightSosPromise;
 }
 
 /**
@@ -727,6 +761,7 @@ export async function updateSosAlertStatus(
   dispatchedTeam?: string,
   trackingCode?: string
 ): Promise<{ success: boolean; error?: string }> {
+  invalidateLiveSosCache();
   // Update local cache
   const localItems = getLocalSosCache();
   const existingIndex = localItems.findIndex(

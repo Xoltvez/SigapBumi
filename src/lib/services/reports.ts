@@ -629,247 +629,282 @@ export function inferRegionFromAddress(address?: string): { province?: string; r
   return { province, regency };
 }
 
+let cachedLiveReports: LiveReportItem[] | null = null;
+let cachedLiveReportsTime = 0;
+let inFlightLiveReportsPromise: Promise<LiveReportItem[]> | null = null;
+const CACHE_TTL_MS = 12000; // Cache in-memory 12 detik untuk loading sekejap mata (0ms)
+
+export function getCachedLiveReports(): LiveReportItem[] | null {
+  return cachedLiveReports;
+}
+
+export function invalidateLiveReportsCache(): void {
+  cachedLiveReports = null;
+  cachedLiveReportsTime = 0;
+  inFlightLiveReportsPromise = null;
+}
+
 /**
  * Mengambil daftar laporan: menggabungkan data Supabase live, local cache perangkat, dan data demo
  */
-export async function fetchLiveReports(): Promise<LiveReportItem[]> {
-  const localReports = getLocalReports();
-  let liveItems: LiveReportItem[] = [];
-
-  try {
-    const { data, error } = await supabase
-      .from("reports")
-      .select("*, report_media(*)")
-      .order("created_at", { ascending: false });
-
-    if (!error && data && data.length > 0) {
-      liveItems = data.map((row) => {
-        const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
-        const disaster = row.disaster_type as DisasterType;
-        const agency = inferAgencyFromDisaster(disaster);
-        const isSosReport = Boolean(
-          (row.tracking_code || "").toUpperCase().startsWith("SOS-") ||
-          row.title?.toUpperCase().includes("SOS")
-        );
-
-        const priority: "kritis" | "tinggi" | "sedang" | "rendah" | "normal" =
-          isSosReport
-            ? "kritis"
-            : row.status === "selesai"
-            ? "rendah"
-            : row.priority_score >= 70
-            ? "tinggi"
-            : row.priority_score >= 35
-            ? "sedang"
-            : "rendah";
-
-        const rawDesc = row.description || "";
-        const mediaPhoto = Array.isArray(row.report_media) && row.report_media.length > 0
-          ? row.report_media[0].media_url
-          : undefined;
-        const extractedPhoto = extractPhotoFromDescription(rawDesc) || mediaPhoto || row.image_url || undefined;
-        const extractedPhone = extractPhoneFromDescription(rawDesc) || row.phone_number || undefined;
-        const extractedReporter = extractReporterNameFromDescription(rawDesc) || (row as any).reporter_name || undefined;
-        const cleanDesc = cleanReportDescription(rawDesc);
-        const { province: inferredProv, regency: inferredReg } = inferRegionFromAddress(row.address);
-
-        return {
-          id: row.id,
-          tracking_code: row.tracking_code,
-          disaster_type: disaster,
-          target_agency: agency,
-          title: removeEmojis(row.title),
-          description: cleanDesc,
-          address: removeEmojis(row.address) || "Lokasi Koordinat GPS Terdeteksi",
-          province: row.province || inferredProv,
-          regency: row.regency || inferredReg,
-          lat: coords.lat,
-          lng: coords.lng,
-          status: row.status as ReportStatus,
-          priority,
-          confirmation_count: row.confirmation_count || 0,
-          created_at: formatReportTime(row.created_at),
-          raw_created_at: row.created_at,
-          image_url: extractedPhoto,
-          phone_number: extractedPhone,
-          reporter_name: extractedReporter,
-          is_demo: false,
-        };
-      });
-    }
-  } catch (err) {
-    console.warn("fetchLiveReports Supabase warning:", err);
+export async function fetchLiveReports(forceRefresh = false): Promise<LiveReportItem[]> {
+  // SWR: Jika data cache memori masih segar (< 12 detik) dan tidak dipaksa refresh, kembalikan seketika (0ms)
+  if (!forceRefresh && cachedLiveReports && Date.now() - cachedLiveReportsTime < CACHE_TTL_MS) {
+    return cachedLiveReports;
   }
 
-  // 1b. Cek dan sinkronkan status dari tabel sos_alerts Supabase jika ada sinyal SOS yang sudah diproses
-  try {
-    const { data: sosRows } = await supabase
-      .from("sos_alerts")
-      .select("id, status, note, created_at");
-    if (sosRows && sosRows.length > 0) {
-      sosRows.forEach((s) => {
-        const match = liveItems.find(
-          (r) => r.id === s.id || (s.note && s.note.includes(r.tracking_code))
-        );
-        if (match) {
-          if (s.status === "ditangani" && match.status === "diterima") {
-            match.status = "ditindaklanjuti";
-          } else if (s.status === "selesai" && match.status !== "selesai") {
-            match.status = "selesai";
-          } else if (s.status === "palsu" && match.status !== "ditolak") {
-            match.status = "ditolak";
-          }
-        }
-      });
-    }
-  } catch (err) {
-    console.warn("fetchLiveReports sos_alerts sync warning:", err);
+  // Deduplikasi panggilan paralel yang terjadi bersamaan
+  if (inFlightLiveReportsPromise) {
+    return inFlightLiveReportsPromise;
   }
 
-  // Coba ambil dari endpoint sinkronisasi lintas browser /api/reports
-  if (typeof window !== "undefined") {
+  inFlightLiveReportsPromise = (async () => {
+    const localReports = getLocalReports();
+    let liveItems: LiveReportItem[] = [];
+
     try {
-      const apiRes = await fetch("/api/reports", { cache: "no-store" });
-      if (apiRes.ok) {
-        const apiJson = await apiRes.json();
-        if (apiJson.success && Array.isArray(apiJson.reports)) {
-          apiJson.reports.forEach((row: any) => {
-            const coords = parsePostGISPoint(row.location) || {
-              lat: typeof row.lat === "number" ? row.lat : -6.2088,
-              lng: typeof row.lng === "number" ? row.lng : 106.8456,
-            };
-            const disaster = (row.disaster_type || "lainnya") as DisasterType;
-            const agency = inferAgencyFromDisaster(disaster);
-            const rawDesc = row.description || "";
-            const extractedPhoto = extractPhotoFromDescription(rawDesc) || row.image_url;
-            const extractedPhone = extractPhoneFromDescription(rawDesc) || row.phone_number;
-            const extractedReporter = extractReporterNameFromDescription(rawDesc) || row.reporter_name;
-            const cleanDesc = cleanReportDescription(rawDesc);
-            const { province: inferredProv, regency: inferredReg } = inferRegionFromAddress(row.address);
+      // 1. Eksekusi query reports dan sos_alerts secara PARALEL untuk efisiensi loading
+      const [reportsRes, sosRes] = await Promise.all([
+        supabase
+          .from("reports")
+          .select("*, report_media(*)")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("sos_alerts")
+          .select("id, status, note, created_at"),
+      ]);
 
-            const isSos = Boolean(
-              (row.tracking_code || "").toUpperCase().startsWith("SOS-") ||
-              row.title?.toUpperCase().includes("SOS")
-            );
+      const { data, error } = reportsRes;
+      if (!error && data && data.length > 0) {
+        liveItems = data.map((row) => {
+          const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
+          const disaster = row.disaster_type as DisasterType;
+          const agency = inferAgencyFromDisaster(disaster);
+          const isSosReport = Boolean(
+            (row.tracking_code || "").toUpperCase().startsWith("SOS-") ||
+            row.title?.toUpperCase().includes("SOS")
+          );
 
-            const priority = isSos
+          const priority: "kritis" | "tinggi" | "sedang" | "rendah" | "normal" =
+            isSosReport
               ? "kritis"
               : row.status === "selesai"
               ? "rendah"
-              : (row.priority_score || 0) >= 70
+              : row.priority_score >= 70
               ? "tinggi"
-              : (row.priority_score || 0) >= 35
+              : row.priority_score >= 35
               ? "sedang"
               : "rendah";
 
-            const apiItem: LiveReportItem = {
-              id: row.id,
-              tracking_code: row.tracking_code,
-              disaster_type: disaster,
-              target_agency: agency,
-              title: removeEmojis(row.title || "Laporan Warga"),
-              description: cleanDesc,
-              address: removeEmojis(row.address) || "Lokasi Koordinat GPS Terdeteksi",
-              province: row.province || inferredProv,
-              regency: row.regency || inferredReg,
-              lat: coords.lat,
-              lng: coords.lng,
-              status: (row.status || "diterima") as ReportStatus,
-              priority,
-              confirmation_count: row.confirmation_count || 0,
-              created_at: formatReportTime(row.created_at || new Date().toISOString()),
-              raw_created_at: row.created_at || new Date().toISOString(),
-              image_url: extractedPhoto,
-              phone_number: extractedPhone,
-              reporter_name: extractedReporter,
-              is_demo: false,
-            };
+          const rawDesc = row.description || "";
+          const mediaPhoto = Array.isArray(row.report_media) && row.report_media.length > 0
+            ? row.report_media[0].media_url
+            : undefined;
+          const extractedPhoto = extractPhotoFromDescription(rawDesc) || mediaPhoto || row.image_url || undefined;
+          const extractedPhone = extractPhoneFromDescription(rawDesc) || row.phone_number || undefined;
+          const extractedReporter = extractReporterNameFromDescription(rawDesc) || (row as any).reporter_name || undefined;
+          const cleanDesc = cleanReportDescription(rawDesc);
+          const { province: inferredProv, regency: inferredReg } = inferRegionFromAddress(row.address);
 
-            // Tambahkan jika belum ada di liveItems
-            if (!liveItems.some((x) => x.tracking_code === apiItem.tracking_code || x.id === apiItem.id)) {
-              liveItems.push(apiItem);
+          return {
+            id: row.id,
+            tracking_code: row.tracking_code,
+            disaster_type: disaster,
+            target_agency: agency,
+            title: removeEmojis(row.title),
+            description: cleanDesc,
+            address: removeEmojis(row.address) || "Lokasi Koordinat GPS Terdeteksi",
+            province: row.province || inferredProv,
+            regency: row.regency || inferredReg,
+            lat: coords.lat,
+            lng: coords.lng,
+            status: row.status as ReportStatus,
+            priority,
+            confirmation_count: row.confirmation_count || 0,
+            created_at: formatReportTime(row.created_at),
+            raw_created_at: row.created_at,
+            image_url: extractedPhoto,
+            phone_number: extractedPhone,
+            reporter_name: extractedReporter,
+            is_demo: false,
+          };
+        });
+      }
+
+      // Sinkronkan status dari tabel sos_alerts
+      const { data: sosRows } = sosRes;
+      if (sosRows && sosRows.length > 0) {
+        sosRows.forEach((s) => {
+          const match = liveItems.find(
+            (r) => r.id === s.id || (s.note && s.note.includes(r.tracking_code))
+          );
+          if (match) {
+            if (s.status === "ditangani" && match.status === "diterima") {
+              match.status = "ditindaklanjuti";
+            } else if (s.status === "selesai" && match.status !== "selesai") {
+              match.status = "selesai";
+            } else if (s.status === "palsu" && match.status !== "ditolak") {
+              match.status = "ditolak";
             }
-          });
+          }
+        });
+      }
+    } catch (err) {
+      console.warn("fetchLiveReports Supabase warning:", err);
+    }
+
+    // Hanya panggil endpoint /api/reports sebagai fallback jika Supabase kosong atau koneksi gagal
+    if (liveItems.length === 0 && typeof window !== "undefined") {
+      try {
+        const apiRes = await fetch("/api/reports", { cache: "no-store" });
+        if (apiRes.ok) {
+          const apiJson = await apiRes.json();
+          if (apiJson.success && Array.isArray(apiJson.reports)) {
+            apiJson.reports.forEach((row: any) => {
+              const coords = parsePostGISPoint(row.location) || {
+                lat: typeof row.lat === "number" ? row.lat : -6.2088,
+                lng: typeof row.lng === "number" ? row.lng : 106.8456,
+              };
+              const disaster = (row.disaster_type || "lainnya") as DisasterType;
+              const agency = inferAgencyFromDisaster(disaster);
+              const rawDesc = row.description || "";
+              const extractedPhoto = extractPhotoFromDescription(rawDesc) || row.image_url;
+              const extractedPhone = extractPhoneFromDescription(rawDesc) || row.phone_number;
+              const extractedReporter = extractReporterNameFromDescription(rawDesc) || row.reporter_name;
+              const cleanDesc = cleanReportDescription(rawDesc);
+              const { province: inferredProv, regency: inferredReg } = inferRegionFromAddress(row.address);
+
+              const isSos = Boolean(
+                (row.tracking_code || "").toUpperCase().startsWith("SOS-") ||
+                row.title?.toUpperCase().includes("SOS")
+              );
+
+              const priority = isSos
+                ? "kritis"
+                : row.status === "selesai"
+                ? "rendah"
+                : (row.priority_score || 0) >= 70
+                ? "tinggi"
+                : (row.priority_score || 0) >= 35
+                ? "sedang"
+                : "rendah";
+
+              const apiItem: LiveReportItem = {
+                id: row.id,
+                tracking_code: row.tracking_code,
+                disaster_type: disaster,
+                target_agency: agency,
+                title: removeEmojis(row.title || "Laporan Warga"),
+                description: cleanDesc,
+                address: removeEmojis(row.address) || "Lokasi Koordinat GPS Terdeteksi",
+                province: row.province || inferredProv,
+                regency: row.regency || inferredReg,
+                lat: coords.lat,
+                lng: coords.lng,
+                status: (row.status || "diterima") as ReportStatus,
+                priority,
+                confirmation_count: row.confirmation_count || 0,
+                created_at: formatReportTime(row.created_at || new Date().toISOString()),
+                raw_created_at: row.created_at || new Date().toISOString(),
+                image_url: extractedPhoto,
+                phone_number: extractedPhone,
+                reporter_name: extractedReporter,
+                is_demo: false,
+              };
+
+              // Tambahkan jika belum ada di liveItems
+              if (!liveItems.some((x) => x.tracking_code === apiItem.tracking_code || x.id === apiItem.id)) {
+                liveItems.push(apiItem);
+              }
+            });
+          }
         }
+      } catch (apiErr) {
+        console.warn("fetchLiveReports /api/reports fallback notice:", apiErr);
       }
-    } catch (apiErr) {
-      console.warn("fetchLiveReports /api/reports fallback notice:", apiErr);
     }
-  }
 
-  // Gabungkan laporan: Mock baseline -> Local Reports baseline -> Supabase live (Database pusat SELALU menang)
-  const mergedMap = new Map<string, LiveReportItem>();
+    // Gabungkan laporan: Mock baseline -> Local Reports baseline -> Supabase live (Database pusat SELALU menang)
+    const mergedMap = new Map<string, LiveReportItem>();
 
-  // 1. Data default demonstrasi
-  DEFAULT_MOCK_REPORTS.forEach((item) => {
-    mergedMap.set(item.tracking_code, item);
-    mergedMap.set(item.id, item);
-  });
-
-  // 2. Data lokal perangkat pengguna (laporan baru offline/draft)
-  localReports.forEach((item) => {
-    const rawDesc = item.description || "";
-    const extractedPhoto = extractPhotoFromDescription(rawDesc) || item.image_url;
-    const extractedPhone = extractPhoneFromDescription(rawDesc) || item.phone_number;
-    const extractedReporter = extractReporterNameFromDescription(rawDesc) || item.reporter_name;
-    const cleanDesc = cleanReportDescription(rawDesc);
-
-    const sanitized: LiveReportItem = {
-      ...item,
-      description: cleanDesc,
-      image_url: extractedPhoto,
-      phone_number: extractedPhone,
-      reporter_name: extractedReporter,
-    };
-    mergedMap.set(item.tracking_code, sanitized);
-    mergedMap.set(item.id, sanitized);
-  });
-
-  // 3. Data database Supabase riil (MUTLAK MENIMPA data lokal & mock agar status selalu sinkron antar-browser)
-  liveItems.forEach((item) => {
-    const prev = mergedMap.get(item.tracking_code) || mergedMap.get(item.id);
-    const resolved: LiveReportItem = {
-      ...(prev || {}),
-      ...item,
-      status: item.status, // Status dari database pusat mutlak menjadi acuan
-    };
-    mergedMap.set(item.tracking_code, resolved);
-    mergedMap.set(item.id, resolved);
-  });
-
-  // 4. Sinkronkan kembali cache lokal di browser ini agar data lokal tidak basi
-  try {
-    const updatedLocal = localReports.map((local) => {
-      const serverMatch = liveItems.find(
-        (s) => s.id === local.id || s.tracking_code === local.tracking_code
-      );
-      if (serverMatch) {
-        return {
-          ...local,
-          status: serverMatch.status,
-          confirmation_count: serverMatch.confirmation_count,
-        };
-      }
-      return local;
+    // 1. Data default demonstrasi
+    DEFAULT_MOCK_REPORTS.forEach((item) => {
+      mergedMap.set(item.tracking_code, item);
+      mergedMap.set(item.id, item);
     });
-    if (typeof window !== "undefined") {
-      localStorage.setItem("sigapbumi_local_reports", JSON.stringify(updatedLocal));
-    }
-  } catch {}
 
-  const deletedIds = getDeletedReportIds();
-  const allReports = Array.from(new Set(mergedMap.values())).filter(
-    (item) => !deletedIds.has(item.id) && !deletedIds.has(item.tracking_code)
-  );
+    // 2. Data lokal perangkat pengguna (laporan baru offline/draft)
+    localReports.forEach((item) => {
+      const rawDesc = item.description || "";
+      const extractedPhoto = extractPhotoFromDescription(rawDesc) || item.image_url;
+      const extractedPhone = extractPhoneFromDescription(rawDesc) || item.phone_number;
+      const extractedReporter = extractReporterNameFromDescription(rawDesc) || item.reporter_name;
+      const cleanDesc = cleanReportDescription(rawDesc);
 
-  // Selalu urutkan daftar laporan dari data yang paling baru ke terlama
-  allReports.sort((a, b) => {
-    const timeA = parseReportTimestamp(a.raw_created_at || a.created_at);
-    const timeB = parseReportTimestamp(b.raw_created_at || b.created_at);
-    return timeB - timeA;
-  });
+      const sanitized: LiveReportItem = {
+        ...item,
+        description: cleanDesc,
+        image_url: extractedPhoto,
+        phone_number: extractedPhone,
+        reporter_name: extractedReporter,
+      };
+      mergedMap.set(item.tracking_code, sanitized);
+      mergedMap.set(item.id, sanitized);
+    });
 
-  return allReports;
+    // 3. Data database Supabase riil (MUTLAK MENIMPA data lokal & mock agar status selalu sinkron antar-browser)
+    liveItems.forEach((item) => {
+      const prev = mergedMap.get(item.tracking_code) || mergedMap.get(item.id);
+      const resolved: LiveReportItem = {
+        ...(prev || {}),
+        ...item,
+        status: item.status, // Status dari database pusat mutlak menjadi acuan
+      };
+      mergedMap.set(item.tracking_code, resolved);
+      mergedMap.set(item.id, resolved);
+    });
+
+    // 4. Sinkronkan kembali cache lokal di browser ini agar data lokal tidak basi
+    try {
+      const updatedLocal = localReports.map((local) => {
+        const serverMatch = liveItems.find(
+          (s) => s.id === local.id || s.tracking_code === local.tracking_code
+        );
+        if (serverMatch) {
+          return {
+            ...local,
+            status: serverMatch.status,
+            confirmation_count: serverMatch.confirmation_count,
+          };
+        }
+        return local;
+      });
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sigapbumi_local_reports", JSON.stringify(updatedLocal));
+      }
+    } catch {}
+
+    const deletedIds = getDeletedReportIds();
+    const allReports = Array.from(new Set(mergedMap.values())).filter(
+      (item) => !deletedIds.has(item.id) && !deletedIds.has(item.tracking_code)
+    );
+
+    // Selalu urutkan daftar laporan dari data yang paling baru ke terlama
+    allReports.sort((a, b) => {
+      const timeA = parseReportTimestamp(a.raw_created_at || a.created_at);
+      const timeB = parseReportTimestamp(b.raw_created_at || b.created_at);
+      return timeB - timeA;
+    });
+
+    // Simpan ke cache in-memory untuk akses instan berikutnya
+    cachedLiveReports = allReports;
+    cachedLiveReportsTime = Date.now();
+    inFlightLiveReportsPromise = null;
+
+    return allReports;
+  })();
+
+  return inFlightLiveReportsPromise;
 }
 
 /**
@@ -1282,6 +1317,7 @@ export async function updateReportStatusLive(
   version?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    invalidateLiveReportsCache();
     const cleanNote = note?.trim() || `Status diperbarui menjadi ${newStatus}`;
 
     // Update data lokal jika ini laporan di cache browser atau buat jika belum ada

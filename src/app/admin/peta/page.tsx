@@ -44,6 +44,7 @@ import {
   DEFAULT_MOCK_REPORTS,
   reportsToMapPoints,
   fetchLiveReports,
+  getCachedLiveReports,
   updateReportStatusLive,
 } from "@/lib/services/reports";
 import { fetchLiveSosAlerts, updateSosAlertStatus } from "@/lib/services/sos";
@@ -87,6 +88,10 @@ function AdminPetaContent() {
 
   const { activeUnit, activeUnitName, toggleMobileSidebar, activeSosCount } = useAdmin();
   const [points, setPoints] = useState<MapPoint[]>(() => {
+    const cached = getCachedLiveReports();
+    if (cached && cached.length > 0) {
+      return reportsToMapPoints(cached);
+    }
     return reportsToMapPoints(DEFAULT_MOCK_REPORTS);
   });
 
@@ -326,10 +331,11 @@ function AdminPetaContent() {
   };
 
   const loadData = useCallback(async () => {
-    setIsLoading(true);
     try {
-      const liveReports = await fetchLiveReports();
-      const liveSos = await fetchLiveSosAlerts();
+      const [liveReports, liveSos] = await Promise.all([
+        fetchLiveReports(),
+        fetchLiveSosAlerts(),
+      ]);
 
       if (liveReports && liveReports.length > 0) {
         const reportPoints = reportsToMapPoints(liveReports);
