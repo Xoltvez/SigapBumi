@@ -64,6 +64,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Custom Text Selection Brand SigapBumi (Warna Blok Teks Oranye Khas Brand) */
+::selection {
+  background-color: #F97316;
+  color: #FFFFFF;
+}
+
+::-moz-selection {
+  background-color: #F97316;
+  color: #FFFFFF;
+}
+
 :focus-visible {
   outline: 2px solid #F97316;
   outline-offset: 2px;
