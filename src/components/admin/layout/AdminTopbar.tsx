@@ -91,7 +91,7 @@ export function AdminTopbar({
   }, []);
 
   return (
-    <header className="h-16 sm:h-20 bg-[#FAFBFC] border-b border-slate-200/90 px-3.5 sm:px-6 md:px-8 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.03)] select-none font-sans">
+    <header className="h-16 sm:h-20 bg-[#FAFBFC] border-b border-slate-200/90 px-3.5 sm:px-6 md:px-8 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.03)] select-none font-sans transform-gpu will-change-transform">
       {/* Left: Mobile Hamburger, Date Pill Dropdown & Search Bar */}
       <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
         {/* Mobile Hamburger Menu Button */}

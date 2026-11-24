@@ -162,3 +162,15 @@ button, a, input, select, textarea {
     scroll-behavior: auto !important;
   }
 }
+
+/* Mobile Safe Area & Hardware Accelerated Smooth Scrolling */
+@media (max-width: 768px) {
+  nav[class*="fixed"],
+  header[class*="sticky"] {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
+  }
+}

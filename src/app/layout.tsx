@@ -40,7 +40,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={`${plusJakartaSans.variable} h-full antialiased selection:bg-primary selection:text-white`}>
-      <body className="min-h-full flex flex-col font-sans bg-bg text-ink pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0 selection:bg-primary selection:text-white">
+      <body className="min-h-full flex flex-col font-sans bg-bg text-ink pb-[calc(5.5rem+env(safe-area-inset-bottom,12px))] md:pb-0 selection:bg-primary selection:text-white">
         <Suspense fallback={null}>
           <Header />
         </Suspense>

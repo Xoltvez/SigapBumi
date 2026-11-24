@@ -75,7 +75,7 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-30 h-14 md:h-16 bg-surface/95 backdrop-blur-md border-b border-line shadow-xs ${
+      className={`sticky top-0 z-40 h-14 md:h-16 bg-surface/95 backdrop-blur-md border-b border-line shadow-xs transform-gpu will-change-transform ${
         isMapRoute ? "hidden md:block" : "block"
       }`}
     >
