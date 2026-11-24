@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef, Suspense } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -93,14 +93,22 @@ function PetaContent() {
   // Tinggi sheet saat diciutkan (minimized peek height yang presisi tanpa ruang kosong di bawah)
   const collapsedHeight = selectedPoint ? 88 : 58;
 
+  // Tinggi sheet saat dibuka (kompak dan presisi membungkus isi filter tanpa ruang kosong agar peta terlihat leluasa)
+  const getExpandedHeight = useCallback(() => {
+    if (typeof window === "undefined") return selectedPoint ? 370 : 275;
+    return selectedPoint
+      ? Math.min(370, window.innerHeight * 0.5)
+      : Math.min(275, window.innerHeight * 0.38);
+  }, [selectedPoint]);
+
   // Animasi GSAP pembukaan & penutupan Mobile Bottom Sheet
   useEffect(() => {
     if (!mobileSheetRef.current) return;
     if (isMobileSheetOpen) {
       gsap.to(mobileSheetRef.current, {
-        height: "68vh",
-        duration: 0.45,
-        ease: "power3.out",
+        height: getExpandedHeight(),
+        duration: 0.35,
+        ease: "power2.out",
         overwrite: "auto",
       });
 
@@ -108,19 +116,19 @@ function PetaContent() {
       if (contentEl) {
         gsap.fromTo(
           contentEl,
-          { opacity: 0, y: 12 },
-          { opacity: 1, y: 0, duration: 0.35, delay: 0.1, ease: "power2.out", overwrite: "auto" }
+          { opacity: 0, y: 10 },
+          { opacity: 1, y: 0, duration: 0.25, delay: 0.05, ease: "power2.out", overwrite: "auto" }
         );
       }
     } else {
       gsap.to(mobileSheetRef.current, {
         height: collapsedHeight,
-        duration: 0.35,
+        duration: 0.3,
         ease: "power2.inOut",
         overwrite: "auto",
       });
     }
-  }, [isMobileSheetOpen, collapsedHeight]);
+  }, [isMobileSheetOpen, collapsedHeight, getExpandedHeight]);
 
   // Touch gesture handlers untuk membuka & menutup sheet dengan drag / swipe
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -133,14 +141,14 @@ function PetaContent() {
     if (!isDragging.current || !mobileSheetRef.current) return;
     touchCurrentY.current = e.touches[0].clientY;
     const deltaY = touchCurrentY.current - touchStartY.current;
+    const maxH = getExpandedHeight();
 
     // Respon interaktif visual saat ditarik secara realtime
     if (!isMobileSheetOpen && deltaY < 0) {
-      const targetHeight = Math.min(collapsedHeight + Math.abs(deltaY) * 0.9, window.innerHeight * 0.68);
+      const targetHeight = Math.min(collapsedHeight + Math.abs(deltaY) * 0.9, maxH);
       gsap.set(mobileSheetRef.current, { height: targetHeight });
     } else if (isMobileSheetOpen && deltaY > 0) {
-      const baseHeight = window.innerHeight * 0.68;
-      const targetHeight = Math.max(collapsedHeight, baseHeight - deltaY * 0.9);
+      const targetHeight = Math.max(collapsedHeight, maxH - deltaY * 0.9);
       gsap.set(mobileSheetRef.current, { height: targetHeight });
     }
   };
@@ -149,15 +157,16 @@ function PetaContent() {
     if (!isDragging.current) return;
     isDragging.current = false;
     const deltaY = touchCurrentY.current - touchStartY.current;
+    const maxH = getExpandedHeight();
 
-    if (!isMobileSheetOpen && deltaY < -30) {
+    if (!isMobileSheetOpen && deltaY < -25) {
       setIsMobileSheetOpen(true);
-    } else if (isMobileSheetOpen && deltaY > 30) {
+    } else if (isMobileSheetOpen && deltaY > 25) {
       setIsMobileSheetOpen(false);
     } else if (mobileSheetRef.current) {
       gsap.to(mobileSheetRef.current, {
-        height: isMobileSheetOpen ? "68vh" : collapsedHeight,
-        duration: 0.3,
+        height: isMobileSheetOpen ? maxH : collapsedHeight,
+        duration: 0.25,
         ease: "power2.out",
       });
     }
@@ -168,6 +177,7 @@ function PetaContent() {
     touchStartY.current = e.clientY;
     touchCurrentY.current = e.clientY;
     isDragging.current = true;
+    const maxH = getExpandedHeight();
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       if (!isDragging.current || !mobileSheetRef.current) return;
@@ -175,11 +185,10 @@ function PetaContent() {
       const deltaY = touchCurrentY.current - touchStartY.current;
 
       if (!isMobileSheetOpen && deltaY < 0) {
-        const targetHeight = Math.min(collapsedHeight + Math.abs(deltaY) * 0.9, window.innerHeight * 0.68);
+        const targetHeight = Math.min(collapsedHeight + Math.abs(deltaY) * 0.9, maxH);
         gsap.set(mobileSheetRef.current, { height: targetHeight });
       } else if (isMobileSheetOpen && deltaY > 0) {
-        const baseHeight = window.innerHeight * 0.68;
-        const targetHeight = Math.max(collapsedHeight, baseHeight - deltaY * 0.9);
+        const targetHeight = Math.max(collapsedHeight, maxH - deltaY * 0.9);
         gsap.set(mobileSheetRef.current, { height: targetHeight });
       }
     };
@@ -190,14 +199,14 @@ function PetaContent() {
       window.removeEventListener("mouseup", onMouseUp);
       const deltaY = touchCurrentY.current - touchStartY.current;
 
-      if (!isMobileSheetOpen && deltaY < -30) {
+      if (!isMobileSheetOpen && deltaY < -25) {
         setIsMobileSheetOpen(true);
-      } else if (isMobileSheetOpen && deltaY > 30) {
+      } else if (isMobileSheetOpen && deltaY > 25) {
         setIsMobileSheetOpen(false);
       } else if (mobileSheetRef.current) {
         gsap.to(mobileSheetRef.current, {
-          height: isMobileSheetOpen ? "68vh" : collapsedHeight,
-          duration: 0.3,
+          height: isMobileSheetOpen ? maxH : collapsedHeight,
+          duration: 0.25,
           ease: "power2.out",
         });
       }
@@ -223,8 +232,8 @@ function PetaContent() {
     touchCurrentY.current = e.touches[0].clientY;
     const deltaY = touchCurrentY.current - touchStartY.current;
     if (deltaY > 0) {
-      const baseHeight = window.innerHeight * 0.68;
-      const targetHeight = Math.max(collapsedHeight, baseHeight - deltaY * 0.9);
+      const maxH = getExpandedHeight();
+      const targetHeight = Math.max(collapsedHeight, maxH - deltaY * 0.9);
       gsap.set(mobileSheetRef.current, { height: targetHeight });
     }
   };
@@ -233,12 +242,12 @@ function PetaContent() {
     if (!isDragging.current) return;
     isDragging.current = false;
     const deltaY = touchCurrentY.current - touchStartY.current;
-    if (deltaY > 35) {
+    if (deltaY > 25) {
       setIsMobileSheetOpen(false);
     } else if (mobileSheetRef.current) {
       gsap.to(mobileSheetRef.current, {
-        height: "68vh",
-        duration: 0.3,
+        height: getExpandedHeight(),
+        duration: 0.25,
         ease: "power2.out",
       });
     }
@@ -686,7 +695,7 @@ function PetaContent() {
         <div
           ref={mobileSheetRef}
           className="absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 flex flex-col overflow-hidden will-change-[height]"
-          style={{ height: isMobileSheetOpen ? "68vh" : collapsedHeight }}
+          style={{ height: isMobileSheetOpen ? getExpandedHeight() : collapsedHeight }}
         >
           {/* Handle Bar Drag Area (Mendukung sentuhan / scroll tarik ke atas dan ke bawah) */}
           <div
@@ -797,7 +806,7 @@ function PetaContent() {
             onTouchStart={handleContentTouchStart}
             onTouchMove={handleContentTouchMove}
             onTouchEnd={handleContentTouchEnd}
-            className={`mobile-sheet-content flex-1 overflow-y-auto p-4 space-y-3.5 pb-24 touch-pan-y ${
+            className={`mobile-sheet-content flex-1 overflow-y-auto px-4 pt-3 pb-3.5 space-y-3 touch-pan-y ${
               isMobileSheetOpen ? "block" : "hidden"
             }`}
           >

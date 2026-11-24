@@ -803,7 +803,7 @@ function AdminPetaContent() {
         <div
           className={`absolute inset-x-0 bottom-0 z-30 bg-white rounded-t-3xl shadow-[0_-8px_24px_rgba(0,0,0,0.14)] border-t border-slate-200/80 transition-all duration-300 flex flex-col ${
             isMobileSheetOpen
-              ? "max-h-[75vh]"
+              ? "max-h-[380px]"
               : selectedPoint
               ? "max-h-[82px]"
               : "max-h-[58px]"
