@@ -1338,60 +1338,53 @@ function AdminPetaContent() {
             {/* ============================================================== */}
             {isLiveNavigating && activeRoute && (
               <>
-                {/* Top Left: Tactical Emergency Command HUD */}
-                <div className="absolute top-4 left-4 z-[550] bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-blue-500/30 shadow-[0_16px_40px_rgba(15,23,42,0.45)] p-4 text-white max-w-[420px] animate-in slide-in-from-top-4 duration-300 pointer-events-auto select-none">
+                {/* Top Left: Tactical Emergency Command HUD (Ukuran kompak, ramping & tidak menutupi peta) */}
+                <div className="absolute top-3.5 left-3.5 z-[550] bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-blue-500/30 shadow-[0_12px_32px_rgba(15,23,42,0.4)] p-3 text-white w-[300px] sm:w-[320px] animate-in slide-in-from-top-4 duration-300 pointer-events-auto select-none">
                   {/* Operation Status Bar Bersih */}
-                  <div className="flex items-center gap-2 pb-2.5 mb-2.5 border-b border-slate-800 min-w-0">
-                    {selectedPoint && (
-                      <span className="text-[11px] font-mono px-2 py-0.5 bg-slate-800 text-cyan-400 border border-slate-700 rounded-md font-bold whitespace-nowrap shrink-0">
-                        {selectedPoint.tracking_code}
-                      </span>
-                    )}
-                    <span className="text-xs text-slate-300 font-medium truncate min-w-0 flex-1">
+                  <div className="flex items-center gap-2 pb-2 mb-2 border-b border-slate-800 min-w-0">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+                    <span className="text-xs text-slate-300 font-semibold truncate min-w-0 flex-1">
                       {selectedPoint?.location_name || "Menuju Titik Sasaran"}
                     </span>
                   </div>
 
-                  {/* Turn-by-Turn Instruction */}
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-13 h-13 rounded-2xl bg-blue-600/25 border border-blue-400/40 text-blue-400 flex items-center justify-center shrink-0 shadow-inner">
+                  {/* Turn-by-Turn Instruction Kompak */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600/25 border border-blue-400/40 text-blue-400 flex items-center justify-center shrink-0 shadow-inner">
                       {renderManeuverIcon(activeRoute.steps?.[0]?.modifier)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-2xl font-black text-white tracking-tight leading-none">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-xl font-black text-white tracking-tight leading-none">
                           {activeRoute.steps?.[0]?.distanceFormatted || activeRoute.distanceFormatted}
                         </span>
-                        <span className="text-[11px] text-blue-400 font-bold uppercase tracking-wider">
-                          Manuver Berikutnya
+                        <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">
+                          Manuver
                         </span>
                       </div>
-                      <p className="text-sm font-semibold text-slate-200 truncate mt-1">
+                      <p className="text-xs font-semibold text-slate-200 truncate mt-0.5">
                         {activeRoute.steps?.[0]?.instruction || `Menuju ${selectedPoint?.location_name || "Lokasi Kejadian"}`}
-                      </p>
-                      <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                        Tujuan: {selectedPoint?.title || "Titik Bencana Terdata"}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Bottom Center: Tactical Telemetry Dock */}
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[550] bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_16px_45px_rgba(0,0,0,0.18)] p-3.5 px-6 flex items-center gap-6 select-none animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto min-w-max whitespace-nowrap">
+                {/* Bottom Center: Tactical Telemetry Dock (Lebih ramping, mudah dibaca, kontras optimal) */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[550] bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_12px_36px_rgba(0,0,0,0.18)] p-2.5 px-4 flex items-center gap-4 select-none animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto max-w-[calc(100%-2rem)]">
                   {/* Telemetri Waktu & ETA */}
-                  <div className="flex items-center gap-3 border-r border-slate-200 pr-6 shrink-0">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-                      <Clock className="w-5 h-5 text-emerald-600" />
+                  <div className="flex items-center gap-2.5 border-r border-slate-200 pr-4 shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                      <Clock className="w-4 h-4 text-emerald-600" />
                     </div>
                     <div className="shrink-0">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block whitespace-nowrap">
-                        Estimasi Waktu Tiba
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">
+                        Estimasi Tiba
                       </span>
-                      <div className="flex items-center gap-2 mt-0.5 whitespace-nowrap">
-                        <span className="text-lg font-black text-emerald-600 leading-none whitespace-nowrap">
+                      <div className="flex items-baseline gap-1.5 mt-0.5">
+                        <span className="text-base font-black text-emerald-600 leading-none">
                           {activeRoute.durationFormattedShort}
                         </span>
-                        <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
+                        <span className="text-[11px] font-semibold text-slate-500">
                           ({activeRoute.arrivalTimeFormatted})
                         </span>
                       </div>
@@ -1399,20 +1392,20 @@ function AdminPetaContent() {
                   </div>
 
                   {/* Telemetri Jarak & Rute */}
-                  <div className="flex items-center gap-3 border-r border-slate-200 pr-6 shrink-0">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
-                      <Route className="w-5 h-5 text-blue-600" />
+                  <div className="flex items-center gap-2.5 border-r border-slate-200 pr-4 shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+                      <Route className="w-4 h-4 text-blue-600" />
                     </div>
                     <div className="shrink-0">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block whitespace-nowrap">
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">
                         Jarak Tempuh
                       </span>
-                      <span className="text-lg font-black text-slate-900 leading-none block mt-0.5 whitespace-nowrap">
-                        {activeRoute.distanceKm} km
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-medium block whitespace-nowrap">
-                        Jalur Jalan Arteri
-                      </span>
+                      <div className="flex items-baseline gap-1 mt-0.5">
+                        <span className="text-base font-black text-slate-900 leading-none">
+                          {activeRoute.distanceKm}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-bold">km</span>
+                      </div>
                     </div>
                   </div>
 
@@ -1421,20 +1414,20 @@ function AdminPetaContent() {
                     <button
                       type="button"
                       onClick={triggerLocate}
-                      className="h-10 px-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
+                      className="h-8.5 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs whitespace-nowrap shrink-0"
                       title="Pusatkan Kamera ke Posisi Armada"
                     >
-                      <Crosshair className="w-4 h-4 text-blue-600" />
-                      <span className="whitespace-nowrap">Fokus Armada</span>
+                      <Crosshair className="w-3.5 h-3.5 text-blue-600" />
+                      <span className="whitespace-nowrap hidden sm:inline">Fokus Armada</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={handleExitLiveNavigation}
-                      className="h-10 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap shrink-0"
+                      className="h-8.5 px-3.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap shrink-0"
                     >
-                      <X className="w-4 h-4 text-rose-600 stroke-[2.5]" />
-                      <span className="whitespace-nowrap">Akhiri Rute</span>
+                      <X className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
+                      <span className="whitespace-nowrap">Akhiri</span>
                     </button>
                   </div>
                 </div>
