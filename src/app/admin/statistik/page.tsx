@@ -1147,7 +1147,7 @@ export default function AdminStatistikPage() {
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden flex">
                   <div
-                    className={`bg-linear-to-r ${agency.gradient} h-full transition-all duration-500 rounded-full`}
+                    className={`h-full transition-all duration-500 rounded-full ${roleConfig.agencySectionTitle === "Beban Penanganan Lintas 5 Instansi Terkait" ? "bg-black" : `bg-linear-to-r ${agency.gradient}`}`}
                     style={{ width: `${agency.count > 0 ? Math.min(100, Math.max(agency.pct, 4)) : 0}%` }}
                   />
                 </div>

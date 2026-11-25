@@ -653,9 +653,9 @@ function AdminPetaContent() {
         {isLiveNavigating && activeRoute && (
           <>
             {/* Top Tactical HUD Panel */}
-            <div className="absolute top-3 left-3 right-3 z-40 bg-orange-600 rounded-2xl border border-orange-500 shadow-[0_12px_36px_rgba(234,88,12,0.35)] p-3 text-white animate-in slide-in-from-top-3 duration-300 pointer-events-auto">
+            <div className="absolute top-3 left-3 right-3 z-40 bg-[#F97316] rounded-2xl border border-[#F97316] shadow-[0_12px_36px_rgba(234,88,12,0.35)] p-3 text-white animate-in slide-in-from-top-3 duration-300 pointer-events-auto">
               {/* Header Navigasi Bersih */}
-              <div className="flex items-center gap-2 pb-2 mb-2 border-b border-orange-500/60 min-w-0">
+              <div className="flex items-center gap-2 pb-2 mb-2 border-b border-[#F97316]/60 min-w-0">
                 <span className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" />
                 <span className="text-[11px] text-orange-50 font-medium truncate min-w-0 flex-1">
                   {selectedPoint?.location_name || "Menuju Titik Lokasi"}
@@ -664,7 +664,7 @@ function AdminPetaContent() {
 
               {/* Manuver Navigasi Utama */}
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-700/60 border border-orange-400/50 text-white flex items-center justify-center shrink-0 shadow-inner">
+                <div className="w-10 h-10 rounded-xl bg-[#F97316]/60 border border-orange-400/50 text-white flex items-center justify-center shrink-0 shadow-inner">
                   {renderManeuverIcon(activeRoute.steps?.[0]?.modifier, activeRoute.steps?.[0]?.instruction)}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1003,7 +1003,7 @@ function AdminPetaContent() {
                       <button
                         type="button"
                         onClick={handleStartLiveNavigation}
-                        className="w-full h-9 px-3 rounded-xl bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white text-xs font-bold inline-flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer active:scale-98"
+                        className="w-full h-9 px-3 rounded-xl bg-[#F97316] hover:bg-orange-700 active:bg-orange-800 text-white text-xs font-bold inline-flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer active:scale-98"
                       >
                         <Navigation className="w-3.5 h-3.5 text-white fill-white" />
                         <span>Mulai Rute</span>
@@ -1380,9 +1380,9 @@ function AdminPetaContent() {
             {isLiveNavigating && activeRoute && (
               <>
                 {/* Top Left: Tactical Emergency Command HUD (Tema Oranye dengan Ikon Sign Manuver Belok/Lurus) */}
-                <div className="absolute top-3.5 left-3.5 z-[550] bg-orange-600 rounded-2xl border border-orange-500 shadow-[0_12px_32px_rgba(234,88,12,0.35)] p-3 text-white w-[290px] sm:w-[320px] animate-in slide-in-from-top-4 duration-300 pointer-events-auto select-none">
+                <div className="absolute top-3.5 left-3.5 z-[550] bg-orange-600 rounded-2xl border border-[#F97316] shadow-[0_12px_32px_rgba(234,88,12,0.35)] p-3 text-white w-[290px] sm:w-[320px] animate-in slide-in-from-top-4 duration-300 pointer-events-auto select-none">
                   {/* Operation Status Bar Bersih */}
-                  <div className="flex items-center gap-2 pb-2 mb-2.5 border-b border-orange-500/60 min-w-0">
+                  <div className="flex items-center gap-2 pb-2 mb-2.5 border-b border-[#F97316]/60 min-w-0">
                     <span className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" />
                     <span className="text-xs text-orange-50 font-semibold truncate min-w-0 flex-1">
                       {selectedPoint?.location_name || "Menuju Titik Sasaran"}
@@ -1391,7 +1391,7 @@ function AdminPetaContent() {
 
                   {/* Turn-by-Turn Instruction dengan Ikon Sign Belokan */}
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-orange-700/60 border border-orange-400/50 text-white flex items-center justify-center shrink-0 shadow-inner">
+                    <div className="w-10 h-10 rounded-xl bg-[#F97316]/60 border border-orange-400/50 text-white flex items-center justify-center shrink-0 shadow-inner">
                       {renderManeuverIcon(activeRoute.steps?.[0]?.modifier, activeRoute.steps?.[0]?.instruction)}
                     </div>
                     <div className="min-w-0 flex-1">
