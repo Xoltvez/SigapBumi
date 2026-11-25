@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { ReportStatus } from "@/types";
+import { appendAuditLog } from "@/lib/enterprise/store";
+import { extractActorFromHeaders } from "@/lib/rbac";
+import { getClientIp, getDeviceMeta } from "@/lib/enterprise/authGuard";
 
 const VALID_STATUSES: ReportStatus[] = [
   "diterima",
@@ -59,8 +62,24 @@ export async function POST(request: Request) {
     }
 
     const finalNote = cleanNote;
-    const actor = actorName || "Petugas Posko Terpadu";
+    const actorCtx = extractActorFromHeaders(request.headers);
+    const actor = actorName || actorCtx.userName || "Petugas Posko Terpadu";
     const nowIso = new Date().toISOString();
+
+    // Catat mutasi CHANGE_STATUS ke Immutable Audit Trail
+    appendAuditLog({
+      userId: actorCtx.userId,
+      userName: actor,
+      role: actorCtx.role,
+      unit: actorCtx.unit,
+      unitName: actorCtx.unitName,
+      action: "CHANGE_STATUS",
+      module: "Laporan Bencana",
+      recordId: reportId,
+      ipAddress: getClientIp(request.headers),
+      deviceMeta: getDeviceMeta(request.headers),
+      after: { status, note: finalNote },
+    });
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey =

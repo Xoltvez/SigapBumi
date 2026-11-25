@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -10,14 +10,22 @@ import {
   Bell,
   MapPin,
   BarChart2,
+  Activity,
+  Users,
+  ClipboardList,
+  ShieldAlert,
   Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   User,
   X,
+  Trash2,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
+import { clearAllLocalReportsAndCaches } from "@/lib/services/reports";
+import { hasPermission, type Permission } from "@/lib/rbac";
 
 interface AdminSidebarProps {
   isCollapsed: boolean;
@@ -36,10 +44,28 @@ export function AdminSidebar({
 }: AdminSidebarProps) {
   const pathname = usePathname();
   const { logout, adminUser, activeSosCount: contextSosCount } = useAdmin();
+  const [isProfilePopoverOpen, setIsProfilePopoverOpen] = useState(false);
+  const profilePopoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profilePopoverRef.current && !profilePopoverRef.current.contains(e.target as Node)) {
+        setIsProfilePopoverOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const effectiveSosCount = activeSosCount !== undefined ? activeSosCount : (contextSosCount || 0);
 
-  const navItems = [
+  const navItems: {
+    href: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: string;
+    permission?: Permission;
+  }[] = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/laporan", label: "Data Laporan", icon: FileText },
     {
@@ -50,7 +76,15 @@ export function AdminSidebar({
     },
     { href: "/admin/peta", label: "Peta Operasional", icon: MapPin },
     { href: "/admin/statistik", label: "Rekap & Statistik", icon: BarChart2 },
+    { href: "/admin/analitik", label: "Analitik Web", icon: Activity, permission: "view_analytics" },
+    { href: "/admin/monitoring", label: "Monitoring Pengguna", icon: Users, permission: "view_user_monitoring" },
+    { href: "/admin/audit-logs", label: "Audit Trail", icon: ClipboardList, permission: "view_audit_logs" },
+    { href: "/admin/security", label: "Security Center", icon: ShieldAlert, permission: "view_security_center" },
   ];
+
+  const visibleNavItems = navItems.filter(
+    (item) => !item.permission || hasPermission(item.permission, adminUser?.unit, adminUser?.role)
+  );
 
   return (
     <>
@@ -142,7 +176,7 @@ export function AdminSidebar({
             isCollapsed ? "px-2" : "px-4"
           }`}
         >
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive =
               item.href === "/admin"
@@ -204,12 +238,82 @@ export function AdminSidebar({
           })}
         </nav>
 
-        {/* Mobile Drawer Body: Hanya Menu Pengaturan & Profil sesuai instruksi */}
+        {/* Mobile Drawer Body: Menu Analitik, Pengaturan & Profil */}
         <div className="md:hidden flex-1 py-5 px-4 flex flex-col justify-between overflow-y-auto pb-10">
           <div className="space-y-2">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
-              Menu Pengaturan
+              Menu Tambahan & Pengaturan
             </span>
+            <Link
+              href="/admin/analitik"
+              onClick={onCloseMobile}
+              className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[13px] transition-colors border ${
+                pathname.startsWith("/admin/analitik")
+                  ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
+                  : "border-slate-100 bg-slate-50 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-medium"
+              }`}
+            >
+              <Activity
+                className={`w-5 h-5 shrink-0 ${
+                  pathname.startsWith("/admin/analitik") ? "text-white" : "text-slate-500"
+                }`}
+              />
+              <span className="font-semibold text-sm">Analitik Web</span>
+            </Link>
+            {hasPermission("view_user_monitoring", adminUser?.unit, adminUser?.role) && (
+              <Link
+                href="/admin/monitoring"
+                onClick={onCloseMobile}
+                className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[13px] transition-colors border ${
+                  pathname.startsWith("/admin/monitoring")
+                    ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
+                    : "border-slate-100 bg-slate-50 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-medium"
+                }`}
+              >
+                <Users
+                  className={`w-5 h-5 shrink-0 ${
+                    pathname.startsWith("/admin/monitoring") ? "text-white" : "text-slate-500"
+                  }`}
+                />
+                <span className="font-semibold text-sm">Monitoring Pengguna</span>
+              </Link>
+            )}
+            {hasPermission("view_audit_logs", adminUser?.unit, adminUser?.role) && (
+              <Link
+                href="/admin/audit-logs"
+                onClick={onCloseMobile}
+                className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[13px] transition-colors border ${
+                  pathname.startsWith("/admin/audit-logs")
+                    ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
+                    : "border-slate-100 bg-slate-50 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-medium"
+                }`}
+              >
+                <ClipboardList
+                  className={`w-5 h-5 shrink-0 ${
+                    pathname.startsWith("/admin/audit-logs") ? "text-white" : "text-slate-500"
+                  }`}
+                />
+                <span className="font-semibold text-sm">Audit Trail</span>
+              </Link>
+            )}
+            {hasPermission("view_security_center", adminUser?.unit, adminUser?.role) && (
+              <Link
+                href="/admin/security"
+                onClick={onCloseMobile}
+                className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[13px] transition-colors border ${
+                  pathname.startsWith("/admin/security")
+                    ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
+                    : "border-slate-100 bg-slate-50 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-medium"
+                }`}
+              >
+                <ShieldAlert
+                  className={`w-5 h-5 shrink-0 ${
+                    pathname.startsWith("/admin/security") ? "text-white" : "text-slate-500"
+                  }`}
+                />
+                <span className="font-semibold text-sm">Security Center</span>
+              </Link>
+            )}
             <Link
               href="/admin/pengaturan"
               onClick={onCloseMobile}
@@ -329,40 +433,112 @@ export function AdminSidebar({
             {(!isCollapsed || isMobileOpen) && <span className="truncate">Pengaturan</span>}
           </Link>
 
-          {/* Officer Profile Card / Compact Avatar */}
-          {isCollapsed && !isMobileOpen ? (
-            <Link
-              href="/admin/pengaturan"
-              onClick={onCloseMobile}
-              title={`Profil: ${adminUser?.name || "Petugas Posko"} (${adminUser?.unitName || "Komando"})`}
-              className="flex items-center justify-center w-11 h-11 mx-auto rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100 transition-colors cursor-pointer group shadow-2xs"
-            >
-              <div className="w-8 h-8 rounded-full bg-[#1E293B] text-white flex items-center justify-center text-xs font-bold shrink-0">
-                <User className="w-4 h-4 text-white" />
+          {/* Officer Profile Card / Compact Avatar + Detail Popover */}
+          <div className="relative" ref={profilePopoverRef}>
+            {isProfilePopoverOpen && (
+              <div
+                className={`absolute z-50 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 text-xs animate-in fade-in slide-in-from-bottom-2 duration-150 ${
+                  isCollapsed && !isMobileOpen
+                    ? "left-14 bottom-0 w-56"
+                    : "left-0 right-0 bottom-full mb-2"
+                }`}
+              >
+                <div className="px-3.5 py-2.5 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-[#1E293B] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                      {(adminUser?.name?.[0] || "A").toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 truncate">
+                        {adminUser?.name || "Drs. Tri Wahyudi"}
+                      </p>
+                      <p className="text-[11px] text-slate-400 truncate">
+                        {adminUser?.email || "admin@sigapbumi.id"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded-md bg-orange-50 border border-orange-200 text-[10px] font-bold text-orange-700">
+                    {adminUser?.unitName || "Pemerintahan"}
+                  </div>
+                </div>
+
+                <Link
+                  href="/admin/pengaturan"
+                  onClick={() => {
+                    setIsProfilePopoverOpen(false);
+                    if (onCloseMobile) onCloseMobile();
+                  }}
+                  className="w-full text-left px-3.5 py-2 text-slate-700 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 border-b border-slate-100"
+                >
+                  <Settings className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Pengaturan Akun & Posko</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfilePopoverOpen(false);
+                    clearAllLocalReportsAndCaches();
+                    window.location.reload();
+                  }}
+                  className="w-full text-left px-3.5 py-2 text-rose-600 hover:bg-rose-50 font-medium transition-colors flex items-center gap-2 border-b border-slate-100 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Hapus Semua Cache</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfilePopoverOpen(false);
+                    logout("manual");
+                  }}
+                  className="w-full text-left px-3.5 py-2 text-slate-600 hover:bg-slate-50 font-semibold transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Keluar Sesi</span>
+                </button>
               </div>
-            </Link>
-          ) : (
-            <Link
-              href="/admin/pengaturan"
-              onClick={onCloseMobile}
-              className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-slate-100/80 transition-colors cursor-pointer group"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
+            )}
+
+            {isCollapsed && !isMobileOpen ? (
+              <button
+                type="button"
+                onClick={() => setIsProfilePopoverOpen((prev) => !prev)}
+                title={`Profil: ${adminUser?.name || "Petugas Posko"} (${adminUser?.unitName || "Komando"})`}
+                className="flex items-center justify-center w-11 h-11 mx-auto rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100 transition-colors cursor-pointer group shadow-2xs"
+              >
                 <div className="w-8 h-8 rounded-full bg-[#1E293B] text-white flex items-center justify-center text-xs font-bold shrink-0">
                   <User className="w-4 h-4 text-white" />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-800 truncate leading-tight">
-                    {adminUser?.unitName || "BNPB Komando"}
-                  </p>
-                  <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                    {adminUser?.name || "Kapten Hendra Gunawan"}
-                  </p>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsProfilePopoverOpen((prev) => !prev)}
+                className="w-full text-left flex items-center justify-between p-2.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-slate-100/80 transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-[#1E293B] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-800 truncate leading-tight">
+                      {adminUser?.unitName || "Pemerintahan"}
+                    </p>
+                    <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                      {adminUser?.name || "Drs. Tri Wahyudi"}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all shrink-0" />
-            </Link>
-          )}
+                <ChevronUp
+                  className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform shrink-0 ${
+                    isProfilePopoverOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+            )}
+          </div>
         </div>
       </aside>
     </>

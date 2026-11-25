@@ -9,6 +9,7 @@ import { SosFab } from "@/components/layout/SosFab";
 import { ToastContainer } from "@/components/ui/Toast";
 import { GsapPageTransition } from "@/components/common/GsapPageTransition";
 import { IdleSessionManager } from "@/components/common/IdleSessionManager";
+import { AnalyticsTracker } from "@/components/common/AnalyticsTracker";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -46,6 +47,9 @@ export default function RootLayout({
         </Suspense>
         <Suspense fallback={null}>
           <IdleSessionManager />
+        </Suspense>
+        <Suspense fallback={null}>
+          <AnalyticsTracker />
         </Suspense>
         <ToastContainer />
         <GsapPageTransition>{children}</GsapPageTransition>

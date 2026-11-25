@@ -18,7 +18,9 @@ import {
   ShieldAlert,
   Shield,
 } from "lucide-react";
-import { setAdminSession, type AdminAuthSession } from "@/lib/adminAuth";
+import { setAdminSession, ADMIN_SESSION_TOKEN_KEY, type AdminAuthSession } from "@/lib/adminAuth";
+import { sendMonitoringEvent, trackAdminActivity } from "@/lib/analytics/client";
+import { resolveSystemRole } from "@/lib/rbac";
 
 interface UnitOption {
   id: string;
@@ -123,6 +125,18 @@ function AdminLoginContent() {
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setShakeKey((prev) => prev + 1);
+      const activeUnitData =
+        UNIT_OPTIONS.find((u) => u.id === selectedUnit) || UNIT_OPTIONS[0];
+      sendMonitoringEvent({
+        type: "login_failed",
+        userId: nip.trim() || "empty-nip",
+        userName: activeUnitData.demoOfficer,
+        userEmail: `${selectedUnit}@sigapbumi.go.id`,
+        unit: selectedUnit,
+        unitName: activeUnitData.shortName,
+        role: resolveSystemRole(selectedUnit),
+        reason: errors.nip || errors.password || "Validasi login gagal",
+      });
       return;
     }
 
@@ -145,6 +159,27 @@ function AdminLoginContent() {
 
       try {
         setAdminSession(sessionPayload);
+        const sid =
+          (typeof window !== "undefined" && sessionStorage.getItem(ADMIN_SESSION_TOKEN_KEY)) ||
+          `ses-${Date.now()}`;
+        sendMonitoringEvent({
+          type: "login",
+          sessionId: sid,
+          userId: sessionPayload.nip,
+          userName: sessionPayload.name,
+          userEmail: sessionPayload.email,
+          unit: sessionPayload.unit,
+          unitName: sessionPayload.unitName,
+          role: resolveSystemRole(sessionPayload.unit, sessionPayload.role),
+        });
+        trackAdminActivity({
+          adminName: sessionPayload.name,
+          adminEmail: sessionPayload.email,
+          unit: sessionPayload.unit,
+          unitName: sessionPayload.unitName,
+          action: "Login Posko",
+          detail: `NIP ${sessionPayload.nip} masuk ke sistem`,
+        });
         if (rememberMe) {
           localStorage.setItem("sigapbumi_remember_unit", selectedUnit);
         } else {
