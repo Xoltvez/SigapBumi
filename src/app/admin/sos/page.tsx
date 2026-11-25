@@ -786,8 +786,6 @@ export default function AdminSosPage() {
                         {item.title}
                       </h3>
                       <p className="text-xs text-slate-400 font-normal mt-0.5">
-                        <span className="font-semibold text-slate-500">{item.displayCode}</span>
-                        <span className="mx-1.5">•</span>
                         <span>{item.timeAgo}</span>
                       </p>
                     </div>
@@ -830,37 +828,15 @@ export default function AdminSosPage() {
                   </p>
                 </div>
 
-                {/* Mini Geolocation Card */}
+                {/* Geolocation Card */}
                 <div className="bg-[#F8FAFC] rounded-xl border border-slate-100 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    {/* Mini Map Canvas Mock with Red Marker */}
-                    <div className="w-24 h-14 rounded-lg bg-linear-to-tr from-slate-200 to-slate-100 border border-slate-200/80 relative overflow-hidden flex items-center justify-center shrink-0">
-                      {/* Streets decorative lines */}
-                      <svg
-                        className="absolute inset-0 w-full h-full text-slate-300 opacity-60"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 100 60"
-                      >
-                        <path d="M-10 20 H110" stroke="currentColor" strokeWidth="2.5" />
-                        <path d="M30 -10 V70" stroke="currentColor" strokeWidth="2.5" />
-                        <path d="M70 -10 V70" stroke="currentColor" strokeWidth="2.5" />
-                        <path d="M-10 45 Q50 30 110 50" stroke="currentColor" strokeWidth="2" />
-                      </svg>
-                      {/* Red Marker */}
-                      <div className="relative z-10 flex flex-col items-center">
-                        <MapPin className="w-5 h-5 text-red-600 fill-red-600 animate-bounce drop-shadow-sm" />
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-[11px] text-slate-400 block font-normal">
-                        Koordinat GPS
-                      </span>
-                      <span className="text-xs sm:text-[13px] font-bold text-slate-800 font-mono">
-                        {item.coordinates}
-                      </span>
-                    </div>
+                  <div>
+                    <span className="text-[11px] text-slate-400 block font-normal">
+                      Koordinat GPS
+                    </span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800 font-mono">
+                      {item.coordinates}
+                    </span>
                   </div>
 
                   <div className="sm:border-l sm:border-slate-200 sm:pl-4">
@@ -875,24 +851,11 @@ export default function AdminSosPage() {
 
                 {/* Stamped Live Camera Photo Preview */}
                 {item.photoUrl ? (
-                  <div className="rounded-xl border border-slate-200/90 overflow-hidden bg-slate-900/5 relative group">
-                    <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 text-white text-[11px] font-semibold">
-                      <span className="flex items-center gap-1.5">
-                        <Camera className="w-3.5 h-3.5 text-emerald-400" />
-                        Bukti Kamera Riil (Stempel GPS & Waktu)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setPreviewPhotoUrl(item.photoUrl!)}
-                        className="text-[10px] text-emerald-300 hover:text-white underline cursor-pointer"
-                      >
-                        Perbesar
-                      </button>
-                    </div>
-                    <div
-                      onClick={() => setPreviewPhotoUrl(item.photoUrl!)}
-                      className="relative h-44 w-full bg-black cursor-pointer overflow-hidden flex items-center justify-center"
-                    >
+                  <div
+                    onClick={() => setPreviewPhotoUrl(item.photoUrl!)}
+                    className="rounded-xl border border-slate-200/90 overflow-hidden relative group cursor-pointer"
+                  >
+                    <div className="relative h-44 w-full bg-black overflow-hidden flex items-center justify-center">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={item.photoUrl}
