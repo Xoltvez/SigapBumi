@@ -38,6 +38,8 @@ import {
 } from "@/lib/services/sos";
 import { playSosSiren } from "@/lib/audio/siren";
 import { supabase } from "@/lib/supabase/client";
+import { AdminTrashModal } from "@/components/admin/AdminTrashModal";
+import { fetchTrashItems } from "@/lib/services/trash";
 
 interface DisplaySosItem {
   id: string;
@@ -74,6 +76,17 @@ export default function AdminSosPage() {
   const [isMarkingHoax, setIsMarkingHoax] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
+  const [isTrashOpen, setIsTrashOpen] = useState<boolean>(false);
+  const [trashCount, setTrashCount] = useState<number>(0);
+
+  useEffect(() => {
+    const syncTrash = () => {
+      fetchTrashItems("sos").then((list) => setTrashCount(list.length)).catch(() => {});
+    };
+    syncTrash();
+    window.addEventListener("sigapbumi:trash-updated", syncTrash);
+    return () => window.removeEventListener("sigapbumi:trash-updated", syncTrash);
+  }, []);
 
   // Kategori Filter Status
   const [statusFilter, setStatusFilter] = useState<"semua" | "aktif" | "ditangani" | "selesai">("semua");
@@ -387,7 +400,18 @@ export default function AdminSosPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start sm:self-auto">
+          {/* Tombol Kotak Sampah (Restore) */}
+          <button
+            type="button"
+            onClick={() => setIsTrashOpen(true)}
+            className="px-3.5 py-2 rounded-xl border border-amber-200 bg-amber-50/80 hover:bg-amber-100 text-xs font-semibold text-amber-800 shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            title="Lihat dan pulihkan data SOS yang telah dihapus"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-amber-600" />
+            <span>Kotak Sampah{trashCount > 0 ? ` (${trashCount})` : ""}</span>
+          </button>
+
           {/* Tombol Hapus Semua SOS */}
           {sosList.length > 0 && (
             <button
@@ -1203,6 +1227,19 @@ export default function AdminSosPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Kotak Sampah & Restore SOS */}
+      <AdminTrashModal
+        isOpen={isTrashOpen}
+        onClose={() => setIsTrashOpen(false)}
+        kind="sos"
+        title="Kotak Sampah Monitor SOS"
+        onRestored={() => {
+          loadData(false);
+          setToastMessage("Data SOS berhasil dipulihkan dari Kotak Sampah.");
+          setTimeout(() => setToastMessage(null), 4000);
+        }}
+      />
     </div>
   );
 }

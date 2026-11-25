@@ -138,6 +138,7 @@ export function SosFab() {
   const [isPhotoFullscreen, setIsPhotoFullscreen] = useState<boolean>(false);
   const [photoError, setPhotoError] = useState<string>("");
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const rawPhotoFileRef = useRef<File | null>(null);
 
   // Posisi default & status pelacakan GPS, Kompas, Ketinggian & Alamat
@@ -630,12 +631,17 @@ export function SosFab() {
     await verifyDisasterPhotoWithAi(file, selectedAssistance || "lainnya");
   };
 
-  const handleRetakePhoto = () => {
+  const handleRetakePhoto = (source: "camera" | "gallery" = "camera") => {
     setCameraPhotoUrl(null);
     setAiResult(null);
     setPhotoError("");
     rawPhotoFileRef.current = null;
-    if (cameraInputRef.current) {
+    if (source === "gallery") {
+      if (galleryInputRef.current) {
+        galleryInputRef.current.value = "";
+        galleryInputRef.current.click();
+      }
+    } else if (cameraInputRef.current) {
       cameraInputRef.current.value = "";
       cameraInputRef.current.click();
     }
@@ -1392,6 +1398,16 @@ export function SosFab() {
                     id="sos-camera-capture-input"
                   />
 
+                  {/* Input File Galeri (memilih foto dari galeri / file perangkat) */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={galleryInputRef}
+                    onChange={handleCaptureCamera}
+                    className="hidden"
+                    id="sos-gallery-upload-input"
+                  />
+
                   {isProcessingPhoto ? (
                     <div className="p-6 rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50/40 text-center flex flex-col items-center justify-center gap-2">
                       <RefreshCw className="w-6 h-6 text-orange-600 animate-spin" />
@@ -1496,7 +1512,7 @@ export function SosFab() {
                           <Eye className="w-4 h-4 text-blue-600 shrink-0" />
                           <span>Lihat Pratinjau Foto</span>
                         </button>
-                        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
                           {!isVerifyingAi && aiResult && aiResult.status !== "lolos_foto" && (
                             <button
                               type="button"
@@ -1510,33 +1526,62 @@ export function SosFab() {
                           )}
                           <button
                             type="button"
-                            onClick={handleRetakePhoto}
-                            className="flex-1 sm:flex-none justify-center px-3 py-2 sm:py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer text-center"
+                            onClick={() => handleRetakePhoto("camera")}
+                            className="flex-1 sm:flex-none justify-center px-3 py-2 sm:py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1.5"
                           >
-                            Ulangi Foto
+                            <Camera className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                            <span>Kamera</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRetakePhoto("gallery")}
+                            className="flex-1 sm:flex-none justify-center px-3 py-2 sm:py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                          >
+                            <UploadCloud className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                            <span>Galeri</span>
                           </button>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    /* Tombol Ambil Foto Kamera */
-                    <button
-                      type="button"
-                      onClick={() => cameraInputRef.current?.click()}
-                      className="w-full p-5 rounded-2xl border-2 border-dashed border-orange-300 hover:border-orange-500 bg-orange-50/50 hover:bg-orange-50/80 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
-                        <Camera className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-800">
-                          Ambil Foto Bukti Langsung dari Kamera
-                        </p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          Kamera akan langsung mencap stempel lokasi GPS dan waktu riil secara otomatis
-                        </p>
-                      </div>
-                    </button>
+                    /* Pilihan Metode Upload Foto: Kamera Langsung atau Galeri */
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => cameraInputRef.current?.click()}
+                        className="w-full p-4 rounded-2xl border-2 border-dashed border-orange-300 hover:border-orange-500 bg-orange-50/50 hover:bg-orange-50/80 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer"
+                      >
+                        <div className="w-11 h-11 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
+                          <Camera className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-800">
+                            Ambil dari Kamera
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                            Foto langsung dengan stempel GPS & waktu
+                          </p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => galleryInputRef.current?.click()}
+                        className="w-full p-4 rounded-2xl border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50/70 hover:bg-blue-50/50 transition-all text-center flex flex-col items-center justify-center gap-2 group cursor-pointer"
+                      >
+                        <div className="w-11 h-11 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
+                          <UploadCloud className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-800">
+                            Pilih dari Galeri
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                            Unggah foto kejadian dari galeri perangkat
+                          </p>
+                        </div>
+                      </button>
+                    </div>
                   )}
 
                   {photoError && (

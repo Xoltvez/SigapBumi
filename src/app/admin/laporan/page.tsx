@@ -35,6 +35,8 @@ import {
 } from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 import DisasterIcon, { getDisasterLabel as getSharedDisasterLabel } from "@/components/common/DisasterIcon";
+import { AdminTrashModal } from "@/components/admin/AdminTrashModal";
+import { fetchTrashItems } from "@/lib/services/trash";
 
 interface AdminReportRow {
   id: string;
@@ -195,6 +197,17 @@ function LaporanContent() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<AdminReportRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isTrashOpen, setIsTrashOpen] = useState(false);
+  const [trashCount, setTrashCount] = useState(0);
+
+  useEffect(() => {
+    const syncTrash = () => {
+      fetchTrashItems().then((list) => setTrashCount(list.length)).catch(() => {});
+    };
+    syncTrash();
+    window.addEventListener("sigapbumi:trash-updated", syncTrash);
+    return () => window.removeEventListener("sigapbumi:trash-updated", syncTrash);
+  }, []);
 
   // Filters
   const [searchCode, setSearchCode] = useState("");
@@ -497,7 +510,17 @@ function LaporanContent() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsTrashOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-xs font-semibold text-amber-800 shadow-2xs transition-colors shrink-0 cursor-pointer"
+            title="Lihat dan pulihkan laporan atau SOS yang pernah dihapus"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-amber-600" />
+            <span>Kotak Sampah{trashCount > 0 ? ` (${trashCount})` : ""}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
@@ -1116,6 +1139,18 @@ function LaporanContent() {
           </div>
         </div>
       )}
+
+      {/* Modal Kotak Sampah & Restore Laporan */}
+      <AdminTrashModal
+        isOpen={isTrashOpen}
+        onClose={() => setIsTrashOpen(false)}
+        title="Kotak Sampah Laporan & SOS"
+        onRestored={() => {
+          loadData(false);
+          setToastMessage("Data laporan berhasil dipulihkan dari Kotak Sampah.");
+          setTimeout(() => setToastMessage(null), 4000);
+        }}
+      />
     </div>
   );
 }

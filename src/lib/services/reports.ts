@@ -1611,13 +1611,12 @@ export async function deleteReportLive(
   actorName: string = "Petugas Posko Terpadu"
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // 1. Tandai ID / kode tracking sebagai dihapus di local storage agar tidak muncul lagi
-    markReportAsDeleted(reportId);
-
-    // 2. Hapus dari local storage reports
+    // 1. Ambil snapshot lokal sebelum dihapus agar tetap tersedia di Kotak Sampah
+    let localSnap: LiveReportItem | undefined;
     if (typeof window !== "undefined") {
       try {
         const local = getLocalReports();
+        localSnap = local.find((r) => r.id === reportId || r.tracking_code === reportId);
         const filtered = local.filter((r) => r.id !== reportId && r.tracking_code !== reportId);
         localStorage.setItem(LOCAL_STORAGE_REPORTS_KEY, JSON.stringify(filtered));
       } catch {
@@ -1625,21 +1624,59 @@ export async function deleteReportLive(
       }
     }
 
+    // 2. Tandai ID / kode tracking sebagai dihapus di local storage agar tidak muncul lagi
+    markReportAsDeleted(reportId);
+
     // 3. Hapus dari mock in-memory jika ada
     const mockIdx = DEFAULT_MOCK_REPORTS.findIndex((r) => r.id === reportId || r.tracking_code === reportId);
     if (mockIdx >= 0) {
       DEFAULT_MOCK_REPORTS.splice(mockIdx, 1);
     }
 
-    // 4. Panggil API Route DELETE internal /api/admin/status
+    // 4. Arsipkan ke Kotak Sampah & hapus di backend via /api/admin/trash
     try {
-      await fetch("/api/admin/status", {
-        method: "DELETE",
+      const trashRes = await fetch("/api/admin/trash", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reportId }),
+        body: JSON.stringify({
+          action: "archive_and_delete",
+          reportId,
+          kind: "report",
+          actorName,
+          clientSnapshot: localSnap
+            ? {
+                id: localSnap.id,
+                tracking_code: localSnap.tracking_code,
+                title: localSnap.title,
+                address: localSnap.address,
+                status: localSnap.status,
+                photo_url: localSnap.image_url,
+              }
+            : undefined,
+        }),
       });
+      if (trashRes.ok && typeof window !== "undefined") {
+        const trashJson = await trashRes.json();
+        if (trashJson?.archivedItems?.length > 0) {
+          const prevRaw = localStorage.getItem("sigapbumi_admin_trash");
+          const prev = prevRaw ? JSON.parse(prevRaw) : [];
+          const archivedIds = new Set(trashJson.archivedItems.map((a: any) => a.id));
+          localStorage.setItem(
+            "sigapbumi_admin_trash",
+            JSON.stringify([...trashJson.archivedItems, ...prev.filter((p: any) => !archivedIds.has(p.id))].slice(0, 100))
+          );
+          window.dispatchEvent(new CustomEvent("sigapbumi:trash-updated"));
+        }
+      }
     } catch {
-      // Fallback ke Supabase langsung
+      // Fallback ke DELETE endpoint lama
+      try {
+        await fetch("/api/admin/status", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reportId }),
+        });
+      } catch {}
     }
 
     // 5. Coba hapus langsung dari client Supabase jika terhubung

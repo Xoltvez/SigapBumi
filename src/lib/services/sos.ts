@@ -911,13 +911,14 @@ export async function deleteSosAlertLive(
   id: string,
   actorName: string = "Petugas Pusdalops"
 ): Promise<{ success: boolean; error?: string }> {
-  // 1. Tandai di cache deleted
-  markSosAsDeleted(id);
-
-  // 2. Hapus dari local SOS cache
+  // 1. Ambil snapshot lokal sebelum dihapus untuk Kotak Sampah
   const localCache = getLocalSosCache();
+  const localSnap = localCache.find((x) => x.id === id);
   const filtered = localCache.filter((x) => x.id !== id);
   saveLocalSosCache(filtered);
+
+  // 2. Tandai di cache deleted
+  markSosAsDeleted(id);
 
   // 3. Dispatch event agar seluruh layar dan tab segera sinkron
   if (typeof window !== "undefined") {
@@ -926,13 +927,41 @@ export async function deleteSosAlertLive(
     window.dispatchEvent(new CustomEvent("sigapbumi:sos-deleted", { detail: { id } }));
   }
 
-  // 4. Panggil DELETE API backend
+  // 4. Arsipkan ke Kotak Sampah & hapus di backend via /api/admin/trash
   try {
-    await fetch("/api/admin/status", {
-      method: "DELETE",
+    const trashRes = await fetch("/api/admin/trash", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reportId: id, actorName, isSos: true }),
+      body: JSON.stringify({
+        action: "archive_and_delete",
+        reportId: id,
+        kind: "sos",
+        actorName,
+        clientSnapshot: localSnap
+          ? {
+              id: localSnap.id,
+              tracking_code: localSnap.tracking_code,
+              title: `Panggilan Darurat SOS (${String(localSnap.assistance_type || "darurat").toUpperCase()})`,
+              address: localSnap.address,
+              status: localSnap.status,
+              photo_url: localSnap.photo_url,
+            }
+          : undefined,
+      }),
     });
+    if (trashRes.ok && typeof window !== "undefined") {
+      const trashJson = await trashRes.json();
+      if (trashJson?.archivedItems?.length > 0) {
+        const prevRaw = localStorage.getItem("sigapbumi_admin_trash");
+        const prev = prevRaw ? JSON.parse(prevRaw) : [];
+        const archivedIds = new Set(trashJson.archivedItems.map((a: any) => a.id));
+        localStorage.setItem(
+          "sigapbumi_admin_trash",
+          JSON.stringify([...trashJson.archivedItems, ...prev.filter((p: any) => !archivedIds.has(p.id))].slice(0, 100))
+        );
+        window.dispatchEvent(new CustomEvent("sigapbumi:trash-updated"));
+      }
+    }
   } catch (err) {
     console.warn("deleteSosAlertLive API call error:", err);
   }
@@ -950,7 +979,7 @@ export async function deleteSosAlertLive(
 
 /**
  * Menghapus SELURUH data panggilan SOS (sos_alerts Supabase, cache lokal, dan sesi tracking)
- * TANPA menghapus data laporan bencana umum.
+ * dan menyimpannya terlebih dahulu ke Kotak Sampah agar dapat dipulihkan.
  */
 export async function clearAllSosAlerts(): Promise<{ success: boolean; error?: string }> {
   // 1. Kosongkan local cache SOS
@@ -965,13 +994,26 @@ export async function clearAllSosAlerts(): Promise<{ success: boolean; error?: s
     window.dispatchEvent(new CustomEvent("sigapbumi:sos-deleted", { detail: {} }));
   }
 
-  // 2. Panggil API backend untuk membersihkan database
+  // 2. Arsipkan seluruh SOS ke Kotak Sampah & hapus dari database
   try {
-    await fetch("/api/admin/status", {
-      method: "DELETE",
+    const trashRes = await fetch("/api/admin/trash", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clearAllSos: true }),
+      body: JSON.stringify({ action: "archive_and_delete", clearAllSos: true, kind: "sos" }),
     });
+    if (trashRes.ok && typeof window !== "undefined") {
+      const trashJson = await trashRes.json();
+      if (trashJson?.archivedItems?.length > 0) {
+        const prevRaw = localStorage.getItem("sigapbumi_admin_trash");
+        const prev = prevRaw ? JSON.parse(prevRaw) : [];
+        const archivedIds = new Set(trashJson.archivedItems.map((a: any) => a.id));
+        localStorage.setItem(
+          "sigapbumi_admin_trash",
+          JSON.stringify([...trashJson.archivedItems, ...prev.filter((p: any) => !archivedIds.has(p.id))].slice(0, 100))
+        );
+        window.dispatchEvent(new CustomEvent("sigapbumi:trash-updated"));
+      }
+    }
   } catch (err) {
     console.warn("clearAllSosAlerts API call error:", err);
   }
