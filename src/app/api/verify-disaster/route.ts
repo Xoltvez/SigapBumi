@@ -61,8 +61,8 @@ function getAiConfig(): {
 
   for (const envPath of candidatePaths) {
     try {
-      if (fs.existsSync(envPath)) {
-        const content = fs.readFileSync(envPath, "utf8");
+      if (fs.existsSync(/*turbopackIgnore: true*/ envPath)) {
+        const content = fs.readFileSync(/*turbopackIgnore: true*/ envPath, "utf8");
         const gKeyMatch = content.match(/GEMINI_API_KEY\s*=\s*([^\r\n]+)/);
         const gModelMatch = content.match(/GEMINI_MODEL\s*=\s*([^\r\n]+)/);
         const antKeyMatch = content.match(/(?:ANTHROPIC_API_KEY|CLAUDE_API_KEY)\s*=\s*([^\r\n]+)/);
