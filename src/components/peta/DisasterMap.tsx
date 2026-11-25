@@ -721,27 +721,36 @@ export default function DisasterMap({
       const lngNum = Number(pt.lng);
 
       // Construct popup HTML (tanpa emoji, mematuhi Anti-Slop R-01)
+      const statusColorMap: Record<string, { bg: string; color: string; border: string }> = {
+        selesai: { bg: "#ECFDF5", color: "#047857", border: "#A7F3D0" },
+        ditindaklanjuti: { bg: "#FEF3C7", color: "#B45309", border: "#FDE68A" },
+        diverifikasi: { bg: "#EFF6FF", color: "#1D4ED8", border: "#BFDBFE" },
+        ditolak: { bg: "#FEE2E2", color: "#B91C1C", border: "#FECACA" },
+      };
+      const statusStyle = statusColorMap[pt.status] || { bg: "#F6F7F8", color: "#374151", border: "#E5E7EB" };
+
       const popupHtml = `
-        <div style="font-family: system-ui, sans-serif; font-size: 12px; color: #1F2937; min-width: 190px; max-width: 250px; padding: 2px;">
+        <div style="font-family: system-ui, sans-serif; font-size: 12px; color: #1F2937; min-width: 200px; max-width: 260px; padding: 2px;">
           ${pt.is_sos
-          ? `<div style="background-color: #FEE2E2; color: #991B1B; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px;">PANGGILAN DARURAT SOS</div>`
-          : `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <span style="font-family: monospace; font-weight: bold; color: #EF6806;">${pt.tracking_code}</span>
-                  <span style="font-size: 10px; text-transform: capitalize; background: #F6F7F8; padding: 1px 6px; border-radius: 4px; border: 1px solid #E5E7EB;">${pt.status}</span>
-                </div>`
+          ? `<div style="background-color: #FEE2E2; color: #991B1B; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 5px;">PANGGILAN DARURAT SOS</div>`
+          : ""
         }
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 4px;">
+            <span style="font-family: monospace; font-weight: bold; color: #EF6806;">${pt.tracking_code || "-"}</span>
+            <span style="font-size: 10px; font-weight: 600; text-transform: capitalize; background: ${statusStyle.bg}; color: ${statusStyle.color}; padding: 1px 6px; border-radius: 4px; border: 1px solid ${statusStyle.border};">${pt.status}</span>
+          </div>
           ${pt.is_demo
           ? `<div style="background: #FEF0E6; color: #A74904; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; display: inline-block; margin-bottom: 4px;">DATA DEMONSTRASI</div>`
           : ""
         }
           <div style="font-weight: 700; font-size: 13px; line-height: 1.3; margin-bottom: 4px;">${pt.title}</div>
           <div style="color: #4B5563; font-size: 11px; margin-bottom: 6px;">Lokasi: ${pt.location_name}</div>
-          <div style="display: flex; justify-content: space-between; font-size: 10px; color: #6B7280; padding-top: 4px; border-top: 1px solid #E5E7EB;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 10px; color: #6B7280; padding-top: 4px; border-top: 1px solid #E5E7EB;">
             <span>Waktu: ${pt.created_at}</span>
-            ${!pt.is_sos ? `<span style="color: #EF6806; font-weight: 600;">${pt.confirmation_count} konfirmasi</span>` : ""}
+            <span style="color: #EF6806; font-weight: 600; white-space: nowrap;">${pt.confirmation_count ?? 0} konfirmasi</span>
           </div>
-          ${!pt.is_sos
-          ? `<a href="/lacak?kode=${pt.tracking_code}" style="display: block; text-align: center; background-color: #EF6806; color: white; text-decoration: none; padding: 6px 8px; border-radius: 6px; font-weight: 600; font-size: 11px; margin-top: 8px;">Lacak Status & Detail</a>`
+          ${pt.tracking_code
+          ? `<a href="/lacak?kode=${encodeURIComponent(pt.tracking_code)}" style="display: block; text-align: center; background-color: #EF6806; color: white; text-decoration: none; padding: 6px 8px; border-radius: 6px; font-weight: 600; font-size: 11px; margin-top: 8px;">Lacak Status &amp; Detail</a>`
           : ""
         }
         </div>

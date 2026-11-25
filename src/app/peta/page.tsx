@@ -447,22 +447,26 @@ function PetaContent() {
 
         // Map live SOS alerts into MapPoints
         const activeSos: MapPoint[] = (liveSos || [])
-          .filter((s) => s.status === "aktif")
+          .filter((s) => s.status === "aktif" || s.status === "ditangani")
           .map((s) => {
             const rawLat = Number(s.lat);
             const rawLng = Number(s.lng);
             const validLat = !isNaN(rawLat) && isFinite(rawLat) ? rawLat : -6.3276;
             const validLng = !isNaN(rawLng) && isFinite(rawLng) ? rawLng : 108.3249;
+            const resolvedStatus: ReportStatus =
+              s.status === "ditangani" ? "ditindaklanjuti" : "diterima";
 
             return {
               id: s.id,
-              tracking_code: s.id.startsWith("SOS") ? s.id : `SOS-${s.id.slice(0, 4).toUpperCase()}`,
+              tracking_code:
+                s.tracking_code ||
+                (s.id.startsWith("SOS") ? s.id : `SOS-${s.id.slice(0, 4).toUpperCase()}`),
               disaster_type: (s.assistance_type === "damkar" ? "kebakaran" : "lainnya") as DisasterType,
               title: `Panggilan Darurat: Bantuan ${s.assistance_type.toUpperCase()}`,
               location_name: s.address,
               lat: validLat,
               lng: validLng,
-              status: "ditindaklanjuti" as ReportStatus,
+              status: resolvedStatus,
               created_at: s.time_ago || "Baru saja",
               confirmation_count: 1,
               is_sos: true,
@@ -471,11 +475,19 @@ function PetaContent() {
             };
           });
 
-        // Gabungkan tanpa duplikasi ID atau tracking code
-        const merged: MapPoint[] = [...activeSos];
-        for (const pt of reportPoints) {
-          if (!merged.some((m) => m.id === pt.id || (m.tracking_code && pt.tracking_code && m.tracking_code === pt.tracking_code))) {
-            merged.push(pt);
+        // Gabungkan tanpa duplikasi ID atau tracking code (utamakan data dari reports agar status & konfirmasi riil terjaga)
+        const merged: MapPoint[] = [...reportPoints];
+        for (const sosPt of activeSos) {
+          if (
+            !merged.some(
+              (m) =>
+                m.id === sosPt.id ||
+                (m.tracking_code &&
+                  sosPt.tracking_code &&
+                  m.tracking_code.toUpperCase() === sosPt.tracking_code.toUpperCase())
+            )
+          ) {
+            merged.unshift(sosPt);
           }
         }
 
@@ -729,20 +741,25 @@ function PetaContent() {
           >
             {selectedPoint ? (
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
+                <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                  {selectedPoint.is_sos && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                      SOS DARURAT
+                    </span>
+                  )}
                   <span className="text-[10px] font-bold font-mono px-2 py-0.5 bg-slate-100 text-slate-800 rounded">
                     {selectedPoint.tracking_code}
                   </span>
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      selectedPoint.is_sos
-                        ? "bg-rose-100 text-rose-700"
-                        : selectedPoint.status === "selesai"
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
+                      selectedPoint.status === "selesai"
                         ? "bg-emerald-100 text-emerald-700"
-                        : "bg-amber-100 text-amber-700"
+                        : selectedPoint.status === "ditindaklanjuti"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-blue-100 text-blue-700"
                     }`}
                   >
-                    {selectedPoint.is_sos ? "SOS DARURAT" : selectedPoint.status}
+                    {selectedPoint.status}
                   </span>
                 </div>
                 <h4 className="text-xs font-bold text-slate-900 truncate">
@@ -752,18 +769,18 @@ function PetaContent() {
                   <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
                   <span>{selectedPoint.location_name}</span>
                 </p>
-                {!selectedPoint.is_sos && (
-                  <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1">
+                  {!selectedPoint.is_sos && (
                     <span className="text-[10px] font-semibold text-slate-700 flex items-center gap-1">
                       <DisasterIcon type={selectedPoint.disaster_type} size={14} />
                       <span>{getDisasterLabel(selectedPoint.disaster_type)}</span>
                     </span>
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-200 bg-white text-[9px] font-semibold text-slate-700">
-                      <ThumbsUp className="w-2.5 h-2.5 text-orange-500" />
-                      <span>{selectedPoint.confirmation_count} Terkonfirmasi</span>
-                    </span>
-                  </div>
-                )}
+                  )}
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-200 bg-white text-[9px] font-semibold text-slate-700">
+                    <ThumbsUp className="w-2.5 h-2.5 text-orange-500" />
+                    <span>{selectedPoint.confirmation_count ?? 0} Terkonfirmasi</span>
+                  </span>
+                </div>
               </div>
             ) : (
               <div className="flex-1 min-w-0">
@@ -831,9 +848,9 @@ function PetaContent() {
                   <span>Buka Navigasi Rute Google Maps</span>
                 </a>
 
-                {!selectedPoint.is_sos && (
+                {selectedPoint.tracking_code && (
                   <Link
-                    href={`/lacak?kode=${selectedPoint.tracking_code}`}
+                    href={`/lacak?kode=${encodeURIComponent(selectedPoint.tracking_code)}`}
                     className="w-full h-8.5 rounded-xl border border-primary/30 bg-primary-soft text-primary text-xs font-semibold inline-flex items-center justify-center gap-1.5"
                   >
                     <span>Detail &amp; Lacak Laporan</span>
@@ -1181,30 +1198,29 @@ function PetaContent() {
           >
             {/* Header Kartu Detail */}
             <div className="p-3.5 px-4 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 min-w-0">
-                {selectedPoint.is_sos ? (
-                  <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-full flex items-center gap-1.5 shrink-0">
-                    <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
-                    <span>Panggilan Darurat SOS</span>
+              <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                {selectedPoint.is_sos && (
+                  <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 bg-rose-100 border border-rose-200 px-2 py-0.5 rounded-full flex items-center gap-1.5 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping" />
+                    <span>SOS Darurat</span>
                   </span>
-                ) : (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold font-mono px-2 py-0.5 bg-orange-100 text-orange-800 rounded-md">
-                      {selectedPoint.tracking_code}
-                    </span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
-                        selectedPoint.status === "selesai"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : selectedPoint.status === "ditindaklanjuti"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-blue-100 text-blue-700"
-                      }`}
-                    >
-                      {selectedPoint.status}
-                    </span>
-                  </div>
                 )}
+                {selectedPoint.tracking_code && (
+                  <span className="text-[10px] font-bold font-mono px-2 py-0.5 bg-orange-100 text-orange-800 rounded-md shrink-0">
+                    {selectedPoint.tracking_code}
+                  </span>
+                )}
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize shrink-0 ${
+                    selectedPoint.status === "selesai"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : selectedPoint.status === "ditindaklanjuti"
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-blue-100 text-blue-700"
+                  }`}
+                >
+                  {selectedPoint.status}
+                </span>
               </div>
 
               <button
@@ -1254,12 +1270,10 @@ function PetaContent() {
               </div>
 
               {/* Konfirmasi Warga */}
-              {!selectedPoint.is_sos && selectedPoint.confirmation_count > 0 && (
-                <div className="flex items-center gap-2 text-xs font-bold text-orange-600 bg-orange-50/70 border border-orange-100 p-2.5 rounded-xl">
-                  <ThumbsUp className="w-4 h-4" />
-                  <span>{selectedPoint.confirmation_count} Warga Mengonfirmasi Kejadian Ini</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2 text-xs font-bold text-orange-600 bg-orange-50/70 border border-orange-100 p-2.5 rounded-xl">
+                <ThumbsUp className="w-4 h-4 shrink-0" />
+                <span>{selectedPoint.confirmation_count ?? 0} Warga Mengonfirmasi Kejadian Ini</span>
+              </div>
 
               {/* Tombol Aksi */}
               <div className="flex items-center gap-2 pt-1">
@@ -1273,9 +1287,9 @@ function PetaContent() {
                   <span>Rute Maps</span>
                 </a>
 
-                {!selectedPoint.is_sos && (
+                {selectedPoint.tracking_code && (
                   <Link
-                    href={`/lacak?kode=${selectedPoint.tracking_code}`}
+                    href={`/lacak?kode=${encodeURIComponent(selectedPoint.tracking_code)}`}
                     className="flex-1 h-9 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
                   >
                     <span>Lacak Detail</span>
