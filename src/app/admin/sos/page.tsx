@@ -659,7 +659,7 @@ export default function AdminSosPage() {
             onClick={() => setStatusFilter("aktif")}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer shrink-0 ${
               statusFilter === "aktif"
-                ? "bg-rose-600 text-white shadow-sm ring-2 ring-rose-200"
+                ? "bg-rose-600 text-white shadow-sm"
                 : "bg-rose-50/80 text-rose-700 hover:bg-rose-100/70 border border-rose-100"
             }`}
           >
@@ -686,7 +686,7 @@ export default function AdminSosPage() {
             onClick={() => setStatusFilter("ditangani")}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer shrink-0 ${
               statusFilter === "ditangani"
-                ? "bg-amber-600 text-white shadow-sm ring-2 ring-amber-200"
+                ? "bg-amber-600 text-white shadow-sm"
                 : "bg-amber-50/80 text-amber-700 hover:bg-amber-100/70 border border-amber-100"
             }`}
           >
@@ -709,7 +709,7 @@ export default function AdminSosPage() {
             onClick={() => setStatusFilter("selesai")}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-2 cursor-pointer shrink-0 ${
               statusFilter === "selesai"
-                ? "bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-200"
+                ? "bg-emerald-600 text-white shadow-sm"
                 : "bg-emerald-50/80 text-emerald-700 hover:bg-emerald-100/70 border border-emerald-100"
             }`}
           >
