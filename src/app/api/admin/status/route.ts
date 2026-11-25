@@ -130,15 +130,26 @@ export async function POST(request: Request) {
         );
 
       let targetReportUuid = isUUID ? reportId : null;
+      let resolvedTrackingCode: string | null = !isUUID && reportId.toUpperCase().startsWith("SOS-") ? reportId : null;
 
       if (!targetReportUuid) {
         const { data: found } = await supabase
           .from("reports")
-          .select("id")
+          .select("id, tracking_code")
           .or(`tracking_code.eq.${reportId},tracking_code.ilike.${reportId}`)
           .maybeSingle();
         if (found?.id) {
           targetReportUuid = found.id;
+          if (found.tracking_code) resolvedTrackingCode = found.tracking_code;
+        }
+      } else {
+        const { data: foundCode } = await supabase
+          .from("reports")
+          .select("tracking_code")
+          .eq("id", targetReportUuid)
+          .maybeSingle();
+        if (foundCode?.tracking_code) {
+          resolvedTrackingCode = foundCode.tracking_code;
         }
       }
 
@@ -165,6 +176,8 @@ export async function POST(request: Request) {
       const sosPayload: Record<string, unknown> = { status: sosStatus };
       if (status === "selesai" || status === "ditolak") {
         sosPayload.resolved_at = nowIso;
+      } else {
+        sosPayload.resolved_at = null;
       }
 
       if (targetReportUuid) {
@@ -194,16 +207,29 @@ export async function POST(request: Request) {
             .from("sos_alerts")
             .update(sosPayload)
             .eq("id", targetReportUuid);
+          if (resolvedTrackingCode && resolvedTrackingCode.toUpperCase().startsWith("SOS-")) {
+            await supabase
+              .from("sos_alerts")
+              .update(sosPayload)
+              .ilike("note", `%${resolvedTrackingCode}%`);
+          }
         } catch {
           // Abaikan jika bukan SOS
         }
       } else {
-        // Fallback update langsung ke sos_alerts jika id cocok
+        // Fallback update langsung ke sos_alerts jika id atau tracking code cocok
         try {
-          await supabase
-            .from("sos_alerts")
-            .update(sosPayload)
-            .eq("id", reportId);
+          if (isUUID) {
+            await supabase
+              .from("sos_alerts")
+              .update(sosPayload)
+              .eq("id", reportId);
+          } else if (resolvedTrackingCode) {
+            await supabase
+              .from("sos_alerts")
+              .update(sosPayload)
+              .ilike("note", `%${resolvedTrackingCode}%`);
+          }
         } catch {}
       }
     }

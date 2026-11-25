@@ -762,7 +762,7 @@ export async function updateSosAlertStatus(
   trackingCode?: string
 ): Promise<{ success: boolean; error?: string }> {
   invalidateLiveSosCache();
-  // Update local cache
+  // Update local cache — HANYA update jika ada, jangan buat entri baru kosong
   const localItems = getLocalSosCache();
   const existingIndex = localItems.findIndex(
     (x) => x.id === id || (trackingCode && (x.tracking_code === trackingCode || x.note?.includes(trackingCode)))
@@ -770,23 +770,9 @@ export async function updateSosAlertStatus(
   if (existingIndex >= 0) {
     localItems[existingIndex].status = newStatus;
     if (dispatchedTeam) localItems[existingIndex].dispatched_team = dispatchedTeam;
-  } else {
-    localItems.push({
-      id,
-      tracking_code: trackingCode,
-      source: "Ponsel Warga (GPS Sensor)",
-      assistance_type: "damkar",
-      address: "Titik Darurat Warga",
-      coordinates: "-6.2088, 106.8456",
-      lat: -6.2088,
-      lng: 106.8456,
-      time_ago: "Baru saja",
-      status: newStatus,
-      dispatched_team: dispatchedTeam,
-      created_at: new Date().toISOString(),
-    });
+    saveLocalSosCache(localItems);
   }
-  saveLocalSosCache(localItems);
+  // JANGAN push item dummy baru ke cache SOS: ini yang menyebabkan laporan kosong muncul di data laporan
 
   // Map ke status laporan resmi: aktif -> diterima, ditangani -> ditindaklanjuti, selesai -> selesai, palsu -> ditolak
   const reportStatus: "diterima" | "diverifikasi" | "ditindaklanjuti" | "selesai" | "ditolak" =
@@ -813,6 +799,8 @@ export async function updateSosAlertStatus(
     };
     if (newStatus === "selesai" || newStatus === "palsu") {
       sosPayload.resolved_at = new Date().toISOString();
+    } else {
+      sosPayload.resolved_at = null;
     }
     if (newStatus === "palsu") {
       sosPayload.closing_note = "HOAX / PALSU";
