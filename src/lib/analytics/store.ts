@@ -27,6 +27,104 @@ function supabaseHeaders() {
 }
 
 const USE_SUPABASE = !!(SUPABASE_URL && SERVICE_KEY && SUPABASE_URL !== "https://placeholder-project.supabase.co");
+const STORAGE_BUCKET = "system-analytics";
+const STORAGE_OBJECT = "analytics-store.json";
+let bucketEnsured = false;
+
+async function ensureAnalyticsBucket(): Promise<void> {
+  if (!USE_SUPABASE || bucketEnsured) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/bucket/${STORAGE_BUCKET}`, {
+      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+    });
+    if (res.ok) {
+      bucketEnsured = true;
+      return;
+    }
+    await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+      method: "POST",
+      headers: {
+        apikey: SERVICE_KEY,
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id: STORAGE_BUCKET, name: STORAGE_BUCKET, public: false }),
+    });
+    bucketEnsured = true;
+  } catch {}
+}
+
+async function readStorageStore(): Promise<AnalyticsStoreData | null> {
+  if (!USE_SUPABASE) return null;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${STORAGE_OBJECT}`,
+      {
+        headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+        cache: "no-store",
+      }
+    );
+    if (!res.ok) return null;
+    const parsed = (await res.json()) as Partial<AnalyticsStoreData>;
+    return {
+      sessions: parsed.sessions && typeof parsed.sessions === "object" ? parsed.sessions : {},
+      pageViews: Array.isArray(parsed.pageViews) ? parsed.pageViews : [],
+      clicks: Array.isArray(parsed.clicks) ? parsed.clicks : [],
+      adminLogs: Array.isArray(parsed.adminLogs) ? parsed.adminLogs : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function writeStorageStore(data: AnalyticsStoreData): Promise<void> {
+  if (!USE_SUPABASE) return;
+  try {
+    await ensureAnalyticsBucket();
+    await fetch(
+      `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${STORAGE_OBJECT}`,
+      {
+        method: "POST",
+        headers: {
+          apikey: SERVICE_KEY,
+          Authorization: `Bearer ${SERVICE_KEY}`,
+          "Content-Type": "application/json",
+          "x-upsert": "true",
+        },
+        body: JSON.stringify(data),
+      }
+    );
+  } catch {}
+}
+
+function mergeAnalyticsStores(a: AnalyticsStoreData, b: AnalyticsStoreData): AnalyticsStoreData {
+  const sessions: Record<string, AnalyticsSession> = { ...a.sessions };
+  for (const [sid, s] of Object.entries(b.sessions)) {
+    const prev = sessions[sid];
+    if (!prev || new Date(s.lastSeen).getTime() >= new Date(prev.lastSeen).getTime()) {
+      sessions[sid] = prev
+        ? {
+            ...s,
+            activeSeconds: Math.max(prev.activeSeconds || 0, s.activeSeconds || 0),
+            pageViews: Math.max(prev.pageViews || 0, s.pageViews || 0),
+            clicks: Math.max(prev.clicks || 0, s.clicks || 0),
+          }
+        : s;
+    }
+  }
+  const pvMap = new Map<string, AnalyticsPageView>();
+  [...a.pageViews, ...b.pageViews].forEach((pv) => pvMap.set(pv.id, pv));
+  const clkMap = new Map<string, AnalyticsClick>();
+  [...a.clicks, ...b.clicks].forEach((c) => clkMap.set(c.id, c));
+  const admMap = new Map<string, AdminActivityLog>();
+  [...a.adminLogs, ...b.adminLogs].forEach((l) => admMap.set(l.id, l));
+  return {
+    sessions,
+    pageViews: Array.from(pvMap.values()).slice(-MAX_PAGEVIEWS),
+    clicks: Array.from(clkMap.values()).slice(-MAX_CLICKS),
+    adminLogs: Array.from(admMap.values()).slice(-MAX_ADMIN_LOGS),
+  };
+}
 
 // ─── TypeScript interfaces ───────────────────────────────────────────────────
 
@@ -638,15 +736,94 @@ async function getAnalyticsSummaryFromSupabase(period: "1d" | "7d" | "30d") {
 
 // ─── Main exported summary function ─────────────────────────────────────────
 
+export async function recordPageViewAsync(params: {
+  sessionId: string;
+  visitorId: string;
+  path: string;
+  device: "Mobile" | "Desktop";
+  referrer?: string;
+}) {
+  const remote = await readStorageStore();
+  if (remote) {
+    const merged = mergeAnalyticsStores(remote, readAnalyticsStore());
+    writeAnalyticsStore(merged);
+  }
+  recordPageView({
+    ...params,
+    referrer: params.referrer || "Akses Langsung (Direct)",
+  });
+  await writeStorageStore(readAnalyticsStore());
+}
+
+export async function recordHeartbeatAsync(params: {
+  sessionId: string;
+  visitorId: string;
+  path: string;
+  device: "Mobile" | "Desktop";
+  secondsDelta?: number;
+}) {
+  const remote = await readStorageStore();
+  if (remote) {
+    const merged = mergeAnalyticsStores(remote, readAnalyticsStore());
+    writeAnalyticsStore(merged);
+  }
+  recordHeartbeat(params);
+  await writeStorageStore(readAnalyticsStore());
+}
+
+export async function recordClickAsync(params: {
+  sessionId: string;
+  visitorId: string;
+  label: string;
+  path: string;
+  device: "Mobile" | "Desktop";
+}) {
+  const remote = await readStorageStore();
+  if (remote) {
+    const merged = mergeAnalyticsStores(remote, readAnalyticsStore());
+    writeAnalyticsStore(merged);
+  }
+  recordClick(params);
+  await writeStorageStore(readAnalyticsStore());
+}
+
+export async function recordAdminLogAsync(params: {
+  adminName: string;
+  adminEmail: string;
+  unit: string;
+  unitName: string;
+  action: string;
+  detail: string;
+  device: "Mobile" | "Desktop";
+}) {
+  const remote = await readStorageStore();
+  if (remote) {
+    const merged = mergeAnalyticsStores(remote, readAnalyticsStore());
+    writeAnalyticsStore(merged);
+  }
+  recordAdminLog(params);
+  await writeStorageStore(readAnalyticsStore());
+}
+
 export async function getAnalyticsSummaryAsync(period: "1d" | "7d" | "30d") {
   if (USE_SUPABASE) {
-    return await getAnalyticsSummaryFromSupabase(period);
+    try {
+      const sbSummary = await getAnalyticsSummaryFromSupabase(period);
+      if (sbSummary && (sbSummary.totalViews > 0 || sbSummary.liveVisitors > 0 || sbSummary.totalClicks > 0)) {
+        return sbSummary;
+      }
+    } catch {}
+    const remote = await readStorageStore();
+    if (remote) {
+      const merged = mergeAnalyticsStores(remote, readAnalyticsStore());
+      return getAnalyticsSummary(period, merged);
+    }
   }
   return getAnalyticsSummary(period);
 }
 
-export function getAnalyticsSummary(period: "1d" | "7d" | "30d") {
-  const store = readAnalyticsStore();
+export function getAnalyticsSummary(period: "1d" | "7d" | "30d", overrideStore?: AnalyticsStoreData) {
+  const store = overrideStore || readAnalyticsStore();
   const nowMs = Date.now();
   const fiveMinAgoMs = nowMs - 5 * 60 * 1000;
 

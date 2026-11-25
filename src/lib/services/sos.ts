@@ -756,19 +756,17 @@ export async function fetchLiveSosAlerts(forceRefresh = false): Promise<LiveSosI
     return timeB - timeA;
   });
 
-  // Hapus duplikasi sinyal yang berasal dari nomor telepon atau lokasi yang sama dalam waktu berdekatan (< 3 menit)
+  // Hapus duplikasi HANYA jika ID atau tracking_code benar-benar identik (jangan buang laporan SOS baru dari warga yang sama)
   const deduplicated: LiveSosItem[] = [];
   for (const item of sorted) {
-    const cleanItemPhone = item.phone_number ? item.phone_number.replace(/\D/g, "") : "";
     const duplicateIdx = deduplicated.findIndex((existing) => {
       const sameId = existing.id === item.id;
-      const cleanExistingPhone = existing.phone_number ? existing.phone_number.replace(/\D/g, "") : "";
-      const samePhone = Boolean(cleanItemPhone && cleanExistingPhone && cleanItemPhone === cleanExistingPhone);
-      const sameCoords = Math.abs(existing.lat - item.lat) < 0.001 && Math.abs(existing.lng - item.lng) < 0.001;
-      const timeDiff = Math.abs(
-        (new Date(existing.created_at).getTime() || 0) - (new Date(item.created_at).getTime() || 0)
+      const sameTrackingCode = Boolean(
+        existing.tracking_code &&
+        item.tracking_code &&
+        existing.tracking_code.toUpperCase() === item.tracking_code.toUpperCase()
       );
-      return sameId || ((samePhone || sameCoords) && timeDiff < 180000);
+      return sameId || sameTrackingCode;
     });
 
     if (duplicateIdx === -1) {
