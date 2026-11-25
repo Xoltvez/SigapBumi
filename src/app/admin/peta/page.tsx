@@ -15,6 +15,8 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
+  ChevronLeft,
   Navigation,
   ExternalLink,
   Siren,
@@ -103,6 +105,7 @@ function AdminPetaContent() {
   const [selectedProvince, setSelectedProvince] = useState<string>("Semua Provinsi");
   const [selectedDisaster, setSelectedDisaster] = useState<DisasterType | "semua">("semua");
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | "sos" | "semua">("semua");
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   // Tangani parameter navigasi langsung dari Monitor SOS atau menu lain (?id=...&kode=...&lat=...&lng=...)
@@ -1228,8 +1231,8 @@ function AdminPetaContent() {
                   </div>
                 </div>
 
-                {/* 2. Filter Bar Floating Layer */}
-                <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center gap-2 pointer-events-auto flex-wrap">
+                {/* 2. Filter Bar Floating Layer (Ringkas & Dapat Dibuka dengan Tanda Panah) */}
+                <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center gap-1.5 pointer-events-auto flex-wrap transition-all">
                   {/* Search Input Box */}
                   <div className="relative w-44 sm:w-52 shrink-0">
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1242,62 +1245,92 @@ function AdminPetaContent() {
                     />
                   </div>
 
-                  {/* Filter Provinsi */}
-                  <div className="relative shrink-0">
-                    <select
-                      value={selectedProvince}
-                      onChange={(e) => setSelectedProvince(e.target.value)}
-                      className="h-8 pl-2.5 pr-6 rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-white text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none transition-all"
-                    >
-                      {PROVINCE_OPTIONS.map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                      <ChevronDown className="w-3 h-3" />
-                    </div>
-                  </div>
+                  {/* Tombol Tanda Panah Buka/Tutup Filter */}
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterExpanded((prev) => !prev)}
+                    className={`h-8 px-2 rounded-xl border transition-all flex items-center justify-center gap-1 text-xs font-bold cursor-pointer shadow-2xs ${
+                      isFilterExpanded
+                        ? "bg-orange-50 border-orange-200 text-orange-600"
+                        : (selectedProvince !== "Semua Provinsi" || selectedDisaster !== "semua" || selectedStatus !== "semua")
+                        ? "bg-orange-50/80 border-orange-200 text-orange-600"
+                        : "bg-slate-50 hover:bg-slate-100 border-slate-200/80 text-slate-600"
+                    }`}
+                    title={isFilterExpanded ? "Sembunyikan filter" : "Buka filter (Semua Provinsi, Semua Bencana, Semua Status)"}
+                  >
+                    <ChevronRight
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        isFilterExpanded ? "rotate-180" : ""
+                      }`}
+                    />
+                    {(selectedProvince !== "Semua Provinsi" || selectedDisaster !== "semua" || selectedStatus !== "semua") && !isFilterExpanded && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                    )}
+                  </button>
 
-                  {/* Filter Bencana */}
-                  <div className="relative shrink-0">
-                    <select
-                      value={selectedDisaster}
-                      onChange={(e) => setSelectedDisaster(e.target.value as DisasterType | "semua")}
-                      className="h-8 pl-2.5 pr-6 rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-white text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none transition-all"
-                    >
-                      <option value="semua">Semua Bencana</option>
-                      <option value="banjir">Banjir</option>
-                      <option value="longsor">Tanah Longsor</option>
-                      <option value="kebakaran">Kebakaran</option>
-                      <option value="gempa">Gempa Bumi</option>
-                      <option value="karhutla">Karhutla</option>
-                      <option value="lainnya">Lainnya</option>
-                    </select>
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                      <ChevronDown className="w-3 h-3" />
-                    </div>
-                  </div>
+                  {/* Dropdown Filter (Hanya tampil ketika dibuka) */}
+                  {isFilterExpanded && (
+                    <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-left-2 duration-200">
+                      <div className="h-4 w-px bg-slate-200 mx-0.5" />
 
-                  {/* Filter Status */}
-                  <div className="relative shrink-0">
-                    <select
-                      value={selectedStatus}
-                      onChange={(e) => setSelectedStatus(e.target.value as ReportStatus | "sos" | "semua")}
-                      className="h-8 pl-2.5 pr-6 rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-white text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none transition-all"
-                    >
-                      <option value="semua">Semua Status</option>
-                      <option value="diterima">Status: Diterima</option>
-                      <option value="diverifikasi">Status: Diverifikasi</option>
-                      <option value="ditindaklanjuti">Status: Ditindaklanjuti</option>
-                      <option value="selesai">Status: Selesai</option>
-                      <option value="sos">Khusus Sinyal SOS Darurat</option>
-                    </select>
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                      <ChevronDown className="w-3 h-3" />
+                      {/* Filter Provinsi */}
+                      <div className="relative shrink-0">
+                        <select
+                          value={selectedProvince}
+                          onChange={(e) => setSelectedProvince(e.target.value)}
+                          className="h-8 pl-2.5 pr-6 rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-white text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none transition-all"
+                        >
+                          {PROVINCE_OPTIONS.map((p) => (
+                            <option key={p} value={p}>
+                              {p}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <ChevronDown className="w-3 h-3" />
+                        </div>
+                      </div>
+
+                      {/* Filter Bencana */}
+                      <div className="relative shrink-0">
+                        <select
+                          value={selectedDisaster}
+                          onChange={(e) => setSelectedDisaster(e.target.value as DisasterType | "semua")}
+                          className="h-8 pl-2.5 pr-6 rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-white text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none transition-all"
+                        >
+                          <option value="semua">Semua Bencana</option>
+                          <option value="banjir">Banjir</option>
+                          <option value="longsor">Tanah Longsor</option>
+                          <option value="kebakaran">Kebakaran</option>
+                          <option value="gempa">Gempa Bumi</option>
+                          <option value="karhutla">Karhutla</option>
+                          <option value="lainnya">Lainnya</option>
+                        </select>
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <ChevronDown className="w-3 h-3" />
+                        </div>
+                      </div>
+
+                      {/* Filter Status */}
+                      <div className="relative shrink-0">
+                        <select
+                          value={selectedStatus}
+                          onChange={(e) => setSelectedStatus(e.target.value as ReportStatus | "sos" | "semua")}
+                          className="h-8 pl-2.5 pr-6 rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-white text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none transition-all"
+                        >
+                          <option value="semua">Semua Status</option>
+                          <option value="diterima">Status: Diterima</option>
+                          <option value="diverifikasi">Status: Diverifikasi</option>
+                          <option value="ditindaklanjuti">Status: Ditindaklanjuti</option>
+                          <option value="selesai">Status: Selesai</option>
+                          <option value="sos">Khusus Sinyal SOS Darurat</option>
+                        </select>
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <ChevronDown className="w-3 h-3" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Reset Button */}
                   {(selectedProvince !== "Semua Provinsi" ||
