@@ -35,6 +35,7 @@ import {
   Plus,
   Minus,
   Route,
+  Car,
   ArrowUp,
   CornerUpLeft,
   CornerUpRight,
@@ -970,7 +971,7 @@ function AdminPetaContent() {
                         <button
                           type="button"
                           onClick={handleClearRoute}
-                          className="text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2 py-0.5 rounded bg-white border border-slate-200 cursor-pointer shadow-2xs hover:bg-slate-50"
+                          className="text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2.5 py-1 rounded-xl bg-white border border-slate-200 cursor-pointer shadow-2xs hover:bg-slate-50 transition-colors"
                         >
                           Tutup Rute
                         </button>
@@ -1600,7 +1601,7 @@ function AdminPetaContent() {
                         <button
                           type="button"
                           onClick={handleClearRoute}
-                          className="text-[11px] font-bold text-slate-500 hover:text-slate-800 px-2 py-0.5 rounded bg-white border border-slate-200 cursor-pointer shadow-2xs hover:bg-slate-50"
+                          className="text-[11px] font-bold text-slate-500 hover:text-slate-800 px-2.5 py-1 rounded-xl bg-white border border-slate-200 cursor-pointer shadow-2xs hover:bg-slate-50 transition-colors"
                         >
                           Tutup Rute
                         </button>
@@ -1623,7 +1624,7 @@ function AdminPetaContent() {
                       </div>
 
                       <p className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5">
-                        <span>🚗</span>
+                        <Car className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                         <span>{activeRoute.summary}</span>
                       </p>
 
