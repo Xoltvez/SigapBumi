@@ -374,6 +374,36 @@ export function SosFab() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isPhotoFullscreen]);
 
+  // Kunci scroll halaman background saat modal SOS atau foto fullscreen terbuka
+  useEffect(() => {
+    const shouldLock = isOpen || isPhotoFullscreen || isTrackingOpen;
+    if (shouldLock) {
+      // Simpan posisi scroll saat ini dan kunci body
+      const scrollY = window.scrollY;
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
+    } else {
+      // Pulihkan scroll position
+      const scrollY = document.body.style.top;
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || "0") * -1);
+      }
+    }
+    return () => {
+      // Pastikan dibersihkan jika komponen unmount
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+    };
+  }, [isOpen, isPhotoFullscreen, isTrackingOpen]);
+
   // Cleanup watch saat unmount
   useEffect(() => {
     return () => {
@@ -857,9 +887,9 @@ export function SosFab() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="sos-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-xs overflow-hidden"
         >
-          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white rounded-3xl p-5 sm:p-6 shadow-2xl text-left relative border border-slate-100 font-sans">
+          <div className="w-full max-w-lg max-h-[88dvh] overflow-y-auto overscroll-contain bg-white rounded-3xl p-5 sm:p-6 shadow-2xl text-left relative border border-slate-100 font-sans">
             {countdown !== null && countdown > 0 ? (
               /* FASE 1: COUNTDOWN 3 DETIK (DELAY DENGAN OPSI BATALKAN) */
               <div className="text-center py-4">
