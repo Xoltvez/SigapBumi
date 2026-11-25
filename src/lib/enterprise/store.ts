@@ -1,7 +1,71 @@
+/**
+ * SigapBumi Enterprise Store (Monitoring, Audit Trail)
+ * -----------------------------------------------------
+ * Persistent backend: Supabase (production / Vercel)
+ *   - Tabel: admin_user_sessions  → monitoring sesi aktif
+ *   - Tabel: audit_logs (existing) → immutable audit trail  
+ *   - Tabel: security_events      → security center
+ * Fallback: os.tmpdir() JSON file (local development)
+ */
+
 import fs from "fs";
 import os from "os";
 import path from "path";
 import type { SystemRole } from "@/lib/rbac";
+
+// ─── Supabase admin client ───────────────────────────────────────────────────
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+function sbHeaders() {
+  return {
+    apikey: SERVICE_KEY,
+    Authorization: `Bearer ${SERVICE_KEY}`,
+    "Content-Type": "application/json",
+    Prefer: "return=minimal",
+  };
+}
+
+const USE_SUPABASE = !!(
+  SUPABASE_URL &&
+  SERVICE_KEY &&
+  SUPABASE_URL !== "https://placeholder-project.supabase.co"
+);
+
+async function sbPost(table: string, body: Record<string, unknown>, onConflict?: string) {
+  if (!USE_SUPABASE) return;
+  try {
+    const url = onConflict
+      ? `${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`
+      : `${SUPABASE_URL}/rest/v1/${table}`;
+    const prefer = onConflict
+      ? "resolution=merge-duplicates,return=minimal"
+      : "return=minimal";
+    await fetch(url, {
+      method: "POST",
+      headers: { ...sbHeaders(), Prefer: prefer },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    // ignore
+  }
+}
+
+async function sbPatch(table: string, filter: string, body: Record<string, unknown>) {
+  if (!USE_SUPABASE) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+      method: "PATCH",
+      headers: sbHeaders(),
+      body: JSON.stringify(body),
+    });
+  } catch {
+    // ignore
+  }
+}
+
+// ─── TypeScript interfaces ───────────────────────────────────────────────────
 
 export type AuditActionType =
   | "LOGIN"
@@ -69,6 +133,8 @@ interface EnterpriseStoreData {
   auditLogs: AuditLogEntry[];
 }
 
+// ─── Local (tmpdir) fallback ─────────────────────────────────────────────────
+
 const ENTERPRISE_STORE_PATH = path.join(os.tmpdir(), "sigapbumi-enterprise.json");
 const MAX_AUDIT_LOGS = 5000;
 const MAX_SESSIONS = 1000;
@@ -76,72 +142,21 @@ const MAX_SESSIONS = 1000;
 function getSeededUsers(): Record<string, ManagedUserAccount> {
   const now = new Date().toISOString();
   const base: ManagedUserAccount[] = [
-    {
-      userId: "198501012010011001",
-      name: "Drs. Tri Wahyudi (Koordinator Operasi)",
-      email: "pemerintahan@sigapbumi.go.id",
-      unit: "pemerintahan",
-      unitName: "Pemerintahan",
-      role: "Super Admin",
-      isActive: true,
-      createdAt: now,
-    },
-    {
-      userId: "198803152012121002",
-      name: "Kapten Hendra Gunawan",
-      email: "bnpb_bpbd@sigapbumi.go.id",
-      unit: "bnpb_bpbd",
-      unitName: "BNPB",
-      role: "Koordinator Wilayah",
-      isActive: true,
-      createdAt: now,
-    },
-    {
-      userId: "199007202014031003",
-      name: "Komandan Raka Pratama",
-      email: "damkar@sigapbumi.go.id",
-      unit: "damkar",
-      unitName: "Dinas Damkar",
-      role: "Operator Posko",
-      isActive: true,
-      createdAt: now,
-    },
-    {
-      userId: "199211052016042004",
-      name: "dr. Nadia Kusuma",
-      email: "medis@sigapbumi.go.id",
-      unit: "medis",
-      unitName: "Medis / Dinkes",
-      role: "Operator Posko",
-      isActive: true,
-      createdAt: now,
-    },
-    {
-      userId: "198904182013081005",
-      name: "AKBP Bima Santoso",
-      email: "polisi@sigapbumi.go.id",
-      unit: "polisi",
-      unitName: "Polri",
-      role: "Operator Posko",
-      isActive: true,
-      createdAt: now,
-    },
+    { userId: "198501012010011001", name: "Drs. Tri Wahyudi (Koordinator Operasi)", email: "pemerintahan@sigapbumi.go.id", unit: "pemerintahan", unitName: "Pemerintahan", role: "Super Admin", isActive: true, createdAt: now },
+    { userId: "198803152012121002", name: "Kapten Hendra Gunawan", email: "bnpb_bpbd@sigapbumi.go.id", unit: "bnpb_bpbd", unitName: "BNPB", role: "Koordinator Wilayah", isActive: true, createdAt: now },
+    { userId: "199007202014031003", name: "Komandan Raka Pratama", email: "damkar@sigapbumi.go.id", unit: "damkar", unitName: "Dinas Damkar", role: "Operator Posko", isActive: true, createdAt: now },
+    { userId: "199211052016042004", name: "dr. Nadia Kusuma", email: "medis@sigapbumi.go.id", unit: "medis", unitName: "Medis / Dinkes", role: "Operator Posko", isActive: true, createdAt: now },
+    { userId: "198904182013081005", name: "AKBP Bima Santoso", email: "polisi@sigapbumi.go.id", unit: "polisi", unitName: "Polri", role: "Operator Posko", isActive: true, createdAt: now },
   ];
   const map: Record<string, ManagedUserAccount> = {};
-  for (const u of base) {
-    map[u.email.toLowerCase()] = u;
-  }
+  for (const u of base) map[u.email.toLowerCase()] = u;
   return map;
 }
 
 export function readEnterpriseStore(): EnterpriseStoreData {
   try {
     if (!fs.existsSync(ENTERPRISE_STORE_PATH)) {
-      const initial: EnterpriseStoreData = {
-        users: getSeededUsers(),
-        sessions: {},
-        auditLogs: [],
-      };
+      const initial: EnterpriseStoreData = { users: getSeededUsers(), sessions: {}, auditLogs: [] };
       fs.writeFileSync(ENTERPRISE_STORE_PATH, JSON.stringify(initial), "utf-8");
       return initial;
     }
@@ -157,30 +172,20 @@ export function readEnterpriseStore(): EnterpriseStoreData {
       auditLogs: Array.isArray(parsed.auditLogs) ? parsed.auditLogs : [],
     };
   } catch {
-    return {
-      users: getSeededUsers(),
-      sessions: {},
-      auditLogs: [],
-    };
+    return { users: getSeededUsers(), sessions: {}, auditLogs: [] };
   }
 }
 
 export function writeEnterpriseStore(data: EnterpriseStoreData): void {
   try {
-    if (data.auditLogs.length > MAX_AUDIT_LOGS) {
-      data.auditLogs = data.auditLogs.slice(-MAX_AUDIT_LOGS);
-    }
+    if (data.auditLogs.length > MAX_AUDIT_LOGS) data.auditLogs = data.auditLogs.slice(-MAX_AUDIT_LOGS);
     const sKeys = Object.keys(data.sessions);
     if (sKeys.length > MAX_SESSIONS) {
       const sorted = sKeys.sort(
-        (a, b) =>
-          new Date(data.sessions[b].lastHeartbeatAt).getTime() -
-          new Date(data.sessions[a].lastHeartbeatAt).getTime()
+        (a, b) => new Date(data.sessions[b].lastHeartbeatAt).getTime() - new Date(data.sessions[a].lastHeartbeatAt).getTime()
       );
       const next: Record<string, UserSessionRecord> = {};
-      for (const k of sorted.slice(0, MAX_SESSIONS)) {
-        next[k] = data.sessions[k];
-      }
+      for (const k of sorted.slice(0, MAX_SESSIONS)) next[k] = data.sessions[k];
       data.sessions = next;
     }
     fs.writeFileSync(ENTERPRISE_STORE_PATH, JSON.stringify(data), "utf-8");
@@ -189,9 +194,8 @@ export function writeEnterpriseStore(data: EnterpriseStoreData): void {
   }
 }
 
-/**
- * Append-only audit log writer (Immutable: tidak ada fungsi edit atau hapus log oleh admin)
- */
+// ─── Audit Log ───────────────────────────────────────────────────────────────
+
 export function appendAuditLog(entry: Omit<AuditLogEntry, "id" | "timestamp" | "archived">): AuditLogEntry {
   const store = readEnterpriseStore();
   const record: AuditLogEntry = {
@@ -202,8 +206,30 @@ export function appendAuditLog(entry: Omit<AuditLogEntry, "id" | "timestamp" | "
   };
   store.auditLogs.push(record);
   writeEnterpriseStore(store);
+
+  // Persist ke Supabase (sesuai skema public.audit_logs: actor_name, action, entity, meta, created_at)
+  void sbPost("audit_logs", {
+    actor_name: entry.userName,
+    action: entry.action,
+    entity: entry.module,
+    meta: {
+      userId: entry.userId,
+      role: entry.role,
+      unit: entry.unit,
+      unitName: entry.unitName,
+      recordId: entry.recordId,
+      ipAddress: entry.ipAddress,
+      deviceMeta: entry.deviceMeta,
+      before: entry.before || null,
+      after: entry.after || null,
+    },
+    created_at: record.timestamp,
+  });
+
   return record;
 }
+
+// ─── User Heartbeat / Session ─────────────────────────────────────────────────
 
 export function upsertUserHeartbeat(params: {
   sessionId: string;
@@ -221,7 +247,6 @@ export function upsertUserHeartbeat(params: {
   const now = new Date().toISOString();
   const emailKey = params.userEmail.toLowerCase();
 
-  // Pastikan user terdaftar di direktori
   if (!store.users[emailKey]) {
     store.users[emailKey] = {
       userId: params.userId,
@@ -239,12 +264,12 @@ export function upsertUserHeartbeat(params: {
     store.users[emailKey].lastActivityAt = now;
   }
 
-  const existingSession = store.sessions[params.sessionId];
-  if (existingSession) {
-    existingSession.lastHeartbeatAt = now;
-    existingSession.currentPath = params.currentPath;
-    existingSession.isActive = true;
-    existingSession.ipAddress = params.ipAddress;
+  const existing = store.sessions[params.sessionId];
+  if (existing) {
+    existing.lastHeartbeatAt = now;
+    existing.currentPath = params.currentPath;
+    existing.isActive = true;
+    existing.ipAddress = params.ipAddress;
   } else {
     store.sessions[params.sessionId] = {
       sessionId: params.sessionId,
@@ -264,7 +289,30 @@ export function upsertUserHeartbeat(params: {
   }
 
   writeEnterpriseStore(store);
+
+  // Persist ke Supabase
+  void sbPost(
+    "admin_user_sessions",
+    {
+      session_id: params.sessionId,
+      user_id: params.userId,
+      user_name: params.userName,
+      user_email: params.userEmail,
+      role: params.role,
+      unit: params.unit,
+      unit_name: params.unitName,
+      ip_address: params.ipAddress,
+      device_meta: params.deviceMeta,
+      current_path: params.currentPath,
+      status: "online",
+      last_active_at: now,
+      login_at: now,
+    },
+    "session_id"
+  );
 }
+
+// ─── Login / Logout ───────────────────────────────────────────────────────────
 
 export function markUserLogin(params: {
   sessionId: string;
@@ -333,6 +381,44 @@ export function markUserLogin(params: {
   });
 
   writeEnterpriseStore(store);
+
+  // Persist ke Supabase
+  void sbPost(
+    "admin_user_sessions",
+    {
+      session_id: params.sessionId,
+      user_id: params.userId,
+      user_name: params.userName,
+      user_email: params.userEmail,
+      role: params.role,
+      unit: params.unit,
+      unit_name: params.unitName,
+      ip_address: params.ipAddress,
+      device_meta: params.deviceMeta,
+      current_path: "/admin",
+      status: "online",
+      login_at: now,
+      last_active_at: now,
+    },
+    "session_id"
+  );
+
+  void sbPost("audit_logs", {
+    actor_name: params.userName,
+    action: "LOGIN",
+    entity: "Auth",
+    meta: {
+      userId: params.userId,
+      role: params.role,
+      unit: params.unit,
+      unitName: params.unitName,
+      recordId: params.sessionId,
+      ipAddress: params.ipAddress,
+      deviceMeta: params.deviceMeta,
+      after: { status: "authenticated", unit: params.unit },
+    },
+    created_at: now,
+  });
 }
 
 export function markUserLogout(params: {
@@ -373,4 +459,28 @@ export function markUserLogout(params: {
   });
 
   writeEnterpriseStore(store);
+
+  // Persist ke Supabase
+  void sbPatch(
+    "admin_user_sessions",
+    `session_id=eq.${encodeURIComponent(params.sessionId)}`,
+    { status: "offline", logout_at: now, last_active_at: now }
+  );
+
+  void sbPost("audit_logs", {
+    actor_name: params.userName,
+    action: "LOGOUT",
+    entity: "Auth",
+    meta: {
+      userId: params.userId,
+      role: params.role,
+      unit: params.unit,
+      unitName: params.unitName,
+      recordId: params.sessionId,
+      ipAddress: params.ipAddress,
+      deviceMeta: params.deviceMeta,
+      after: { reason: params.reason || "manual" },
+    },
+    created_at: now,
+  });
 }

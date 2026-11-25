@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getAnalyticsSummary,
+  getAnalyticsSummaryAsync,
   recordAdminLog,
   recordClick,
   recordHeartbeat,
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const period: "1d" | "7d" | "30d" =
       periodParam === "1d" || periodParam === "30d" ? periodParam : "7d";
 
-    const summary = getAnalyticsSummary(period);
+    const summary = await getAnalyticsSummaryAsync(period);
     return NextResponse.json(summary, {
       headers: {
         "Cache-Control": "no-store, max-age=0",
