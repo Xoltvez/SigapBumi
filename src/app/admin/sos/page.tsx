@@ -820,14 +820,6 @@ export default function AdminSosPage() {
                   </div>
                 </div>
 
-                {/* Location Address */}
-                <div className="flex items-start gap-2 pt-1">
-                  <MapPin className="w-4 h-4 text-slate-700 shrink-0 mt-0.5" />
-                  <p className="font-semibold text-slate-800 text-xs sm:text-sm leading-snug">
-                    {item.address}
-                  </p>
-                </div>
-
                 {/* Geolocation Card */}
                 <div className="bg-[#F8FAFC] rounded-xl border border-slate-100 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
