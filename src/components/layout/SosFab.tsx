@@ -893,9 +893,9 @@ export function SosFab() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="sos-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-xs overflow-hidden"
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/75 p-3 sm:p-4 backdrop-blur-xs overflow-hidden"
         >
-          <div className="w-full max-w-lg max-h-[88dvh] overflow-y-auto overscroll-contain bg-white rounded-3xl p-5 sm:p-6 shadow-2xl text-left relative border border-slate-100 font-sans">
+          <div className="w-full max-w-lg max-h-[calc(100dvh-2rem)] sm:max-h-[88dvh] overflow-y-auto overscroll-contain bg-white rounded-3xl p-5 pb-7 sm:p-6 shadow-2xl text-left relative border border-slate-100 font-sans">
             {countdown !== null && countdown > 0 ? (
               /* FASE 1: COUNTDOWN 3 DETIK (DELAY DENGAN OPSI BATALKAN) */
               <div className="text-center py-4">
@@ -1650,9 +1650,9 @@ export function SosFab() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="tracking-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/75 p-3 sm:p-4 backdrop-blur-xs animate-in fade-in duration-200 overflow-hidden"
         >
-          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white rounded-3xl p-5 sm:p-6 shadow-2xl text-left relative border border-slate-100 font-sans">
+          <div className="w-full max-w-lg max-h-[calc(100dvh-2rem)] sm:max-h-[88dvh] overflow-y-auto overscroll-contain bg-white rounded-3xl p-5 pb-7 sm:p-6 shadow-2xl text-left relative border border-slate-100 font-sans">
             {/* Header Pelacakan */}
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
               <div>
