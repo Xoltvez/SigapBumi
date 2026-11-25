@@ -958,16 +958,16 @@ function AdminPetaContent() {
                 <div className="space-y-2 pt-0.5">
                   {/* Widget Rute Navigasi Aktif dengan Estimasi Waktu */}
                   {activeRoute ? (
-                    <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50/90 rounded-xl border border-blue-200/90 shadow-2xs space-y-2 animate-in fade-in duration-200">
+                    <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs space-y-2 animate-in fade-in duration-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-extrabold text-blue-800 flex items-center gap-1.5">
+                        <span className="text-[11px] font-extrabold text-slate-800 flex items-center gap-1.5">
                           <Route className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
                           <span>Navigasi Langsung di Peta</span>
                         </span>
                         <button
                           type="button"
                           onClick={handleClearRoute}
-                          className="text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2 py-0.5 rounded bg-white/90 border border-slate-200 cursor-pointer shadow-2xs"
+                          className="text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2 py-0.5 rounded bg-white border border-slate-200 cursor-pointer shadow-2xs hover:bg-slate-50"
                         >
                           Tutup Rute
                         </button>
@@ -975,14 +975,14 @@ function AdminPetaContent() {
 
                       {/* Baris Metrik Jarak & Estimasi Waktu */}
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-white/95 p-2 rounded-lg border border-blue-100 shadow-2xs">
-                          <span className="text-[9px] text-slate-400 font-medium block">Jarak Tempuh</span>
-                          <span className="text-sm font-extrabold text-blue-900 block mt-0.5 leading-none">
+                        <div className="bg-slate-50/80 p-2 rounded-lg border border-slate-200 shadow-2xs">
+                          <span className="text-[9px] text-slate-500 font-medium block">Jarak Tempuh</span>
+                          <span className="text-sm font-extrabold text-slate-900 block mt-0.5 leading-none">
                             {activeRoute.distanceFormatted}
                           </span>
                         </div>
-                        <div className="bg-white/95 p-2 rounded-lg border border-blue-100 shadow-2xs">
-                          <span className="text-[9px] text-slate-400 font-medium block">Estimasi Tiba</span>
+                        <div className="bg-slate-50/80 p-2 rounded-lg border border-slate-200 shadow-2xs">
+                          <span className="text-[9px] text-slate-500 font-medium block">Estimasi Tiba</span>
                           <span className="text-sm font-extrabold text-emerald-600 block mt-0.5 leading-none">
                             {activeRoute.durationFormatted}
                           </span>
@@ -1558,16 +1558,16 @@ function AdminPetaContent() {
                 <div className="space-y-2 pt-1">
                   {/* Widget Rute Navigasi Aktif dengan Estimasi Waktu */}
                   {activeRoute ? (
-                    <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50/90 rounded-xl border border-blue-200/90 shadow-2xs space-y-2.5 animate-in fade-in duration-200">
+                    <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs space-y-2.5 animate-in fade-in duration-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-extrabold text-blue-800 flex items-center gap-1.5">
+                        <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
                           <Route className="w-4 h-4 text-blue-600 animate-pulse" />
                           <span>Navigasi Taktis di Peta</span>
                         </span>
                         <button
                           type="button"
                           onClick={handleClearRoute}
-                          className="text-[11px] font-bold text-slate-500 hover:text-slate-800 px-2 py-0.5 rounded bg-white/90 border border-slate-200 cursor-pointer shadow-2xs"
+                          className="text-[11px] font-bold text-slate-500 hover:text-slate-800 px-2 py-0.5 rounded bg-white border border-slate-200 cursor-pointer shadow-2xs hover:bg-slate-50"
                         >
                           Tutup Rute
                         </button>
@@ -1575,21 +1575,21 @@ function AdminPetaContent() {
 
                       {/* Baris Metrik Jarak & Estimasi Waktu */}
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-white/95 p-2.5 rounded-lg border border-blue-100 shadow-2xs">
-                          <span className="text-[10px] text-slate-400 font-medium block">Jarak Tempuh</span>
-                          <span className="text-base font-extrabold text-blue-900 block mt-0.5 leading-none">
+                        <div className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                          <span className="text-[10px] text-slate-500 font-medium block">Jarak Tempuh</span>
+                          <span className="text-base font-extrabold text-slate-900 block mt-0.5 leading-none">
                             {activeRoute.distanceFormatted}
                           </span>
                         </div>
-                        <div className="bg-white/95 p-2.5 rounded-lg border border-blue-100 shadow-2xs">
-                          <span className="text-[10px] text-slate-400 font-medium block">Estimasi Waktu</span>
+                        <div className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                          <span className="text-[10px] text-slate-500 font-medium block">Estimasi Waktu</span>
                           <span className="text-base font-extrabold text-emerald-600 block mt-0.5 leading-none">
                             {activeRoute.durationFormatted}
                           </span>
                         </div>
                       </div>
 
-                      <p className="text-[11px] text-blue-800 font-medium flex items-center gap-1.5">
+                      <p className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5">
                         <span>🚗</span>
                         <span>{activeRoute.summary}</span>
                       </p>
