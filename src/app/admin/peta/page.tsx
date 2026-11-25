@@ -1184,7 +1184,7 @@ function AdminPetaContent() {
             {/* FLOATING LAYER ATAS: MINI KPI & FILTER TAKTIS (BERSIH)        */}
             {/* ============================================================== */}
             {!isLiveNavigating && (
-              <div className="absolute top-3.5 left-3.5 z-20 max-w-[calc(100%-1.75rem)] pointer-events-none flex flex-col gap-2.5 animate-in fade-in duration-300">
+              <div className="absolute top-3.5 left-3.5 z-20 max-w-[calc(100%-1.75rem)] pointer-events-none flex flex-col items-start gap-2.5 animate-in fade-in duration-300">
                 {/* 1. Bar Mini KPI & Tombol Segarkan */}
                 <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
                   <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center gap-1.5">
@@ -1232,8 +1232,8 @@ function AdminPetaContent() {
                   </div>
                 </div>
 
-                {/* 2. Filter Bar Floating Layer (Ringkas & Dapat Dibuka dengan Tanda Panah) */}
-                <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center gap-1.5 pointer-events-auto flex-wrap transition-all">
+                {/* 2. Filter Bar Floating Layer (Ringkas & Menyesuaikan Lebar Konten) */}
+                <div className="w-fit max-w-full bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.08)] inline-flex items-center gap-1.5 pointer-events-auto transition-all duration-200">
                   {/* Search Input Box */}
                   <div className="relative w-44 sm:w-52 shrink-0">
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
