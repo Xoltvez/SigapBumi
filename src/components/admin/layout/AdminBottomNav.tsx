@@ -94,7 +94,7 @@ export function AdminBottomNav() {
       : []),
   ];
 
-  // Menu tambahan khusus Pemerintahan (Rekap, Analitik Web, dan 3 menu enterprise)
+  // Menu tambahan khusus Pemerintahan
   const extraItems = isPemerintahan
     ? [
         {
@@ -110,22 +110,10 @@ export function AdminBottomNav() {
           allowed: hasPermission("view_analytics", adminUser?.unit, adminUser?.role),
         },
         {
-          href: "/admin/monitoring",
-          label: "Monitoring Pengguna",
-          icon: Users,
-          allowed: hasPermission("view_user_monitoring", adminUser?.unit, adminUser?.role),
-        },
-        {
-          href: "/admin/audit-logs",
-          label: "Audit Trail",
-          icon: ClipboardList,
-          allowed: hasPermission("view_audit_logs", adminUser?.unit, adminUser?.role),
-        },
-        {
-          href: "/admin/security",
-          label: "Security Center",
-          icon: ShieldAlert,
-          allowed: hasPermission("view_security_center", adminUser?.unit, adminUser?.role),
+          href: "/admin/lainnya",
+          label: "Menu Lainnya",
+          icon: MoreHorizontal,
+          allowed: true,
         },
       ].filter((item) => item.allowed)
     : [];

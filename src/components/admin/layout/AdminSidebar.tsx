@@ -11,15 +11,11 @@ import {
   MapPin,
   BarChart2,
   Activity,
-  Users,
-  ClipboardList,
-  ShieldAlert,
   Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
-  ChevronDown,
   MoreHorizontal,
   User,
   X,
@@ -62,30 +58,6 @@ export function AdminSidebar({
   const effectiveSosCount = activeSosCount !== undefined ? activeSosCount : (contextSosCount || 0);
   const isPemerintahan = isPemerintahanUnit(adminUser?.unit);
 
-  const moreMenuItems: {
-    href: string;
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    permission: Permission;
-  }[] = [
-    { href: "/admin/monitoring", label: "Monitoring Pengguna", icon: Users, permission: "view_user_monitoring" },
-    { href: "/admin/audit-logs", label: "Audit Trail", icon: ClipboardList, permission: "view_audit_logs" },
-    { href: "/admin/security", label: "Security Center", icon: ShieldAlert, permission: "view_security_center" },
-  ];
-
-  const visibleMoreItems = isPemerintahan
-    ? moreMenuItems.filter((item) => hasPermission(item.permission, adminUser?.unit, adminUser?.role))
-    : [];
-
-  const isMoreRouteActive = visibleMoreItems.some((item) => pathname.startsWith(item.href));
-  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState<boolean>(isMoreRouteActive);
-
-  useEffect(() => {
-    if (isMoreRouteActive) {
-      setIsMoreMenuOpen(true);
-    }
-  }, [isMoreRouteActive]);
-
   const navItems: {
     href: string;
     label: string;
@@ -110,6 +82,12 @@ export function AdminSidebar({
       icon: Activity,
       pemerintahanOnly: true,
       permission: "view_analytics",
+    },
+    {
+      href: "/admin/lainnya",
+      label: "Menu Lainnya",
+      icon: MoreHorizontal,
+      pemerintahanOnly: true,
     },
   ];
 
@@ -269,88 +247,6 @@ export function AdminSidebar({
               </Link>
             );
           })}
-
-          {/* Menu Lainnya (Khusus User Pemerintahan: Monitoring Pengguna, Audit Trail, Security Center) */}
-          {isPemerintahan && visibleMoreItems.length > 0 && (
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => setIsMoreMenuOpen((prev) => !prev)}
-                title={isCollapsed ? "Menu Lainnya" : undefined}
-                className={`w-full group flex items-center rounded-xl text-[13px] transition-all relative border cursor-pointer ${
-                  isMoreRouteActive
-                    ? "border-orange-200 bg-orange-50/80 text-[#F97316] font-semibold"
-                    : "border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
-                } ${
-                  isCollapsed
-                    ? "md:justify-center md:h-11 md:w-11 md:mx-auto md:p-0"
-                    : "gap-3.5 px-4 py-3"
-                }`}
-              >
-                <MoreHorizontal
-                  className={`w-[18px] h-[18px] shrink-0 transition-colors ${
-                    isMoreRouteActive
-                      ? "text-[#F97316]"
-                      : "text-slate-400 group-hover:text-slate-600"
-                  }`}
-                />
-
-                {(!isCollapsed || isMobileOpen) && (
-                  <>
-                    <span className="flex-1 truncate text-left">Menu Lainnya</span>
-                    <ChevronDown
-                      className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
-                        isMoreMenuOpen ? "rotate-180" : ""
-                      } ${isMoreRouteActive ? "text-[#F97316]" : "text-slate-400"}`}
-                    />
-                  </>
-                )}
-              </button>
-
-              {isMoreMenuOpen && (
-                <div
-                  className={`mt-1 space-y-1 ${
-                    isCollapsed && !isMobileOpen
-                      ? "flex flex-col items-center"
-                      : "pl-3 ml-3 border-l border-slate-200/80"
-                  }`}
-                >
-                  {visibleMoreItems.map((sub) => {
-                    const SubIcon = sub.icon;
-                    const isSubActive = pathname.startsWith(sub.href);
-                    return (
-                      <Link
-                        key={sub.href}
-                        href={sub.href}
-                        onClick={onCloseMobile}
-                        title={isCollapsed ? sub.label : undefined}
-                        className={`group flex items-center rounded-xl text-[12.5px] transition-all border ${
-                          isSubActive
-                            ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
-                            : "border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
-                        } ${
-                          isCollapsed && !isMobileOpen
-                            ? "md:justify-center md:h-10 md:w-10 md:p-0"
-                            : "gap-3 px-3.5 py-2.5"
-                        }`}
-                      >
-                        <SubIcon
-                          className={`w-4 h-4 shrink-0 transition-colors ${
-                            isSubActive
-                              ? "text-white"
-                              : "text-slate-400 group-hover:text-slate-600"
-                          }`}
-                        />
-                        {(!isCollapsed || isMobileOpen) && (
-                          <span className="flex-1 truncate">{sub.label}</span>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
         </nav>
 
         {/* Mobile Drawer Body: Menu Tambahan (Khusus Pemerintahan), Pengaturan & Profil */}
@@ -378,55 +274,23 @@ export function AdminSidebar({
               </Link>
             )}
 
-            {isPemerintahan && visibleMoreItems.length > 0 && (
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-1.5 space-y-1">
-                <button
-                  type="button"
-                  onClick={() => setIsMoreMenuOpen((prev) => !prev)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-colors ${
-                    isMoreRouteActive
-                      ? "text-[#F97316] bg-orange-50"
-                      : "text-slate-700 hover:bg-slate-100"
+            {isPemerintahan && (
+              <Link
+                href="/admin/lainnya"
+                onClick={onCloseMobile}
+                className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[13px] transition-colors border ${
+                  pathname.startsWith("/admin/lainnya")
+                    ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
+                    : "border-slate-100 bg-slate-50 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-medium"
+                }`}
+              >
+                <MoreHorizontal
+                  className={`w-5 h-5 shrink-0 ${
+                    pathname.startsWith("/admin/lainnya") ? "text-white" : "text-slate-500"
                   }`}
-                >
-                  <span className="flex items-center gap-3">
-                    <MoreHorizontal className="w-5 h-5 shrink-0" />
-                    <span>Menu Lainnya</span>
-                  </span>
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform duration-200 ${
-                      isMoreMenuOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-                {isMoreMenuOpen && (
-                  <div className="space-y-1 pl-2">
-                    {visibleMoreItems.map((sub) => {
-                      const SubIcon = sub.icon;
-                      const isSubActive = pathname.startsWith(sub.href);
-                      return (
-                        <Link
-                          key={sub.href}
-                          href={sub.href}
-                          onClick={onCloseMobile}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors border ${
-                            isSubActive
-                              ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
-                              : "border-transparent text-slate-700 hover:text-slate-900 hover:bg-white font-medium"
-                          }`}
-                        >
-                          <SubIcon
-                            className={`w-4 h-4 shrink-0 ${
-                              isSubActive ? "text-white" : "text-slate-500"
-                            }`}
-                          />
-                          <span className="font-semibold text-sm">{sub.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                />
+                <span className="font-semibold text-sm">Menu Lainnya</span>
+              </Link>
             )}
             <Link
               href="/admin/pengaturan"
