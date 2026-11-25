@@ -1541,7 +1541,7 @@ export function SosFab() {
                     ) : aiResult?.status === "ditolak" ? (
                       <>
                         <AlertCircle className="w-4 h-4 text-slate-400" />
-                        <span>FOTO DITOLAK: AMBIL ULANG FOTO BENCANA</span>
+                        <span>FOTO DITOLAK</span>
                       </>
                     ) : (
                       <>
