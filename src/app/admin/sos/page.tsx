@@ -546,19 +546,11 @@ export default function AdminSosPage() {
                   <AlertCircle className="w-6 h-6 stroke-[2.5]" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-2xl font-extrabold text-rose-600 tracking-tight leading-none">
-                      {countAktif}
-                    </p>
-                    {countAktif > 0 && (
-                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                    )}
-                  </div>
+                  <p className="text-2xl font-extrabold text-rose-600 tracking-tight leading-none">
+                    {countAktif}
+                  </p>
                   <p className="text-xs text-slate-600 font-bold mt-1">
                     Belum Diproses
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    Perlu respons cepat
                   </p>
                 </div>
               </div>
@@ -585,9 +577,6 @@ export default function AdminSosPage() {
                   <p className="text-xs text-slate-600 font-bold mt-1">
                     Sedang Ditangani
                   </p>
-                  <p className="text-[10px] text-slate-400">
-                    Regu di lokasi kejadian
-                  </p>
                 </div>
               </div>
               <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${statusFilter === "ditangani" ? "text-amber-500 translate-x-0.5" : "text-slate-400"}`} />
@@ -613,9 +602,6 @@ export default function AdminSosPage() {
                   <p className="text-xs text-slate-600 font-bold mt-1">
                     Selesai Ditangani
                   </p>
-                  <p className="text-[10px] text-slate-400">
-                    Insiden tuntas diatasi
-                  </p>
                 </div>
               </div>
               <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${statusFilter === "selesai" ? "text-emerald-500 translate-x-0.5" : "text-slate-400"}`} />
@@ -640,9 +626,6 @@ export default function AdminSosPage() {
                   </p>
                   <p className="text-xs text-slate-600 font-bold mt-1">
                     Total Panggilan SOS
-                  </p>
-                  <p className="text-[10px] text-blue-600 font-medium">
-                    {activeUnitName}
                   </p>
                 </div>
               </div>
