@@ -17,13 +17,15 @@ import {
   X,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
-import { hasPermission } from "@/lib/rbac";
+import { hasPermission, isPemerintahanUnit } from "@/lib/rbac";
 
 export function AdminBottomNav() {
   const pathname = usePathname();
   const { activeSosCount, adminUser } = useAdmin();
   const [isNavigatingMap, setIsNavigatingMap] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+
+  const isPemerintahan = isPemerintahanUnit(adminUser?.unit);
 
   // Jangan tampilkan di halaman login admin
   const isLoginPage = pathname === "/admin/login";
@@ -80,47 +82,59 @@ export function AdminBottomNav() {
       icon: MapPin,
       isActive: pathname.startsWith("/admin/peta"),
     },
+    ...(!isPemerintahan
+      ? [
+          {
+            href: "/admin/statistik",
+            label: "Rekap",
+            icon: BarChart2,
+            isActive: pathname.startsWith("/admin/statistik"),
+          },
+        ]
+      : []),
   ];
 
-  // Menu tambahan (termasuk modul Enterprise RBAC)
-  const extraItems = [
-    {
-      href: "/admin/statistik",
-      label: "Rekap & Statistik",
-      icon: BarChart2,
-      allowed: true,
-    },
-    {
-      href: "/admin/analitik",
-      label: "Analitik Web",
-      icon: Activity,
-      allowed: hasPermission("view_analytics", adminUser?.unit, adminUser?.role),
-    },
-    {
-      href: "/admin/monitoring",
-      label: "Monitoring Pengguna",
-      icon: Users,
-      allowed: hasPermission("view_user_monitoring", adminUser?.unit, adminUser?.role),
-    },
-    {
-      href: "/admin/audit-logs",
-      label: "Audit Trail",
-      icon: ClipboardList,
-      allowed: hasPermission("view_audit_logs", adminUser?.unit, adminUser?.role),
-    },
-    {
-      href: "/admin/security",
-      label: "Security Center",
-      icon: ShieldAlert,
-      allowed: hasPermission("view_security_center", adminUser?.unit, adminUser?.role),
-    },
-  ].filter((item) => item.allowed);
+  // Menu tambahan khusus Pemerintahan (Rekap, Analitik Web, dan 3 menu enterprise)
+  const extraItems = isPemerintahan
+    ? [
+        {
+          href: "/admin/statistik",
+          label: "Rekap & Statistik",
+          icon: BarChart2,
+          allowed: true,
+        },
+        {
+          href: "/admin/analitik",
+          label: "Analitik Web",
+          icon: Activity,
+          allowed: hasPermission("view_analytics", adminUser?.unit, adminUser?.role),
+        },
+        {
+          href: "/admin/monitoring",
+          label: "Monitoring Pengguna",
+          icon: Users,
+          allowed: hasPermission("view_user_monitoring", adminUser?.unit, adminUser?.role),
+        },
+        {
+          href: "/admin/audit-logs",
+          label: "Audit Trail",
+          icon: ClipboardList,
+          allowed: hasPermission("view_audit_logs", adminUser?.unit, adminUser?.role),
+        },
+        {
+          href: "/admin/security",
+          label: "Security Center",
+          icon: ShieldAlert,
+          allowed: hasPermission("view_security_center", adminUser?.unit, adminUser?.role),
+        },
+      ].filter((item) => item.allowed)
+    : [];
 
-  const isExtraActive = extraItems.some((item) => pathname.startsWith(item.href));
+  const isExtraActive = isPemerintahan && extraItems.some((item) => pathname.startsWith(item.href));
 
   return (
     <>
-      {isMoreOpen && (
+      {isPemerintahan && isMoreOpen && (
         <div className="md:hidden fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-[1px]" onClick={() => setIsMoreOpen(false)}>
           <div
             onClick={(e) => e.stopPropagation()}
@@ -204,29 +218,31 @@ export function AdminBottomNav() {
             );
           })}
 
-          <button
-            type="button"
-            onClick={() => setIsMoreOpen((v) => !v)}
-            className={`flex flex-col items-center justify-center flex-1 h-full text-[10px] transition-all relative py-1 cursor-pointer ${
-              isExtraActive || isMoreOpen
-                ? "text-[#F97316] font-bold"
-                : "text-slate-400 hover:text-slate-700 font-medium"
-            }`}
-          >
-            <div className="relative flex items-center justify-center">
-              <MoreHorizontal
-                className={`w-5 h-5 transition-transform ${
-                  isExtraActive || isMoreOpen ? "scale-105 stroke-[2.4]" : "stroke-[1.8]"
-                }`}
-              />
-            </div>
-            <span className="mt-1 leading-none tracking-tight text-center">Lainnya</span>
-            {isExtraActive ? (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#F97316] mt-1 shadow-xs" />
-            ) : (
-              <span className="w-1.5 h-1.5 mt-1 opacity-0 pointer-events-none" />
-            )}
-          </button>
+          {isPemerintahan && (
+            <button
+              type="button"
+              onClick={() => setIsMoreOpen((v) => !v)}
+              className={`flex flex-col items-center justify-center flex-1 h-full text-[10px] transition-all relative py-1 cursor-pointer ${
+                isExtraActive || isMoreOpen
+                  ? "text-[#F97316] font-bold"
+                  : "text-slate-400 hover:text-slate-700 font-medium"
+              }`}
+            >
+              <div className="relative flex items-center justify-center">
+                <MoreHorizontal
+                  className={`w-5 h-5 transition-transform ${
+                    isExtraActive || isMoreOpen ? "scale-105 stroke-[2.4]" : "stroke-[1.8]"
+                  }`}
+                />
+              </div>
+              <span className="mt-1 leading-none tracking-tight text-center">Lainnya</span>
+              {isExtraActive ? (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F97316] mt-1 shadow-xs" />
+              ) : (
+                <span className="w-1.5 h-1.5 mt-1 opacity-0 pointer-events-none" />
+              )}
+            </button>
+          )}
         </div>
       </nav>
     </>

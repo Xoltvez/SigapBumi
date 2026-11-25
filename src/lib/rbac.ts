@@ -40,21 +40,20 @@ const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     "manage_users",
     "manage_roles",
   ],
-  "Koordinator Wilayah": [
-    "view_analytics",
-    "view_user_monitoring",
-    "view_audit_logs",
-    "view_security_center",
-  ],
+  "Koordinator Wilayah": [],
   "Auditor Keamanan": [
-    "view_analytics",
     "view_user_monitoring",
     "view_audit_logs",
     "export_audit_logs",
     "view_security_center",
   ],
-  "Operator Posko": ["view_analytics"],
+  "Operator Posko": [],
 };
+
+export function isPemerintahanUnit(unit?: string): boolean {
+  const normalized = (unit || "").toLowerCase();
+  return normalized === "pemerintahan" || normalized === "semua";
+}
 
 export function resolveSystemRole(unit?: string, explicitRole?: string): SystemRole {
   if (

@@ -19,13 +19,15 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  ChevronDown,
+  MoreHorizontal,
   User,
   X,
   Trash2,
 } from "lucide-react";
 import { useAdmin } from "@/components/layout/AdminShell";
 import { clearAllLocalReportsAndCaches } from "@/lib/services/reports";
-import { hasPermission, type Permission } from "@/lib/rbac";
+import { hasPermission, isPemerintahanUnit, type Permission } from "@/lib/rbac";
 
 interface AdminSidebarProps {
   isCollapsed: boolean;
@@ -58,12 +60,38 @@ export function AdminSidebar({
   }, []);
 
   const effectiveSosCount = activeSosCount !== undefined ? activeSosCount : (contextSosCount || 0);
+  const isPemerintahan = isPemerintahanUnit(adminUser?.unit);
+
+  const moreMenuItems: {
+    href: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    permission: Permission;
+  }[] = [
+    { href: "/admin/monitoring", label: "Monitoring Pengguna", icon: Users, permission: "view_user_monitoring" },
+    { href: "/admin/audit-logs", label: "Audit Trail", icon: ClipboardList, permission: "view_audit_logs" },
+    { href: "/admin/security", label: "Security Center", icon: ShieldAlert, permission: "view_security_center" },
+  ];
+
+  const visibleMoreItems = isPemerintahan
+    ? moreMenuItems.filter((item) => hasPermission(item.permission, adminUser?.unit, adminUser?.role))
+    : [];
+
+  const isMoreRouteActive = visibleMoreItems.some((item) => pathname.startsWith(item.href));
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState<boolean>(isMoreRouteActive);
+
+  useEffect(() => {
+    if (isMoreRouteActive) {
+      setIsMoreMenuOpen(true);
+    }
+  }, [isMoreRouteActive]);
 
   const navItems: {
     href: string;
     label: string;
     icon: React.ComponentType<{ className?: string }>;
     badge?: string;
+    pemerintahanOnly?: boolean;
     permission?: Permission;
   }[] = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -76,15 +104,20 @@ export function AdminSidebar({
     },
     { href: "/admin/peta", label: "Peta Operasional", icon: MapPin },
     { href: "/admin/statistik", label: "Rekap & Statistik", icon: BarChart2 },
-    { href: "/admin/analitik", label: "Analitik Web", icon: Activity, permission: "view_analytics" },
-    { href: "/admin/monitoring", label: "Monitoring Pengguna", icon: Users, permission: "view_user_monitoring" },
-    { href: "/admin/audit-logs", label: "Audit Trail", icon: ClipboardList, permission: "view_audit_logs" },
-    { href: "/admin/security", label: "Security Center", icon: ShieldAlert, permission: "view_security_center" },
+    {
+      href: "/admin/analitik",
+      label: "Analitik Web",
+      icon: Activity,
+      pemerintahanOnly: true,
+      permission: "view_analytics",
+    },
   ];
 
-  const visibleNavItems = navItems.filter(
-    (item) => !item.permission || hasPermission(item.permission, adminUser?.unit, adminUser?.role)
-  );
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.pemerintahanOnly && !isPemerintahan) return false;
+    if (item.permission && !hasPermission(item.permission, adminUser?.unit, adminUser?.role)) return false;
+    return true;
+  });
 
   return (
     <>
@@ -236,83 +269,164 @@ export function AdminSidebar({
               </Link>
             );
           })}
+
+          {/* Menu Lainnya (Khusus User Pemerintahan: Monitoring Pengguna, Audit Trail, Security Center) */}
+          {isPemerintahan && visibleMoreItems.length > 0 && (
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setIsMoreMenuOpen((prev) => !prev)}
+                title={isCollapsed ? "Menu Lainnya" : undefined}
+                className={`w-full group flex items-center rounded-xl text-[13px] transition-all relative border cursor-pointer ${
+                  isMoreRouteActive
+                    ? "border-orange-200 bg-orange-50/80 text-[#F97316] font-semibold"
+                    : "border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
+                } ${
+                  isCollapsed
+                    ? "md:justify-center md:h-11 md:w-11 md:mx-auto md:p-0"
+                    : "gap-3.5 px-4 py-3"
+                }`}
+              >
+                <MoreHorizontal
+                  className={`w-[18px] h-[18px] shrink-0 transition-colors ${
+                    isMoreRouteActive
+                      ? "text-[#F97316]"
+                      : "text-slate-400 group-hover:text-slate-600"
+                  }`}
+                />
+
+                {(!isCollapsed || isMobileOpen) && (
+                  <>
+                    <span className="flex-1 truncate text-left">Menu Lainnya</span>
+                    <ChevronDown
+                      className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
+                        isMoreMenuOpen ? "rotate-180" : ""
+                      } ${isMoreRouteActive ? "text-[#F97316]" : "text-slate-400"}`}
+                    />
+                  </>
+                )}
+              </button>
+
+              {isMoreMenuOpen && (
+                <div
+                  className={`mt-1 space-y-1 ${
+                    isCollapsed && !isMobileOpen
+                      ? "flex flex-col items-center"
+                      : "pl-3 ml-3 border-l border-slate-200/80"
+                  }`}
+                >
+                  {visibleMoreItems.map((sub) => {
+                    const SubIcon = sub.icon;
+                    const isSubActive = pathname.startsWith(sub.href);
+                    return (
+                      <Link
+                        key={sub.href}
+                        href={sub.href}
+                        onClick={onCloseMobile}
+                        title={isCollapsed ? sub.label : undefined}
+                        className={`group flex items-center rounded-xl text-[12.5px] transition-all border ${
+                          isSubActive
+                            ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
+                            : "border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium"
+                        } ${
+                          isCollapsed && !isMobileOpen
+                            ? "md:justify-center md:h-10 md:w-10 md:p-0"
+                            : "gap-3 px-3.5 py-2.5"
+                        }`}
+                      >
+                        <SubIcon
+                          className={`w-4 h-4 shrink-0 transition-colors ${
+                            isSubActive
+                              ? "text-white"
+                              : "text-slate-400 group-hover:text-slate-600"
+                          }`}
+                        />
+                        {(!isCollapsed || isMobileOpen) && (
+                          <span className="flex-1 truncate">{sub.label}</span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </nav>
 
-        {/* Mobile Drawer Body: Menu Analitik, Pengaturan & Profil */}
+        {/* Mobile Drawer Body: Menu Tambahan (Khusus Pemerintahan), Pengaturan & Profil */}
         <div className="md:hidden flex-1 py-5 px-4 flex flex-col justify-between overflow-y-auto pb-10">
           <div className="space-y-2">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
-              Menu Tambahan & Pengaturan
+              {isPemerintahan ? "Menu Tambahan & Pengaturan" : "Pengaturan Posko"}
             </span>
-            <Link
-              href="/admin/analitik"
-              onClick={onCloseMobile}
-              className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[13px] transition-colors border ${
-                pathname.startsWith("/admin/analitik")
-                  ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
-                  : "border-slate-100 bg-slate-50 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-medium"
-              }`}
-            >
-              <Activity
-                className={`w-5 h-5 shrink-0 ${
-                  pathname.startsWith("/admin/analitik") ? "text-white" : "text-slate-500"
-                }`}
-              />
-              <span className="font-semibold text-sm">Analitik Web</span>
-            </Link>
-            {hasPermission("view_user_monitoring", adminUser?.unit, adminUser?.role) && (
+            {isPemerintahan && hasPermission("view_analytics", adminUser?.unit, adminUser?.role) && (
               <Link
-                href="/admin/monitoring"
+                href="/admin/analitik"
                 onClick={onCloseMobile}
                 className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[13px] transition-colors border ${
-                  pathname.startsWith("/admin/monitoring")
+                  pathname.startsWith("/admin/analitik")
                     ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
                     : "border-slate-100 bg-slate-50 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-medium"
                 }`}
               >
-                <Users
+                <Activity
                   className={`w-5 h-5 shrink-0 ${
-                    pathname.startsWith("/admin/monitoring") ? "text-white" : "text-slate-500"
+                    pathname.startsWith("/admin/analitik") ? "text-white" : "text-slate-500"
                   }`}
                 />
-                <span className="font-semibold text-sm">Monitoring Pengguna</span>
+                <span className="font-semibold text-sm">Analitik Web</span>
               </Link>
             )}
-            {hasPermission("view_audit_logs", adminUser?.unit, adminUser?.role) && (
-              <Link
-                href="/admin/audit-logs"
-                onClick={onCloseMobile}
-                className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[13px] transition-colors border ${
-                  pathname.startsWith("/admin/audit-logs")
-                    ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
-                    : "border-slate-100 bg-slate-50 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-medium"
-                }`}
-              >
-                <ClipboardList
-                  className={`w-5 h-5 shrink-0 ${
-                    pathname.startsWith("/admin/audit-logs") ? "text-white" : "text-slate-500"
+
+            {isPemerintahan && visibleMoreItems.length > 0 && (
+              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-1.5 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setIsMoreMenuOpen((prev) => !prev)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-colors ${
+                    isMoreRouteActive
+                      ? "text-[#F97316] bg-orange-50"
+                      : "text-slate-700 hover:bg-slate-100"
                   }`}
-                />
-                <span className="font-semibold text-sm">Audit Trail</span>
-              </Link>
-            )}
-            {hasPermission("view_security_center", adminUser?.unit, adminUser?.role) && (
-              <Link
-                href="/admin/security"
-                onClick={onCloseMobile}
-                className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[13px] transition-colors border ${
-                  pathname.startsWith("/admin/security")
-                    ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
-                    : "border-slate-100 bg-slate-50 text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-medium"
-                }`}
-              >
-                <ShieldAlert
-                  className={`w-5 h-5 shrink-0 ${
-                    pathname.startsWith("/admin/security") ? "text-white" : "text-slate-500"
-                  }`}
-                />
-                <span className="font-semibold text-sm">Security Center</span>
-              </Link>
+                >
+                  <span className="flex items-center gap-3">
+                    <MoreHorizontal className="w-5 h-5 shrink-0" />
+                    <span>Menu Lainnya</span>
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      isMoreMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {isMoreMenuOpen && (
+                  <div className="space-y-1 pl-2">
+                    {visibleMoreItems.map((sub) => {
+                      const SubIcon = sub.icon;
+                      const isSubActive = pathname.startsWith(sub.href);
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          onClick={onCloseMobile}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors border ${
+                            isSubActive
+                              ? "bg-[#F97316] text-white font-semibold shadow-sm border-[#F97316]"
+                              : "border-transparent text-slate-700 hover:text-slate-900 hover:bg-white font-medium"
+                          }`}
+                        >
+                          <SubIcon
+                            className={`w-4 h-4 shrink-0 ${
+                              isSubActive ? "text-white" : "text-slate-500"
+                            }`}
+                          />
+                          <span className="font-semibold text-sm">{sub.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
             <Link
               href="/admin/pengaturan"
