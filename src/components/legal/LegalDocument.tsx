@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { ChevronLeft, CalendarDays, type LucideIcon } from "lucide-react";
+import { ScrollReveal } from "@/components/common/ScrollReveal";
 
 export interface LegalSection {
   id: string;
@@ -26,17 +27,19 @@ export function LegalDocument({
   related,
 }: LegalDocumentProps) {
   return (
+    <ScrollReveal>
     <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 pb-28 md:pb-12 space-y-8">
       {/* Breadcrumb & Header */}
       <div>
         <Link
           href="/"
+          data-reveal="intro"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-soft hover:text-ink mb-3 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
           <span>Kembali ke Beranda</span>
         </Link>
-        <div className="flex items-start gap-3">
+        <div data-reveal="intro" className="flex items-start gap-3">
           <div className="w-11 h-11 rounded-md bg-primary-soft text-primary flex items-center justify-center shrink-0">
             <Icon className="w-5 h-5" />
           </div>
@@ -48,14 +51,14 @@ export function LegalDocument({
             </p>
           </div>
         </div>
-        <p className="text-sm text-ink-soft mt-4 leading-relaxed max-w-3xl">
+        <p data-reveal="intro" className="text-sm text-ink-soft mt-4 leading-relaxed max-w-3xl">
           {intro}
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         {/* Daftar Isi */}
-        <aside className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24 bg-surface border border-line rounded-lg p-5 shadow-card">
+        <aside data-reveal="intro" className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24 bg-surface border border-line rounded-lg p-5 shadow-card">
           <p className="text-xs font-bold uppercase tracking-wider text-ink-muted mb-3">
             Daftar Isi
           </p>
@@ -85,11 +88,12 @@ export function LegalDocument({
         </aside>
 
         {/* Isi Dokumen */}
-        <article className="lg:col-span-8 xl:col-span-9 bg-surface border border-line rounded-lg p-5 md:p-8 shadow-card space-y-8">
+        <article data-reveal="intro" className="lg:col-span-8 xl:col-span-9 bg-surface border border-line rounded-lg p-5 md:p-8 shadow-card space-y-8">
           {sections.map((section, index) => (
             <section
               key={section.id}
               id={section.id}
+              data-reveal="up"
               className="scroll-mt-24 space-y-3"
             >
               <h2 className="text-lg font-bold text-ink">
@@ -103,5 +107,6 @@ export function LegalDocument({
         </article>
       </div>
     </main>
+    </ScrollReveal>
   );
 }

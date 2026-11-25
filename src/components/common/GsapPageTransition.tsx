@@ -24,6 +24,9 @@ const isRouteExcludedFromTransition = (pathname: string | null): boolean => {
   );
 };
 
+// Rute yang punya animasi sendiri (lihat ScrollReveal): cukup progress bar + fade kontainer
+const ROUTES_WITH_OWN_ANIMATION = ["/", "/tentang", "/syarat-ketentuan", "/kebijakan-privasi"];
+
 export function GsapPageTransition({ children }: GsapPageTransitionProps) {
   const pathname = usePathname();
   const pageContainerRef = useRef<HTMLDivElement>(null);
@@ -88,7 +91,7 @@ export function GsapPageTransition({ children }: GsapPageTransitionProps) {
       const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
 
       // Jika di halaman beranda ("/"), biarkan timeline internal ScrollTrigger beranda berjalan
-      if (pathname === "/") {
+      if (ROUTES_WITH_OWN_ANIMATION.includes(pathname)) {
         gsap.fromTo(
           container,
           { opacity: 0.4 },
