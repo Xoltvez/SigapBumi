@@ -345,11 +345,11 @@ function AdminPetaContent() {
     }
   };
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (forceRefresh = false) => {
     try {
       const [liveReports, liveSos] = await Promise.all([
-        fetchLiveReports(),
-        fetchLiveSosAlerts(),
+        fetchLiveReports(forceRefresh, { lean: true }),
+        fetchLiveSosAlerts(forceRefresh),
       ]);
 
       if (liveReports && liveReports.length > 0) {
@@ -1146,7 +1146,7 @@ function AdminPetaContent() {
                   </button>
                   <button
                     type="button"
-                    onClick={loadData}
+                    onClick={() => loadData(true)}
                     className="text-xs font-bold text-slate-600 flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 cursor-pointer"
                   >
                     <RotateCw className="w-3 h-3" />
@@ -1198,7 +1198,7 @@ function AdminPetaContent() {
                     {/* Tombol Segarkan Data */}
                     <button
                       type="button"
-                      onClick={loadData}
+                      onClick={() => loadData(true)}
                       disabled={isLoading}
                       className="px-3 py-1.5 rounded-xl border border-slate-200/80 hover:bg-slate-100 text-xs font-bold text-slate-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
                       title="Segarkan data titik bencana"

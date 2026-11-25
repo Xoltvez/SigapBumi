@@ -183,9 +183,9 @@ export default function AdminRingkasanPage() {
         setIsLoading(true);
       }
       try {
-        // Ambil data laporan dan SOS secara PARALEL untuk kecepatan maksimal
+        // Ambil data laporan (lean 5KB) dan SOS secara PARALEL untuk kecepatan maksimal
         const [live, liveSos] = await Promise.all([
-          fetchLiveReports(),
+          fetchLiveReports(false, { lean: true }),
           fetchLiveSosAlerts(),
         ]);
 

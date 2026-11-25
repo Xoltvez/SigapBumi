@@ -509,7 +509,7 @@ export async function updateSosLocation(
 let cachedLiveSosAlerts: LiveSosItem[] | null = null;
 let cachedLiveSosAlertsTime = 0;
 let inFlightSosPromise: Promise<LiveSosItem[]> | null = null;
-const SOS_CACHE_TTL_MS = 12000; // Cache in-memory 12 detik
+const SOS_CACHE_TTL_MS = 30000; // Cache in-memory 30 detik
 
 export function getCachedLiveSosAlerts(): LiveSosItem[] | null {
   return cachedLiveSosAlerts;
@@ -525,17 +525,17 @@ export function invalidateLiveSosCache(): void {
  * Mengambil daftar panggilan SOS live dari Supabase dan sinkron dengan mock/cache
  */
 export async function fetchLiveSosAlerts(forceRefresh = false): Promise<LiveSosItem[]> {
-  // SWR: Jika data cache memori masih segar (< 12 detik) dan tidak dipaksa refresh, kembalikan seketika (0ms)
+  // SWR: Jika data cache memori masih segar (< 30 detik) dan tidak dipaksa refresh, kembalikan seketika (0ms)
   if (!forceRefresh && cachedLiveSosAlerts && Date.now() - cachedLiveSosAlertsTime < SOS_CACHE_TTL_MS) {
     return cachedLiveSosAlerts;
   }
 
-  // Deduplikasi panggilan paralel
-  if (inFlightSosPromise) {
+  // Deduplikasi panggilan paralel (kecuali dipaksa refresh)
+  if (!forceRefresh && inFlightSosPromise) {
     return inFlightSosPromise;
   }
 
-  inFlightSosPromise = (async () => {
+  const runSosFetch = (async () => {
     const localItems = getLocalSosCache();
     let supabaseItems: LiveSosItem[] = [];
 
@@ -793,10 +793,13 @@ export async function fetchLiveSosAlerts(forceRefresh = false): Promise<LiveSosI
     // Simpan ke cache in-memory untuk akses instan berikutnya
     cachedLiveSosAlerts = finalSos;
     cachedLiveSosAlertsTime = Date.now();
-    inFlightSosPromise = null;
 
     return finalSos;
   })();
+
+  inFlightSosPromise = runSosFetch.finally(() => {
+    inFlightSosPromise = null;
+  });
 
   return inFlightSosPromise;
 }

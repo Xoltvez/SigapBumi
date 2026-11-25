@@ -27,11 +27,13 @@ import { useAdmin } from "@/components/layout/AdminShell";
 import type { ReportStatus, DisasterType, PriorityLabel } from "@/types";
 import {
   fetchLiveReports,
+  getCachedLiveReports,
   updateReportStatusLive,
   deleteReportLive,
   removeEmojis,
   clearAllLocalReportsAndCaches,
   parseReportTimestamp,
+  type LiveReportItem,
 } from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 import DisasterIcon, { getDisasterLabel as getSharedDisasterLabel } from "@/components/common/DisasterIcon";
@@ -189,10 +191,63 @@ export function checkReportBelongsToUnit(r: AdminReportRow, unit: string): boole
   return false;
 }
 
+function mapLiveToAdminRows(live: LiveReportItem[]): AdminReportRow[] {
+  const formatted: AdminReportRow[] = (live || []).map((r) => {
+    const isSos = Boolean(
+      r.tracking_code?.toUpperCase().startsWith("SOS-") ||
+      r.title?.toUpperCase().includes("SOS")
+    );
+
+    let pLabel: PriorityLabel = "Sedang";
+    if (isSos) {
+      pLabel = "Kritis";
+    } else if (r.status === "selesai") {
+      pLabel = "Rendah";
+    } else {
+      const p = String(r.priority || "").toLowerCase();
+      if (p === "tinggi" || r.priority_label === "Tinggi" || r.confirmation_count >= 10) {
+        pLabel = "Tinggi";
+      } else if (p === "rendah" || r.priority_label === "Rendah") {
+        pLabel = "Rendah";
+      } else {
+        pLabel = "Sedang";
+      }
+    }
+
+    return {
+      id: r.id,
+      tracking_code: r.tracking_code,
+      disaster_type: r.disaster_type,
+      title: r.title,
+      location: r.address,
+      time: formatReportTime(r.created_at),
+      raw_time: r.raw_created_at || r.created_at,
+      status: r.status,
+      priority: pLabel,
+      confirmation_count: r.confirmation_count,
+      target_agency: r.target_agency,
+    };
+  });
+
+  formatted.sort((a, b) => {
+    const timeA = parseReportTimestamp(a.raw_time || a.time);
+    const timeB = parseReportTimestamp(b.raw_time || b.time);
+    return timeB - timeA;
+  });
+
+  return formatted;
+}
+
 function LaporanContent() {
   const { activeUnit } = useAdmin();
-  const [reports, setReports] = useState<AdminReportRow[]>(DEFAULT_REPORTS);
-  const [isLoading, setIsLoading] = useState(false);
+  const [reports, setReports] = useState<AdminReportRow[]>(() => {
+    const cached = getCachedLiveReports();
+    return cached ? mapLiveToAdminRows(cached) : DEFAULT_REPORTS;
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(() => !getCachedLiveReports());
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const requestSeqRef = React.useRef<number>(0);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<AdminReportRow | null>(null);
@@ -303,82 +358,55 @@ function LaporanContent() {
     }
   }, []);
 
-  async function loadData(isSilent = false) {
-    if (!isSilent) {
+  async function loadData(forceRefresh = false, isBackground = false) {
+    const reqId = ++requestSeqRef.current;
+    if (!isBackground && reports.length === 0) {
       setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
     }
+    setLoadError(null);
+
     try {
-      const live = await fetchLiveReports();
-      const formatted: AdminReportRow[] = (live || []).map((r) => {
-        const isSos = Boolean(
-          r.tracking_code?.toUpperCase().startsWith("SOS-") ||
-          r.title?.toUpperCase().includes("SOS")
-        );
-
-        let pLabel: PriorityLabel = "Sedang";
-        if (isSos) {
-          pLabel = "Kritis";
-        } else if (r.status === "selesai") {
-          pLabel = "Rendah";
-        } else {
-          const p = String(r.priority || "").toLowerCase();
-          if (p === "tinggi" || r.priority_label === "Tinggi" || r.confirmation_count >= 10) {
-            pLabel = "Tinggi";
-          } else if (p === "rendah" || r.priority_label === "Rendah") {
-            pLabel = "Rendah";
-          } else {
-            pLabel = "Sedang";
-          }
-        }
-
-        return {
-          id: r.id,
-          tracking_code: r.tracking_code,
-          disaster_type: r.disaster_type,
-          title: r.title,
-          location: r.address,
-          time: formatReportTime(r.created_at),
-          raw_time: r.raw_created_at || r.created_at,
-          status: r.status,
-          priority: pLabel,
-          confirmation_count: r.confirmation_count,
-          target_agency: r.target_agency,
-        };
-      });
-
-      // Urutkan default: data laporan yang terbaru selalu berada di paling atas
-      formatted.sort((a, b) => {
-        const timeA = parseReportTimestamp(a.raw_time || a.time);
-        const timeB = parseReportTimestamp(b.raw_time || b.time);
-        return timeB - timeA;
-      });
-
-      setReports(formatted);
+      const live = await fetchLiveReports(forceRefresh, { lean: true });
+      if (reqId !== requestSeqRef.current) return;
+      setReports(mapLiveToAdminRows(live || []));
     } catch (err) {
+      if (reqId !== requestSeqRef.current) return;
       console.warn("Gagal memuat daftar laporan admin:", err);
-      if (!isSilent) {
-        setReports([]);
-      }
+      setLoadError("Gagal memuat daftar laporan dari server. Periksa koneksi internet Anda.");
     } finally {
-      if (!isSilent) {
+      if (reqId === requestSeqRef.current) {
         setIsLoading(false);
+        setIsRefreshing(false);
       }
     }
   }
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadData(false);
-    }, 0);
+    loadData(false, Boolean(getCachedLiveReports()));
 
-    const handleLocalUpdate = () => {
-      loadData(true);
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        loadData(true, true);
+      }, 300);
     };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        scheduleRefresh();
+      }
+    };
+
     if (typeof window !== "undefined") {
-      window.addEventListener("sigapbumi:sos-created", handleLocalUpdate);
-      window.addEventListener("sigapbumi:sos-updated", handleLocalUpdate);
-      window.addEventListener("sigapbumi:report-updated", handleLocalUpdate);
-      window.addEventListener("storage", handleLocalUpdate);
+      window.addEventListener("sigapbumi:sos-created", scheduleRefresh);
+      window.addEventListener("sigapbumi:sos-updated", scheduleRefresh);
+      window.addEventListener("sigapbumi:report-updated", scheduleRefresh);
+      window.addEventListener("sigapbumi:report-deleted", scheduleRefresh);
+      window.addEventListener("storage", scheduleRefresh);
+      document.addEventListener("visibilitychange", handleVisibility);
     }
 
     const channelId = "admin_laporan_list_realtime_" + Math.random().toString(36).substring(2, 8);
@@ -387,42 +415,39 @@ function LaporanContent() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "reports" },
-        () => {
-          loadData(true);
-        }
+        scheduleRefresh
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "report_status_logs" },
-        () => {
-          loadData(true);
-        }
+        scheduleRefresh
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sos_alerts" },
-        () => {
-          loadData(true);
-        }
+        scheduleRefresh
       )
       .subscribe();
 
     // Polling cadangan berkala setiap 2 menit (120 detik) untuk efisiensi jaringan & kenyamanan baca
     const pollInterval = setInterval(() => {
-      loadData(true);
+      loadData(true, true);
     }, 2 * 60 * 1000);
 
     return () => {
-      clearTimeout(timer);
+      if (debounceTimer) clearTimeout(debounceTimer);
       clearInterval(pollInterval);
       if (typeof window !== "undefined") {
-        window.removeEventListener("sigapbumi:sos-created", handleLocalUpdate);
-        window.removeEventListener("sigapbumi:sos-updated", handleLocalUpdate);
-        window.removeEventListener("sigapbumi:report-updated", handleLocalUpdate);
-        window.removeEventListener("storage", handleLocalUpdate);
+        window.removeEventListener("sigapbumi:sos-created", scheduleRefresh);
+        window.removeEventListener("sigapbumi:sos-updated", scheduleRefresh);
+        window.removeEventListener("sigapbumi:report-updated", scheduleRefresh);
+        window.removeEventListener("sigapbumi:report-deleted", scheduleRefresh);
+        window.removeEventListener("storage", scheduleRefresh);
+        document.removeEventListener("visibilitychange", handleVisibility);
       }
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Laporan basis yang dibatasi strictly per instansi / role aktif
@@ -538,12 +563,12 @@ function LaporanContent() {
 
           <button
             type="button"
-            onClick={() => loadData(false)}
-            disabled={isLoading}
+            onClick={() => loadData(true, reports.length > 0)}
+            disabled={isLoading || isRefreshing}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors shrink-0 cursor-pointer"
           >
-            <RotateCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-orange-500" : "text-slate-500"}`} />
-            <span>Segarkan Data</span>
+            <RotateCw className={`w-3.5 h-3.5 ${isLoading || isRefreshing ? "animate-spin text-orange-500" : "text-slate-500"}`} />
+            <span>{isRefreshing ? "Menyinkronkan..." : "Segarkan Data"}</span>
           </button>
         </div>
       </div>
@@ -816,6 +841,21 @@ function LaporanContent() {
                     </tr>
                   ))}
                 </>
+              ) : loadError && reports.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-16 text-center text-slate-500">
+                    <AlertCircle className="w-8 h-8 text-rose-500 mx-auto mb-2" />
+                    <p className="font-semibold text-slate-800">{loadError}</p>
+                    <button
+                      type="button"
+                      onClick={() => loadData(true, false)}
+                      className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                    >
+                      <RotateCw className="w-3.5 h-3.5" />
+                      <span>Coba Lagi</span>
+                    </button>
+                  </td>
+                </tr>
               ) : paginatedReports.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-16 text-center text-slate-400">

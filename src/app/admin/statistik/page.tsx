@@ -26,11 +26,16 @@ import {
 import { useAdmin } from "@/components/layout/AdminShell";
 import {
   fetchLiveReports,
+  getCachedLiveReports,
   type LiveReportItem,
   clearAllLocalReportsAndCaches,
   parseReportTimestamp,
 } from "@/lib/services/reports";
-import { fetchLiveSosAlerts, type LiveSosItem } from "@/lib/services/sos";
+import {
+  fetchLiveSosAlerts,
+  getCachedLiveSosAlerts,
+  type LiveSosItem,
+} from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
 import type { DisasterType, ReportStatus } from "@/types";
 
@@ -149,17 +154,19 @@ function detectProvinceFromAddress(address: string, province?: string): string {
 
 export default function AdminStatistikPage() {
   const { activeUnit, activeUnitName } = useAdmin();
-  const [isLoading, setIsLoading] = useState(false);
-  const [reports, setReports] = useState<LiveReportItem[]>([]);
-  const [sosAlerts, setSosAlerts] = useState<LiveSosItem[]>([]);
+  const [reports, setReports] = useState<LiveReportItem[]>(() => getCachedLiveReports() || []);
+  const [sosAlerts, setSosAlerts] = useState<LiveSosItem[]>(() => getCachedLiveSosAlerts() || []);
+  const [isLoading, setIsLoading] = useState<boolean>(() => !getCachedLiveReports());
   const [lastRefreshedTime, setLastRefreshedTime] = useState<string>("");
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
+  const loadData = useCallback(async (forceRefresh = false) => {
+    if (!getCachedLiveReports()) {
+      setIsLoading(true);
+    }
     try {
       const [liveRep, liveSos] = await Promise.all([
-        fetchLiveReports(),
-        fetchLiveSosAlerts(),
+        fetchLiveReports(forceRefresh, { lean: true }),
+        fetchLiveSosAlerts(forceRefresh),
       ]);
       setReports(liveRep || []);
       setSosAlerts(liveSos || []);
@@ -177,10 +184,10 @@ export default function AdminStatistikPage() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    loadData(false);
 
     const handleSync = () => {
-      loadData();
+      loadData(true);
     };
 
     if (typeof window !== "undefined") {
@@ -999,7 +1006,7 @@ export default function AdminStatistikPage() {
           {/* Segarkan Button */}
           <button
             type="button"
-            onClick={loadData}
+            onClick={() => loadData(true)}
             disabled={isLoading}
             className="px-4 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition-colors inline-flex items-center gap-2 cursor-pointer disabled:opacity-50"
             title="Sinkronkan data statistik dengan database Supabase secara real-time"

@@ -634,7 +634,7 @@ export function inferRegionFromAddress(address?: string): { province?: string; r
 let cachedLiveReports: LiveReportItem[] | null = null;
 let cachedLiveReportsTime = 0;
 let inFlightLiveReportsPromise: Promise<LiveReportItem[]> | null = null;
-const CACHE_TTL_MS = 12000; // Cache in-memory 12 detik untuk loading sekejap mata (0ms)
+const CACHE_TTL_MS = 30000; // Cache in-memory 30 detik untuk navigasi antar tab instan (< 50ms)
 
 export function getCachedLiveReports(): LiveReportItem[] | null {
   return cachedLiveReports;
@@ -647,36 +647,47 @@ export function invalidateLiveReportsCache(): void {
 }
 
 /**
- * Mengambil daftar laporan: menggabungkan data Supabase live, local cache perangkat, dan data demo
+ * Mengambil daftar laporan: menggabungkan data Supabase live, local cache perangkat, dan data demo.
+ * Gunakan `{ lean: true }` untuk daftar/tabel/dashboard/peta agar tidak mengunduh base64 foto (5 KB vs 3.7 MB).
  */
-export async function fetchLiveReports(forceRefresh = false): Promise<LiveReportItem[]> {
-  // SWR: Jika data cache memori masih segar (< 12 detik) dan tidak dipaksa refresh, kembalikan seketika (0ms)
+export async function fetchLiveReports(
+  forceRefresh = false,
+  options?: { lean?: boolean }
+): Promise<LiveReportItem[]> {
+  const isLean = Boolean(options?.lean);
+
+  // SWR: Jika data cache memori masih segar dan tidak dipaksa refresh, kembalikan seketika (0ms)
   if (!forceRefresh && cachedLiveReports && Date.now() - cachedLiveReportsTime < CACHE_TTL_MS) {
     return cachedLiveReports;
   }
 
-  // Deduplikasi panggilan paralel yang terjadi bersamaan
-  if (inFlightLiveReportsPromise) {
+  // Deduplikasi panggilan paralel yang terjadi bersamaan (kecuali dipaksa refresh)
+  if (!forceRefresh && inFlightLiveReportsPromise) {
     return inFlightLiveReportsPromise;
   }
 
-  inFlightLiveReportsPromise = (async () => {
+  const runFetch = (async () => {
     const localReports = getLocalReports();
     let liveItems: LiveReportItem[] = [];
 
     try {
       // 1. Eksekusi query reports dan sos_alerts secara PARALEL untuk efisiensi loading
+      const reportColumns = isLean
+        ? "id, tracking_code, disaster_type, title, address, location, status, priority_score, confirmation_count, created_at, updated_at, reporter_id"
+        : "*, report_media(*)";
+      const sosColumns = isLean ? "id, status, created_at" : "id, status, note, created_at";
+
       const [reportsRes, sosRes] = await Promise.all([
         supabase
           .from("reports")
-          .select("*, report_media(*)")
+          .select(reportColumns)
           .order("created_at", { ascending: false }),
         supabase
           .from("sos_alerts")
-          .select("id, status, note, created_at"),
+          .select(sosColumns),
       ]);
 
-      const { data, error } = reportsRes;
+      const { data, error } = reportsRes as { data: any[] | null; error: any };
       if (!error && data && data.length > 0) {
         liveItems = data.map((row) => {
           const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
@@ -734,9 +745,9 @@ export async function fetchLiveReports(forceRefresh = false): Promise<LiveReport
       }
 
       // Sinkronkan status & fallback foto dari tabel sos_alerts
-      const { data: sosRows } = sosRes;
+      const { data: sosRows } = sosRes as { data: any[] | null };
       if (sosRows && sosRows.length > 0) {
-        sosRows.forEach((s) => {
+        sosRows.forEach((s: any) => {
           const match = liveItems.find(
             (r) => r.id === s.id || (s.note && s.note.includes(r.tracking_code))
           );
@@ -927,10 +938,13 @@ export async function fetchLiveReports(forceRefresh = false): Promise<LiveReport
     // Simpan ke cache in-memory untuk akses instan berikutnya
     cachedLiveReports = allReports;
     cachedLiveReportsTime = Date.now();
-    inFlightLiveReportsPromise = null;
 
     return allReports;
   })();
+
+  inFlightLiveReportsPromise = runFetch.finally(() => {
+    inFlightLiveReportsPromise = null;
+  });
 
   return inFlightLiveReportsPromise;
 }

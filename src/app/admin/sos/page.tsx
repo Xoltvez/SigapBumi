@@ -30,6 +30,7 @@ import { useAdmin } from "@/components/layout/AdminShell";
 import type { SosAssistanceType } from "@/types";
 import {
   fetchLiveSosAlerts,
+  getCachedLiveSosAlerts,
   updateSosAlertStatus,
   deleteSosAlertLive,
   clearAllSosAlerts,
@@ -64,7 +65,7 @@ export default function AdminSosPage() {
   const { activeUnit, activeUnitName, setActiveSosCount, isSirenMuted } = useAdmin();
   const isPemerintahan = activeUnit === "pemerintahan" || activeUnit === "semua";
   const [sosList, setSosList] = useState<DisplaySosItem[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(() => !getCachedLiveSosAlerts());
   const knownIdsRef = React.useRef<Set<string>>(new Set());
   const isFirstLoadRef = React.useRef<boolean>(true);
 
@@ -120,10 +121,10 @@ export default function AdminSosPage() {
     setActiveSosCount(countAktif);
   }, [countAktif, setActiveSosCount]);
 
-  const loadData = useCallback(async (isSilent = false) => {
-    if (!isSilent) setIsLoading(true);
+  const loadData = useCallback(async (isSilent = false, forceRefresh = false) => {
+    if (!isSilent && !getCachedLiveSosAlerts()) setIsLoading(true);
     try {
-      const live = await fetchLiveSosAlerts();
+      const live = await fetchLiveSosAlerts(forceRefresh);
       const mappedLive: DisplaySosItem[] = (live || []).map((e, index) => {
         let type: SosAssistanceType = e.assistance_type || "damkar";
         let title = "Bantuan Darurat";
@@ -205,7 +206,7 @@ export default function AdminSosPage() {
   useEffect(() => {
     loadData(false);
 
-    const handleLocalUpdate = () => loadData(true);
+    const handleLocalUpdate = () => loadData(true, true);
     if (typeof window !== "undefined") {
       window.addEventListener("sigapbumi:sos-created", handleLocalUpdate);
       window.addEventListener("sigapbumi:sos-updated", handleLocalUpdate);
