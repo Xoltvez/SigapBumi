@@ -323,8 +323,8 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
           },
           body: JSON.stringify({
             model: aiConfig.anthropicModel,
-            max_tokens: 600,
-            temperature: 0.1,
+            max_tokens: 1500,
+            thinking: { type: "between_tools" },
             messages: [
               {
                 role: "user",
@@ -352,7 +352,10 @@ Keluarkan HANYA JSON valid sesuai skema berikut tanpa format markdown pembuka/pe
 
         if (claudeRes.ok) {
           const claudeData = await claudeRes.json();
-          const claudeText = claudeData.content?.[0]?.text;
+          const claudeText = claudeData.content
+            ?.filter((c: { type: string; text?: string }) => c.type === "text")
+            .map((c: { text?: string }) => c.text)
+            .join("");
           if (claudeText) {
             console.log("[AI-VISION] Berhasil verifikasi via Claude Vision!");
             outputText = claudeText;
