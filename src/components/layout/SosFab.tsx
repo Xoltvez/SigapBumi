@@ -52,7 +52,7 @@ async function compressImageForAi(file: File): Promise<Blob> {
       img.src = e.target?.result as string;
     };
     img.onload = () => {
-      const maxDim = 800;
+      const maxDim = 720;
       let width = img.width;
       let height = img.height;
       if (width > maxDim || height > maxDim) {
@@ -71,11 +71,15 @@ async function compressImageForAi(file: File): Promise<Blob> {
       if (ctx) {
         ctx.drawImage(img, 0, 0, width, height);
         canvas.toBlob(
-          (blob) => {
-            resolve(blob || file);
+          (webpBlob) => {
+            if (webpBlob) {
+              resolve(webpBlob);
+            } else {
+              canvas.toBlob((jpgBlob) => resolve(jpgBlob || file), "image/jpeg", 0.65);
+            }
           },
-          "image/jpeg",
-          0.65
+          "image/webp",
+          0.62
         );
       } else {
         resolve(file);
