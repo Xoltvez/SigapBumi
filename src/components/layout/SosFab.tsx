@@ -1407,14 +1407,15 @@ export function SosFab() {
                     <div className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-950 relative shadow-sm group">
                       <div
                         onClick={() => setIsPhotoFullscreen(true)}
-                        className="relative aspect-video max-h-56 w-full flex items-center justify-center overflow-hidden bg-black cursor-pointer"
+                        className="relative w-full overflow-hidden bg-black cursor-pointer"
                         title="Klik untuk melihat foto layar penuh"
+                        style={{ maxHeight: "280px" }}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={cameraPhotoUrl}
                           alt="Bukti Kamera Berstempel"
-                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-300 block"
                         />
                         {/* Overlay petunjuk klik fullscreen */}
                         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
@@ -1899,12 +1900,9 @@ export function SosFab() {
 
           {/* Footer Lightbox */}
           <div
-            className="flex flex-col sm:flex-row items-center justify-between gap-2 max-w-5xl mx-auto w-full pt-2 text-[11px] text-slate-400 border-t border-white/10 shrink-0"
+            className="flex items-center justify-center max-w-5xl mx-auto w-full pt-2 border-t border-white/10 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
-            <span className="text-center sm:text-left">
-              🛡️ Stempel kompas dial, mini map, dan koordinat tercetak permanen langsung dari kamera perangkat warga.
-            </span>
             <button
               type="button"
               onClick={() => setIsPhotoFullscreen(false)}
