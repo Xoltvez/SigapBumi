@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getAnalyticsSummaryAsync,
-  recordAdminLog,
-  recordClick,
-  recordHeartbeat,
-  recordPageView,
+  recordAdminLogAsync,
+  recordClickAsync,
+  recordHeartbeatAsync,
+  recordPageViewAsync,
 } from "@/lib/analytics/store";
 
 export async function GET(req: NextRequest) {
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const device: "Mobile" | "Desktop" = body?.device === "Mobile" ? "Mobile" : "Desktop";
 
     if (type === "pageview") {
-      recordPageView({
+      await recordPageViewAsync({
         sessionId: String(body.sessionId || `sess-${Date.now()}`),
         visitorId: String(body.visitorId || `vis-${Date.now()}`),
         path: String(body.path || "/"),
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         referrer: String(body.referrer || "Akses Langsung (Direct)"),
       });
     } else if (type === "heartbeat") {
-      recordHeartbeat({
+      await recordHeartbeatAsync({
         sessionId: String(body.sessionId || `sess-${Date.now()}`),
         visitorId: String(body.visitorId || `vis-${Date.now()}`),
         path: String(body.path || "/"),
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         secondsDelta: Number(body.secondsDelta || 25),
       });
     } else if (type === "click") {
-      recordClick({
+      await recordClickAsync({
         sessionId: String(body.sessionId || `sess-${Date.now()}`),
         visitorId: String(body.visitorId || `vis-${Date.now()}`),
         label: String(body.label || "Interaksi"),
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         device,
       });
     } else if (type === "admin_log") {
-      recordAdminLog({
+      await recordAdminLogAsync({
         adminName: String(body.adminName || "Petugas Posko"),
         adminEmail: String(body.adminEmail || "admin@sigapbumi.id"),
         unit: String(body.unit || "pemerintahan"),

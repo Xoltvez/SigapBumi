@@ -331,7 +331,7 @@ export async function stampPhotoWithGpsTimestamp(
 
     img.onload = async () => {
       try {
-        const MAX_WIDTH = 1280;
+        const MAX_WIDTH = 1080;
         let targetWidth = img.width;
         let targetHeight = img.height;
 
@@ -550,8 +550,14 @@ export async function stampPhotoWithGpsTimestamp(
 
         ctx.restore();
 
-        // 5. Ekspor data gambar beresolusi tinggi JPEG
-        const stampedDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+        // 5. Auto-kompresi ke format WebP ringan (dengan fallback JPEG untuk browser lama)
+        let stampedDataUrl = canvas.toDataURL("image/webp", 0.72);
+        if (!stampedDataUrl.startsWith("data:image/webp")) {
+          stampedDataUrl = canvas.toDataURL("image/jpeg", 0.72);
+        } else if (stampedDataUrl.length > 190000) {
+          // Jika hasil WebP masih > ~140 KB, turunkan kualitas agar tetap ringan & cepat diunggah
+          stampedDataUrl = canvas.toDataURL("image/webp", 0.58);
+        }
         resolve(stampedDataUrl);
       } catch (err) {
         console.error("Gagal menstempel foto kamera GPS lengkap:", err);

@@ -30,6 +30,7 @@ import { useAdmin } from "@/components/layout/AdminShell";
 import type { SosAssistanceType } from "@/types";
 import {
   fetchLiveSosAlerts,
+  getCachedLiveSosAlerts,
   updateSosAlertStatus,
   deleteSosAlertLive,
   clearAllSosAlerts,
@@ -38,6 +39,8 @@ import {
 } from "@/lib/services/sos";
 import { playSosSiren } from "@/lib/audio/siren";
 import { supabase } from "@/lib/supabase/client";
+import { AdminTrashModal } from "@/components/admin/AdminTrashModal";
+import { fetchTrashItems } from "@/lib/services/trash";
 
 interface DisplaySosItem {
   id: string;
@@ -62,7 +65,7 @@ export default function AdminSosPage() {
   const { activeUnit, activeUnitName, setActiveSosCount, isSirenMuted } = useAdmin();
   const isPemerintahan = activeUnit === "pemerintahan" || activeUnit === "semua";
   const [sosList, setSosList] = useState<DisplaySosItem[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(() => !getCachedLiveSosAlerts());
   const knownIdsRef = React.useRef<Set<string>>(new Set());
   const isFirstLoadRef = React.useRef<boolean>(true);
 
@@ -74,6 +77,17 @@ export default function AdminSosPage() {
   const [isMarkingHoax, setIsMarkingHoax] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
+  const [isTrashOpen, setIsTrashOpen] = useState<boolean>(false);
+  const [trashCount, setTrashCount] = useState<number>(0);
+
+  useEffect(() => {
+    const syncTrash = () => {
+      fetchTrashItems("sos").then((list) => setTrashCount(list.length)).catch(() => {});
+    };
+    syncTrash();
+    window.addEventListener("sigapbumi:trash-updated", syncTrash);
+    return () => window.removeEventListener("sigapbumi:trash-updated", syncTrash);
+  }, []);
 
   // Kategori Filter Status
   const [statusFilter, setStatusFilter] = useState<"semua" | "aktif" | "ditangani" | "selesai">("semua");
@@ -107,10 +121,10 @@ export default function AdminSosPage() {
     setActiveSosCount(countAktif);
   }, [countAktif, setActiveSosCount]);
 
-  const loadData = useCallback(async (isSilent = false) => {
-    if (!isSilent) setIsLoading(true);
+  const loadData = useCallback(async (isSilent = false, forceRefresh = false) => {
+    if (!isSilent && !getCachedLiveSosAlerts()) setIsLoading(true);
     try {
-      const live = await fetchLiveSosAlerts();
+      const live = await fetchLiveSosAlerts(forceRefresh);
       const mappedLive: DisplaySosItem[] = (live || []).map((e, index) => {
         let type: SosAssistanceType = e.assistance_type || "damkar";
         let title = "Bantuan Darurat";
@@ -192,7 +206,7 @@ export default function AdminSosPage() {
   useEffect(() => {
     loadData(false);
 
-    const handleLocalUpdate = () => loadData(true);
+    const handleLocalUpdate = () => loadData(true, true);
     if (typeof window !== "undefined") {
       window.addEventListener("sigapbumi:sos-created", handleLocalUpdate);
       window.addEventListener("sigapbumi:sos-updated", handleLocalUpdate);
@@ -387,7 +401,18 @@ export default function AdminSosPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start sm:self-auto">
+          {/* Tombol Kotak Sampah (Restore) */}
+          <button
+            type="button"
+            onClick={() => setIsTrashOpen(true)}
+            className="px-3.5 py-2 rounded-xl border border-amber-200 bg-amber-50/80 hover:bg-amber-100 text-xs font-semibold text-amber-800 shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            title="Lihat dan pulihkan data SOS yang telah dihapus"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-amber-600" />
+            <span>Kotak Sampah{trashCount > 0 ? ` (${trashCount})` : ""}</span>
+          </button>
+
           {/* Tombol Hapus Semua SOS */}
           {sosList.length > 0 && (
             <button
@@ -521,19 +546,11 @@ export default function AdminSosPage() {
                   <AlertCircle className="w-6 h-6 stroke-[2.5]" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-2xl font-extrabold text-rose-600 tracking-tight leading-none">
-                      {countAktif}
-                    </p>
-                    {countAktif > 0 && (
-                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                    )}
-                  </div>
+                  <p className="text-2xl font-extrabold text-rose-600 tracking-tight leading-none">
+                    {countAktif}
+                  </p>
                   <p className="text-xs text-slate-600 font-bold mt-1">
                     Belum Diproses
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    Perlu respons cepat
                   </p>
                 </div>
               </div>
@@ -560,9 +577,6 @@ export default function AdminSosPage() {
                   <p className="text-xs text-slate-600 font-bold mt-1">
                     Sedang Ditangani
                   </p>
-                  <p className="text-[10px] text-slate-400">
-                    Regu di lokasi kejadian
-                  </p>
                 </div>
               </div>
               <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${statusFilter === "ditangani" ? "text-amber-500 translate-x-0.5" : "text-slate-400"}`} />
@@ -588,9 +602,6 @@ export default function AdminSosPage() {
                   <p className="text-xs text-slate-600 font-bold mt-1">
                     Selesai Ditangani
                   </p>
-                  <p className="text-[10px] text-slate-400">
-                    Insiden tuntas diatasi
-                  </p>
                 </div>
               </div>
               <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${statusFilter === "selesai" ? "text-emerald-500 translate-x-0.5" : "text-slate-400"}`} />
@@ -615,9 +626,6 @@ export default function AdminSosPage() {
                   </p>
                   <p className="text-xs text-slate-600 font-bold mt-1">
                     Total Panggilan SOS
-                  </p>
-                  <p className="text-[10px] text-blue-600 font-medium">
-                    {activeUnitName}
                   </p>
                 </div>
               </div>
@@ -1203,6 +1211,19 @@ export default function AdminSosPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Kotak Sampah & Restore SOS */}
+      <AdminTrashModal
+        isOpen={isTrashOpen}
+        onClose={() => setIsTrashOpen(false)}
+        kind="sos"
+        title="Kotak Sampah Monitor SOS"
+        onRestored={() => {
+          loadData(false);
+          setToastMessage("Data SOS berhasil dipulihkan dari Kotak Sampah.");
+          setTimeout(() => setToastMessage(null), 4000);
+        }}
+      />
     </div>
   );
 }

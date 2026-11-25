@@ -63,7 +63,9 @@ export function getLocalReports(): LiveReportItem[] {
         !deleted.has(r.id) &&
         !deleted.has(r.tracking_code) &&
         !r.id?.startsWith("rep-mock") &&
-        !r.id?.startsWith("mock-")
+        !r.id?.startsWith("mock-") &&
+        // Bersihkan entri dummy korup yang sempat terbuat oleh bug lama
+        !(r.title === "Laporan Bencana" && r.address === "Lokasi Kejadian" && !r.image_url)
     );
   } catch {
     return [];
@@ -632,7 +634,7 @@ export function inferRegionFromAddress(address?: string): { province?: string; r
 let cachedLiveReports: LiveReportItem[] | null = null;
 let cachedLiveReportsTime = 0;
 let inFlightLiveReportsPromise: Promise<LiveReportItem[]> | null = null;
-const CACHE_TTL_MS = 12000; // Cache in-memory 12 detik untuk loading sekejap mata (0ms)
+const CACHE_TTL_MS = 30000; // Cache in-memory 30 detik untuk navigasi antar tab instan (< 50ms)
 
 export function getCachedLiveReports(): LiveReportItem[] | null {
   return cachedLiveReports;
@@ -645,36 +647,47 @@ export function invalidateLiveReportsCache(): void {
 }
 
 /**
- * Mengambil daftar laporan: menggabungkan data Supabase live, local cache perangkat, dan data demo
+ * Mengambil daftar laporan: menggabungkan data Supabase live, local cache perangkat, dan data demo.
+ * Gunakan `{ lean: true }` untuk daftar/tabel/dashboard/peta agar tidak mengunduh base64 foto (5 KB vs 3.7 MB).
  */
-export async function fetchLiveReports(forceRefresh = false): Promise<LiveReportItem[]> {
-  // SWR: Jika data cache memori masih segar (< 12 detik) dan tidak dipaksa refresh, kembalikan seketika (0ms)
+export async function fetchLiveReports(
+  forceRefresh = false,
+  options?: { lean?: boolean }
+): Promise<LiveReportItem[]> {
+  const isLean = Boolean(options?.lean);
+
+  // SWR: Jika data cache memori masih segar dan tidak dipaksa refresh, kembalikan seketika (0ms)
   if (!forceRefresh && cachedLiveReports && Date.now() - cachedLiveReportsTime < CACHE_TTL_MS) {
     return cachedLiveReports;
   }
 
-  // Deduplikasi panggilan paralel yang terjadi bersamaan
-  if (inFlightLiveReportsPromise) {
+  // Deduplikasi panggilan paralel yang terjadi bersamaan (kecuali dipaksa refresh)
+  if (!forceRefresh && inFlightLiveReportsPromise) {
     return inFlightLiveReportsPromise;
   }
 
-  inFlightLiveReportsPromise = (async () => {
+  const runFetch = (async () => {
     const localReports = getLocalReports();
     let liveItems: LiveReportItem[] = [];
 
     try {
       // 1. Eksekusi query reports dan sos_alerts secara PARALEL untuk efisiensi loading
+      const reportColumns = isLean
+        ? "id, tracking_code, disaster_type, title, address, location, status, priority_score, confirmation_count, created_at, updated_at, reporter_id"
+        : "*, report_media(*)";
+      const sosColumns = isLean ? "id, status, created_at" : "id, status, note, created_at";
+
       const [reportsRes, sosRes] = await Promise.all([
         supabase
           .from("reports")
-          .select("*, report_media(*)")
+          .select(reportColumns)
           .order("created_at", { ascending: false }),
         supabase
           .from("sos_alerts")
-          .select("id, status, note, created_at"),
+          .select(sosColumns),
       ]);
 
-      const { data, error } = reportsRes;
+      const { data, error } = reportsRes as { data: any[] | null; error: any };
       if (!error && data && data.length > 0) {
         liveItems = data.map((row) => {
           const coords = parsePostGISPoint(row.location) || { lat: -6.2088, lng: 106.8456 };
@@ -731,10 +744,10 @@ export async function fetchLiveReports(forceRefresh = false): Promise<LiveReport
         });
       }
 
-      // Sinkronkan status dari tabel sos_alerts
-      const { data: sosRows } = sosRes;
+      // Sinkronkan status & fallback foto dari tabel sos_alerts
+      const { data: sosRows } = sosRes as { data: any[] | null };
       if (sosRows && sosRows.length > 0) {
-        sosRows.forEach((s) => {
+        sosRows.forEach((s: any) => {
           const match = liveItems.find(
             (r) => r.id === s.id || (s.note && s.note.includes(r.tracking_code))
           );
@@ -745,6 +758,10 @@ export async function fetchLiveReports(forceRefresh = false): Promise<LiveReport
               match.status = "selesai";
             } else if (s.status === "palsu" && match.status !== "ditolak") {
               match.status = "ditolak";
+            }
+            if (!match.image_url && s.note) {
+              const sosPhoto = extractPhotoFromDescription(s.note);
+              if (sosPhoto) match.image_url = sosPhoto;
             }
           }
         });
@@ -852,12 +869,34 @@ export async function fetchLiveReports(forceRefresh = false): Promise<LiveReport
       mergedMap.set(item.id, sanitized);
     });
 
-    // 3. Data database Supabase riil (MUTLAK MENIMPA data lokal & mock agar status selalu sinkron antar-browser)
+    // 3. Data database Supabase riil (MUTLAK MENIMPA status lokal & mock, namun PERTAHANKAN foto/kontak jika server belum punya)
+    let sosPhotoMap = new Map<string, string>();
+    if (typeof window !== "undefined") {
+      try {
+        const rawSos = localStorage.getItem("sigapbumi_sos_alerts_cache");
+        if (rawSos) {
+          const parsedSos = JSON.parse(rawSos) as Array<{ id?: string; tracking_code?: string; photo_url?: string }>;
+          if (Array.isArray(parsedSos)) {
+            parsedSos.forEach((s) => {
+              if (s.photo_url) {
+                if (s.id) sosPhotoMap.set(s.id, s.photo_url);
+                if (s.tracking_code) sosPhotoMap.set(s.tracking_code, s.photo_url);
+              }
+            });
+          }
+        }
+      } catch {}
+    }
+
     liveItems.forEach((item) => {
       const prev = mergedMap.get(item.tracking_code) || mergedMap.get(item.id);
+      const fallbackSosPhoto = sosPhotoMap.get(item.id) || sosPhotoMap.get(item.tracking_code);
       const resolved: LiveReportItem = {
         ...(prev || {}),
         ...item,
+        image_url: item.image_url || prev?.image_url || fallbackSosPhoto,
+        phone_number: item.phone_number || prev?.phone_number,
+        reporter_name: item.reporter_name || prev?.reporter_name,
         status: item.status, // Status dari database pusat mutlak menjadi acuan
       };
       mergedMap.set(item.tracking_code, resolved);
@@ -899,10 +938,13 @@ export async function fetchLiveReports(forceRefresh = false): Promise<LiveReport
     // Simpan ke cache in-memory untuk akses instan berikutnya
     cachedLiveReports = allReports;
     cachedLiveReportsTime = Date.now();
-    inFlightLiveReportsPromise = null;
 
     return allReports;
   })();
+
+  inFlightLiveReportsPromise = runFetch.finally(() => {
+    inFlightLiveReportsPromise = null;
+  });
 
   return inFlightLiveReportsPromise;
 }
@@ -961,14 +1003,24 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
     const { data, error } = await query.maybeSingle();
 
     if (!error && data) {
-      // Sinkronkan status dari tabel sos_alerts jika lebih lanjut
+      // Sinkronkan status & fallback foto dari tabel sos_alerts
+      let sosFallbackNote: string | undefined;
       try {
-        const { data: sosAlert } = await supabase
+        let { data: sosAlert } = await supabase
           .from("sos_alerts")
-          .select("status")
+          .select("status, note")
           .eq("id", data.id)
           .maybeSingle();
+        if (!sosAlert && data.tracking_code) {
+          const { data: sosByCode } = await supabase
+            .from("sos_alerts")
+            .select("status, note")
+            .ilike("note", `%${data.tracking_code}%`)
+            .maybeSingle();
+          sosAlert = sosByCode;
+        }
         if (sosAlert) {
+          sosFallbackNote = sosAlert.note || undefined;
           if (sosAlert.status === "ditangani" && data.status === "diterima") {
             data.status = "ditindaklanjuti";
           } else if (sosAlert.status === "selesai" && data.status !== "selesai") {
@@ -1001,11 +1053,36 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         }
       }
 
-      // Ekstraksi foto bukti dari report_media, regex [Foto: ...], atau field bawaan
+      // Ekstraksi foto bukti dari report_media, regex [Foto: ...], field bawaan, sos_alerts, atau cache lokal
       const mediaPhoto = Array.isArray(data.report_media) && data.report_media.length > 0
         ? data.report_media[0].media_url
         : undefined;
-      const imageUrl = mediaPhoto || extractPhotoFromDescription(data.description) || data.image_url || undefined;
+      let localPhotoFallback: string | undefined;
+      if (typeof window !== "undefined") {
+        const localHit = getLocalReports().find(
+          (r) => r.id === data.id || r.tracking_code === data.tracking_code
+        );
+        localPhotoFallback = localHit?.image_url || extractPhotoFromDescription(localHit?.description);
+        if (!localPhotoFallback) {
+          try {
+            const rawSos = localStorage.getItem("sigapbumi_sos_alerts_cache");
+            if (rawSos) {
+              const parsedSos = JSON.parse(rawSos) as Array<{ id?: string; tracking_code?: string; photo_url?: string }>;
+              const sosHit = parsedSos.find(
+                (s) => s.id === data.id || (data.tracking_code && s.tracking_code === data.tracking_code)
+              );
+              if (sosHit?.photo_url) localPhotoFallback = sosHit.photo_url;
+            }
+          } catch {}
+        }
+      }
+      const imageUrl =
+        mediaPhoto ||
+        extractPhotoFromDescription(data.description) ||
+        data.image_url ||
+        extractPhotoFromDescription(sosFallbackNote) ||
+        localPhotoFallback ||
+        undefined;
 
       // Ekstraksi kontak & nama pelapor jika ada
       const phoneNumber = data.reporter_phone || extractPhoneFromDescription(data.description) || data.phone_number || undefined;
@@ -1320,7 +1397,7 @@ export async function updateReportStatusLive(
     invalidateLiveReportsCache();
     const cleanNote = note?.trim() || `Status diperbarui menjadi ${newStatus}`;
 
-    // Update data lokal jika ini laporan di cache browser atau buat jika belum ada
+    // Update data lokal jika laporan ada di cache browser
     const localItems = getLocalReports();
     let localMatch = localItems.find(
       (r) => r.id === reportId || r.tracking_code === reportId
@@ -1351,42 +1428,31 @@ export async function updateReportStatusLive(
 
     if (!localMatch && mockItem) {
       localMatch = { ...mockItem };
-    } else if (!localMatch) {
-      localMatch = {
-        id: reportId,
-        tracking_code: reportId.startsWith("LPR") || reportId.startsWith("SOS") ? reportId : `LPR-${reportId.slice(0, 6).toUpperCase()}`,
-        disaster_type: "kebakaran",
-        target_agency: "damkar",
-        title: "Laporan Bencana",
-        description: cleanNote,
-        address: "Lokasi Kejadian",
-        lat: -7.4052,
-        lng: 109.2452,
-        status: newStatus,
-        priority: "sedang",
-        confirmation_count: 1,
-        created_at: "Baru saja",
-        timeline: [],
-      };
     }
+    // JANGAN buat entri dummy baru jika tidak ada di local cache:
+    // ini akan menimpa data laporan asli yang sudah ada (termasuk foto/image_url)
+    // dan menyebabkan laporan baru kosong muncul di data laporan.
 
-    localMatch.status = newStatus;
-    if (!localMatch.timeline) localMatch.timeline = [];
-    localMatch.timeline.push({
-      status: newStatus,
-      label:
-        newStatus === "diverifikasi"
-          ? "Diverifikasi Petugas"
-          : newStatus === "ditindaklanjuti"
-          ? "Tim Operasional Ditugaskan"
-          : newStatus === "selesai"
-          ? "Penanganan Selesai"
-          : "Laporan Ditolak",
-      timestamp: "Baru saja",
-      note: cleanNote,
-      actor: actorName,
-    });
-    saveLocalReport(localMatch);
+    if (localMatch) {
+      // Hanya update status dan tambah timeline entry — JANGAN timpa field lain seperti image_url/foto
+      localMatch.status = newStatus;
+      if (!localMatch.timeline) localMatch.timeline = [];
+      localMatch.timeline.push({
+        status: newStatus,
+        label:
+          newStatus === "diverifikasi"
+            ? "Diverifikasi Petugas"
+            : newStatus === "ditindaklanjuti"
+            ? "Tim Operasional Ditugaskan"
+            : newStatus === "selesai"
+            ? "Penanganan Selesai"
+            : "Laporan Ditolak",
+        timestamp: "Baru saja",
+        note: cleanNote,
+        actor: actorName,
+      });
+      saveLocalReport(localMatch);
+    }
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("sigapbumi:report-updated", { detail: { id: reportId, status: newStatus } }));
@@ -1487,12 +1553,58 @@ export async function updateReportStatusLive(
           const sosPayload: Record<string, unknown> = { status: sosStatus };
           if (newStatus === "selesai" || newStatus === "ditolak") {
             sosPayload.resolved_at = new Date().toISOString();
+          } else {
+            sosPayload.resolved_at = null;
           }
           await supabase
             .from("sos_alerts")
             .update(sosPayload)
             .eq("id", targetUuid);
+
+          // Sinkronkan juga jika sos_alerts tertaut lewat tracking_code di kolom note
+          const codeForSos = localMatch?.tracking_code || (!isUuid ? reportId : undefined);
+          if (codeForSos && codeForSos.toUpperCase().startsWith("SOS-")) {
+            await supabase
+              .from("sos_alerts")
+              .update(sosPayload)
+              .ilike("note", `%${codeForSos}%`);
+          }
         } catch {}
+
+        // Sinkronkan juga cache SOS lokal agar Monitor SOS langsung ter-update
+        if (typeof window !== "undefined") {
+          try {
+            const rawSos = localStorage.getItem("sigapbumi_sos_alerts_cache");
+            if (rawSos) {
+              const parsedSos = JSON.parse(rawSos) as Array<{ id?: string; tracking_code?: string; status?: string; note?: string }>;
+              if (Array.isArray(parsedSos)) {
+                const nextSosStatus =
+                  newStatus === "ditolak"
+                    ? "palsu"
+                    : newStatus === "ditindaklanjuti"
+                    ? "ditangani"
+                    : newStatus === "selesai"
+                    ? "selesai"
+                    : "aktif";
+                let changed = false;
+                const updatedSos = parsedSos.map((s) => {
+                  if (
+                    s.id === targetUuid ||
+                    s.id === reportId ||
+                    (localMatch?.tracking_code && (s.tracking_code === localMatch.tracking_code || s.note?.includes(localMatch.tracking_code)))
+                  ) {
+                    changed = true;
+                    return { ...s, status: nextSosStatus };
+                  }
+                  return s;
+                });
+                if (changed) {
+                  localStorage.setItem("sigapbumi_sos_alerts_cache", JSON.stringify(updatedSos));
+                }
+              }
+            }
+          } catch {}
+        }
       }
     } catch {
       // Ignore
@@ -1513,13 +1625,12 @@ export async function deleteReportLive(
   actorName: string = "Petugas Posko Terpadu"
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // 1. Tandai ID / kode tracking sebagai dihapus di local storage agar tidak muncul lagi
-    markReportAsDeleted(reportId);
-
-    // 2. Hapus dari local storage reports
+    // 1. Ambil snapshot lokal sebelum dihapus agar tetap tersedia di Kotak Sampah
+    let localSnap: LiveReportItem | undefined;
     if (typeof window !== "undefined") {
       try {
         const local = getLocalReports();
+        localSnap = local.find((r) => r.id === reportId || r.tracking_code === reportId);
         const filtered = local.filter((r) => r.id !== reportId && r.tracking_code !== reportId);
         localStorage.setItem(LOCAL_STORAGE_REPORTS_KEY, JSON.stringify(filtered));
       } catch {
@@ -1527,21 +1638,59 @@ export async function deleteReportLive(
       }
     }
 
+    // 2. Tandai ID / kode tracking sebagai dihapus di local storage agar tidak muncul lagi
+    markReportAsDeleted(reportId);
+
     // 3. Hapus dari mock in-memory jika ada
     const mockIdx = DEFAULT_MOCK_REPORTS.findIndex((r) => r.id === reportId || r.tracking_code === reportId);
     if (mockIdx >= 0) {
       DEFAULT_MOCK_REPORTS.splice(mockIdx, 1);
     }
 
-    // 4. Panggil API Route DELETE internal /api/admin/status
+    // 4. Arsipkan ke Kotak Sampah & hapus di backend via /api/admin/trash
     try {
-      await fetch("/api/admin/status", {
-        method: "DELETE",
+      const trashRes = await fetch("/api/admin/trash", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reportId }),
+        body: JSON.stringify({
+          action: "archive_and_delete",
+          reportId,
+          kind: "report",
+          actorName,
+          clientSnapshot: localSnap
+            ? {
+                id: localSnap.id,
+                tracking_code: localSnap.tracking_code,
+                title: localSnap.title,
+                address: localSnap.address,
+                status: localSnap.status,
+                photo_url: localSnap.image_url,
+              }
+            : undefined,
+        }),
       });
+      if (trashRes.ok && typeof window !== "undefined") {
+        const trashJson = await trashRes.json();
+        if (trashJson?.archivedItems?.length > 0) {
+          const prevRaw = localStorage.getItem("sigapbumi_admin_trash");
+          const prev = prevRaw ? JSON.parse(prevRaw) : [];
+          const archivedIds = new Set(trashJson.archivedItems.map((a: any) => a.id));
+          localStorage.setItem(
+            "sigapbumi_admin_trash",
+            JSON.stringify([...trashJson.archivedItems, ...prev.filter((p: any) => !archivedIds.has(p.id))].slice(0, 100))
+          );
+          window.dispatchEvent(new CustomEvent("sigapbumi:trash-updated"));
+        }
+      }
     } catch {
-      // Fallback ke Supabase langsung
+      // Fallback ke DELETE endpoint lama
+      try {
+        await fetch("/api/admin/status", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reportId }),
+        });
+      } catch {}
     }
 
     // 5. Coba hapus langsung dari client Supabase jika terhubung

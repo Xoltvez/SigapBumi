@@ -29,10 +29,11 @@ export function AnalyticsTracker() {
     });
   }, [pathname]);
 
-  // Track Live Heartbeat (KHUSUS pengunjung publik, setiap 25 detik saat tab aktif)
+  // Track Live Heartbeat (KHUSUS pengunjung publik, kirim awal 2 detik & setiap 20 detik saat tab aktif)
   useEffect(() => {
     if (pathname?.startsWith("/admin")) return;
-    const interval = setInterval(() => {
+
+    const sendBeat = (delta: number) => {
       if (document.visibilityState !== "visible") return;
       const { visitorId, sessionId } = getVisitorAndSessionIds();
       sendAnalyticsEvent({
@@ -41,11 +42,17 @@ export function AnalyticsTracker() {
         sessionId,
         path: pathname || "/",
         device: getAnalyticsDevice(),
-        secondsDelta: 25,
+        secondsDelta: delta,
       });
-    }, 25000);
+    };
 
-    return () => clearInterval(interval);
+    const initialTimer = setTimeout(() => sendBeat(5), 2000);
+    const interval = setInterval(() => sendBeat(20), 20000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
   }, [pathname]);
 
   // Track Button & Link Clicks (KHUSUS pengunjung publik)

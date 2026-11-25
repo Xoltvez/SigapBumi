@@ -26,6 +26,7 @@ import type { ReportStatus, DisasterType, PriorityLabel } from "@/types";
 import DisasterIcon from "@/components/common/DisasterIcon";
 import {
   fetchLiveReports,
+  getCachedLiveReports,
   fetchReportDetail,
   updateReportStatusLive,
   recordAuditLog,
@@ -35,6 +36,7 @@ import {
   extractPhotoFromDescription,
   extractPhoneFromDescription,
   extractReporterNameFromDescription,
+  type LiveReportItem,
 } from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 
@@ -85,10 +87,99 @@ function getMaskedPhone(phone?: string): string {
   return `${prefix}-****-${suffix}`;
 }
 
+function buildDetailStateFromItem(
+  found: LiveReportItem,
+  detail?: LiveReportItem | null
+): ReportDetailState {
+  let pLabel: PriorityLabel = "Sedang";
+  const isSos = Boolean(
+    found.tracking_code?.startsWith("SOS-") ||
+    found.title?.toUpperCase().includes("SOS") ||
+    found.target_agency === "damkar" ||
+    found.target_agency === "medis" ||
+    found.target_agency === "polisi" ||
+    found.target_agency === "bnpb_bpbd"
+  );
+
+  const isActualSos = Boolean(
+    found.tracking_code?.toUpperCase().startsWith("SOS-") ||
+    found.title?.toUpperCase().includes("SOS") ||
+    (found as any).is_sos === true ||
+    (detail as any)?.is_sos === true
+  );
+
+  const p = String(found.priority || "").toLowerCase();
+  if (isSos || p === "kritis" || found.priority_label === "Kritis") {
+    pLabel = "Kritis";
+  } else if (p === "tinggi" || found.priority_label === "Tinggi") {
+    pLabel = "Tinggi";
+  } else if (p === "rendah" || found.priority_label === "Rendah") {
+    pLabel = "Rendah";
+  } else if (p === "sedang" || p === "normal" || found.priority_label === "Sedang") {
+    pLabel = "Sedang";
+  } else if (found.confirmation_count >= 20) {
+    pLabel = "Kritis";
+  } else if (found.confirmation_count >= 10) {
+    pLabel = "Tinggi";
+  } else if (found.status === "selesai") {
+    pLabel = "Rendah";
+  }
+
+  const rawDesc = detail?.description || found.description || "";
+  const cleanDesc = cleanReportDescription(rawDesc);
+  const photoUrl = detail?.image_url || extractPhotoFromDescription(found.description) || found.image_url;
+  const reporterName = detail?.reporter_name || found.reporter_name || extractReporterNameFromDescription(rawDesc);
+  const phoneNum = detail?.phone_number || found.phone_number || extractPhoneFromDescription(rawDesc);
+
+  return {
+    id: detail?.id || found.id,
+    tracking_code: detail?.tracking_code || found.tracking_code,
+    disaster_type: detail?.disaster_type || found.disaster_type,
+    title: removeEmojis(detail?.title || found.title),
+    description: cleanDesc,
+    address: detail?.address || found.address,
+    lat: detail?.lat || found.lat,
+    lng: detail?.lng || found.lng,
+    status: detail?.status || found.status,
+    priority: pLabel,
+    confirmation_count: detail?.confirmation_count ?? found.confirmation_count,
+    created_at: detail?.created_at || found.created_at,
+    version: 1,
+    is_sos: isActualSos,
+    reporter_name: reporterName || undefined,
+    reporter_phone: phoneNum || undefined,
+    image_url: photoUrl,
+    timeline: (detail?.timeline && detail.timeline.length > 0) ? detail.timeline : found.timeline || [
+      {
+        status: found.status,
+        label:
+          found.status === "diterima"
+            ? "Laporan Masuk Sistem"
+            : found.status === "ditindaklanjuti"
+            ? "Tim Operasional Ditugaskan"
+            : found.status === "selesai"
+            ? "Penanganan Selesai"
+            : "Status Diperbarui",
+        timestamp: found.created_at,
+        note: "Laporan tercatat di sistem posko terpadu.",
+        actor: "Petugas Posko Terpadu",
+      },
+    ],
+  };
+}
+
 export default function DetailLaporanClient({ reportId }: { reportId: string }) {
   const router = useRouter();
-  const [report, setReport] = useState<ReportDetailState | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialCached = React.useMemo(() => {
+    const cached = getCachedLiveReports();
+    return cached?.find((r) => r.id === reportId || r.tracking_code === reportId) || null;
+  }, [reportId]);
+
+  const [report, setReport] = useState<ReportDetailState | null>(() =>
+    initialCached ? buildDetailStateFromItem(initialCached) : null
+  );
+  const [isLoading, setIsLoading] = useState<boolean>(() => !initialCached);
+  const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(true);
 
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -118,12 +209,22 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
     let isMounted = true;
 
     async function loadDetail(isSilent = false) {
-      if (!isSilent) setIsLoading(true);
+      if (!isSilent && !report) setIsLoading(true);
+      setIsLoadingDetail(true);
       try {
-        const live = await fetchLiveReports();
-        let found = live.find(
-          (r) => r.id === reportId || r.tracking_code === reportId
-        );
+        // 1. Langsung fetch detail 1 baris spesifik (tanpa mengunduh 3.7MB seluruh tabel reports!)
+        const lookupKey = initialCached?.tracking_code || reportId;
+        let detail = await fetchReportDetail(lookupKey);
+        let found: LiveReportItem | undefined = initialCached || detail || undefined;
+
+        // 2. Fallback hanya jika tidak ada di cache maupun query detail langsung
+        if (!found) {
+          const live = await fetchLiveReports(false, { lean: true });
+          found = live.find((r) => r.id === reportId || r.tracking_code === reportId);
+          if (found && !detail) {
+            detail = await fetchReportDetail(found.tracking_code);
+          }
+        }
 
         if (!found) {
           const fallbackMap: Record<string, any> = {
@@ -202,127 +303,38 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
         }
 
         if (isMounted && found) {
-          const detail = await fetchReportDetail(found.tracking_code);
+          const built = buildDetailStateFromItem(found, detail);
 
-          let pLabel: PriorityLabel = "Sedang";
-          const isSos = Boolean(
-            found.tracking_code?.startsWith("SOS-") ||
-            found.title?.toUpperCase().includes("SOS") ||
-            found.target_agency === "damkar" ||
-            found.target_agency === "medis" ||
-            found.target_agency === "polisi" ||
-            found.target_agency === "bnpb_bpbd"
-          );
-
-          const isActualSos = Boolean(
-            found.tracking_code?.toUpperCase().startsWith("SOS-") ||
-            found.title?.toUpperCase().includes("SOS") ||
-            (found as any).is_sos === true ||
-            (detail as any)?.is_sos === true
-          );
-
-          const p = String(found.priority || "").toLowerCase();
-          if (isSos || p === "kritis" || found.priority_label === "Kritis") {
-            pLabel = "Kritis";
-          } else if (p === "tinggi" || found.priority_label === "Tinggi") {
-            pLabel = "Tinggi";
-          } else if (p === "rendah" || found.priority_label === "Rendah") {
-            pLabel = "Rendah";
-          } else if (p === "sedang" || p === "normal" || found.priority_label === "Sedang") {
-            pLabel = "Sedang";
-          } else if (found.confirmation_count >= 20) {
-            pLabel = "Kritis";
-          } else if (found.confirmation_count >= 10) {
-            pLabel = "Tinggi";
-          } else if (found.status === "selesai") {
-            pLabel = "Rendah";
-          }
-
-          const rawDesc = detail?.description || found.description || "";
-          const cleanDesc = cleanReportDescription(rawDesc);
-          const photoUrl = detail?.image_url || extractPhotoFromDescription(found.description) || found.image_url;
-
-          // 1. Deteksi nama & nomor telepon: dari detail / found / tag deskripsi
-          let reporterName = detail?.reporter_name || found.reporter_name || extractReporterNameFromDescription(rawDesc);
-          let phoneNum = detail?.phone_number || found.phone_number || extractPhoneFromDescription(rawDesc);
-
-          // 2. Jika ada reporter_id di database Supabase, coba ambil nama & nomor telepon dari tabel profiles
-          if ((!reporterName || !phoneNum) && found.reporter_id) {
+          // Jika ada reporter_id di database Supabase, coba ambil nama & nomor telepon dari tabel profiles
+          if ((!built.reporter_name || !built.reporter_phone) && found.reporter_id) {
             try {
               const { data: prof } = await supabase
                 .from("profiles")
                 .select("full_name, phone_number")
                 .eq("id", found.reporter_id)
                 .maybeSingle();
-              if (prof?.full_name && !reporterName) {
-                reporterName = prof.full_name;
+              if (prof?.full_name && !built.reporter_name) {
+                built.reporter_name = prof.full_name;
               }
-              if (prof?.phone_number && !phoneNum) {
-                phoneNum = prof.phone_number;
-              }
-            } catch {}
-          }
-
-          // 3. Jika tersimpan di browser warga (localStorage) dengan email yang sama
-          if ((!reporterName || !phoneNum) && typeof window !== "undefined" && found.user_email) {
-            try {
-              const stored = localStorage.getItem("sigapbumi_current_user");
-              if (stored) {
-                const parsed = JSON.parse(stored);
-                if (parsed.email === found.user_email) {
-                  if (!reporterName && parsed.full_name) reporterName = parsed.full_name;
-                  if (!phoneNum && parsed.phone_number) phoneNum = parsed.phone_number;
-                }
+              if (prof?.phone_number && !built.reporter_phone) {
+                built.reporter_phone = prof.phone_number;
               }
             } catch {}
           }
 
-          setReport({
-            id: found.id,
-            tracking_code: found.tracking_code,
-            disaster_type: found.disaster_type,
-            title: removeEmojis(found.title),
-            description: cleanDesc,
-            address: found.address,
-            lat: found.lat,
-            lng: found.lng,
-            status: found.status,
-            priority: pLabel,
-            confirmation_count: found.confirmation_count,
-            created_at: found.created_at,
-            version: 1,
-            is_sos: isActualSos,
-            reporter_name: reporterName || undefined,
-            reporter_phone: phoneNum || undefined,
-            image_url: photoUrl,
-            timeline: (detail?.timeline && detail.timeline.length > 0) ? detail.timeline : found.timeline || [
-              {
-                status: found.status,
-                label:
-                  found.status === "diterima"
-                    ? "Laporan Masuk Sistem"
-                    : found.status === "ditindaklanjuti"
-                    ? "Tim Operasional Ditugaskan"
-                    : found.status === "selesai"
-                    ? "Penanganan Selesai"
-                    : "Status Diperbarui",
-                timestamp: found.created_at,
-                note: "Laporan tercatat di sistem posko terpadu.",
-                actor: "Petugas Posko Terpadu",
-              },
-            ],
-          });
+          if (isMounted) setReport(built);
         }
       } catch (err) {
         console.warn("Gagal memuat detail laporan:", err);
       } finally {
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+          setIsLoadingDetail(false);
+        }
       }
     }
 
-    const timer = setTimeout(() => {
-      loadDetail();
-    }, 0);
+    loadDetail(Boolean(initialCached));
 
     const handleLocalUpdate = () => {
       loadDetail(true);
@@ -361,7 +373,6 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
 
     return () => {
       isMounted = false;
-      clearTimeout(timer);
       clearInterval(pollTimer);
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:report-updated", handleLocalUpdate);
@@ -519,9 +530,21 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] text-ink-muted text-sm">
-        <Radio className="w-6 h-6 animate-spin text-primary mr-2" />
-        <p>Memuat Lembar Kerja Laporan...</p>
+      <div className="space-y-6 max-w-[1400px] mx-auto pb-12 animate-pulse">
+        <div className="bg-surface border border-line rounded-md p-4 h-24" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8 space-y-6">
+            <div className="bg-surface border border-line rounded-md p-5">
+              <div className="h-4 w-40 bg-slate-200 rounded mb-3" />
+              <div className="aspect-video w-full bg-slate-100 rounded-md" />
+            </div>
+            <div className="bg-surface border border-line rounded-md p-5 h-28" />
+          </div>
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-surface border border-line rounded-md p-5 h-60" />
+            <div className="bg-surface border border-line rounded-md p-5 h-44" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -629,6 +652,11 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
                   className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                 />
               </button>
+            ) : isLoadingDetail ? (
+              <div className="aspect-video w-full rounded-md bg-slate-100/80 border border-line flex flex-col items-center justify-center text-ink-muted p-6 text-center animate-pulse">
+                <ImageIcon className="w-10 h-10 text-slate-300 mb-2" />
+                <p className="text-xs font-medium text-slate-400">Memuat foto bukti kejadian...</p>
+              </div>
             ) : (
               <div className="aspect-video w-full rounded-md bg-bg border border-line flex flex-col items-center justify-center text-ink-muted p-6 text-center">
                 <ImageIcon className="w-12 h-12 text-ink-muted mb-2 opacity-50" />

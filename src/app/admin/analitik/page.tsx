@@ -21,7 +21,10 @@ import {
   Siren,
   CheckCircle2,
   Activity,
+  Lock,
 } from "lucide-react";
+import { useAdmin } from "@/components/layout/AdminShell";
+import { hasPermission, isPemerintahanUnit } from "@/lib/rbac";
 import {
   ResponsiveContainer,
   BarChart,
@@ -135,6 +138,11 @@ function formatWibTimeOnly(iso: string): string {
 }
 
 export default function AdminAnalitikWebPage() {
+  const { adminUser } = useAdmin();
+  const canView =
+    isPemerintahanUnit(adminUser?.unit) &&
+    hasPermission("view_analytics", adminUser?.unit, adminUser?.role);
+
   const [activeTab, setActiveTab] = useState<SubTabId>("overview");
   const [period, setPeriod] = useState<PeriodId>("7d");
   const [isLoading, setIsLoading] = useState(true);
@@ -142,6 +150,7 @@ export default function AdminAnalitikWebPage() {
   const [data, setData] = useState<AnalyticsResponse | null>(null);
 
   const loadAnalytics = useCallback(async (showSpinner = false) => {
+    if (!canView) return;
     if (showSpinner) setIsRefreshing(true);
     try {
       const res = await fetch(`/api/analytics?period=${period}`, {
@@ -157,16 +166,20 @@ export default function AdminAnalitikWebPage() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [period]);
+  }, [period, canView]);
 
   // Load awal + auto-polling real-time setiap 8 detik
   useEffect(() => {
+    if (!canView) {
+      setIsLoading(false);
+      return;
+    }
     loadAnalytics(false);
     const interval = setInterval(() => {
       loadAnalytics(false);
     }, 8000);
     return () => clearInterval(interval);
-  }, [loadAnalytics]);
+  }, [loadAnalytics, canView]);
 
   const periodLabel = period === "1d" ? "Hari Ini" : period === "30d" ? "30 Hari Terakhir" : "7 Hari Terakhir";
 
@@ -191,6 +204,18 @@ export default function AdminAnalitikWebPage() {
     { id: "map_weather", label: "Peta & Cuaca", icon: MapIcon },
     { id: "journey", label: "Alur Lapor Warga", icon: GitBranch },
   ];
+
+  if (!canView) {
+    return (
+      <div className="max-w-xl mx-auto mt-16 bg-white border border-slate-200 rounded-2xl p-8 text-center">
+        <Lock className="w-10 h-10 text-[#F97316] mx-auto mb-3" />
+        <h1 className="text-lg font-extrabold text-slate-900">Akses Analitik Web Dibatasi</h1>
+        <p className="text-xs text-slate-500 mt-2">
+          Modul Analitik Website SigapBumi hanya tersedia untuk akun unit Pemerintahan (Super Admin).
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto font-sans pb-12 select-none">
