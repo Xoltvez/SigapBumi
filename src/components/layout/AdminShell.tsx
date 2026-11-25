@@ -20,6 +20,9 @@ import {
   type AdminAuthSession,
 } from "@/lib/adminAuth";
 import { getAdminSettings } from "@/lib/services/settings";
+import { sendMonitoringEvent, trackAdminActivity } from "@/lib/analytics/client";
+import { ADMIN_SESSION_TOKEN_KEY } from "@/lib/adminAuth";
+import { resolveSystemRole } from "@/lib/rbac";
 
 export type { AdminAuthSession };
 
@@ -80,6 +83,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const [isVerifyingAuth, setIsVerifyingAuth] = useState<boolean>(!isLoginPage);
   const [idleWarningSeconds, setIdleWarningSeconds] = useState<number | null>(null);
   const lastThrottleRef = useRef<number>(0);
+  const adminUserRef = useRef<AdminAuthSession | null>(null);
+  const lastLoggedAdminPathRef = useRef<string>("");
+
+  useEffect(() => {
+    adminUserRef.current = adminUser;
+  }, [adminUser]);
 
   // Otomatis tutup sidebar mobile saat navigasi rute berubah
   useEffect(() => {
@@ -88,6 +97,31 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(
     (reason: "manual" | "idle" | "left" | "unauthorized" = "manual") => {
+      const currentAdmin = adminUserRef.current;
+      if (currentAdmin) {
+        const sid =
+          (typeof window !== "undefined" && sessionStorage.getItem(ADMIN_SESSION_TOKEN_KEY)) ||
+          `ses-${Date.now()}`;
+        sendMonitoringEvent({
+          type: "logout",
+          sessionId: sid,
+          userId: currentAdmin.nip,
+          userName: currentAdmin.name,
+          userEmail: currentAdmin.email,
+          unit: currentAdmin.unit,
+          unitName: currentAdmin.unitName,
+          role: resolveSystemRole(currentAdmin.unit, currentAdmin.role),
+          reason,
+        });
+        trackAdminActivity({
+          adminName: currentAdmin.name,
+          adminEmail: currentAdmin.email,
+          unit: currentAdmin.unit,
+          unitName: currentAdmin.unitName,
+          action: reason === "idle" ? "Auto-Logout (Idle)" : "Keluar Sesi",
+          detail: reason === "idle" ? "Sesi ditutup otomatis karena tidak aktif" : "Petugas keluar dari posko",
+        });
+      }
       stopSosSiren();
       clearAdminSession();
       setAdminUser(null);
@@ -97,6 +131,58 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     },
     [router]
   );
+
+  // Catat Log Aktivitas & Heartbeat Monitoring Petugas di area /admin/*
+  useEffect(() => {
+    if (isLoginPage || !adminUser || !pathname) return;
+    const sid =
+      (typeof window !== "undefined" && sessionStorage.getItem(ADMIN_SESSION_TOKEN_KEY)) ||
+      `ses-${adminUser.nip}`;
+    const sysRole = resolveSystemRole(adminUser.unit, adminUser.role);
+
+    // Kirim heartbeat sesi langsung
+    sendMonitoringEvent({
+      type: "heartbeat",
+      sessionId: sid,
+      userId: adminUser.nip,
+      userName: adminUser.name,
+      userEmail: adminUser.email,
+      unit: adminUser.unit,
+      unitName: adminUser.unitName,
+      role: sysRole,
+      currentPath: pathname,
+    });
+
+    const key = `${adminUser.email}:${pathname}`;
+    if (lastLoggedAdminPathRef.current !== key) {
+      lastLoggedAdminPathRef.current = key;
+      trackAdminActivity({
+        adminName: adminUser.name,
+        adminEmail: adminUser.email,
+        unit: adminUser.unit,
+        unitName: adminUser.unitName,
+        action: "Akses Halaman",
+        detail: pathname,
+      });
+    }
+
+    const hbInterval = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      sendMonitoringEvent({
+        type: "heartbeat",
+        sessionId: sid,
+        userId: adminUser.nip,
+        userName: adminUser.name,
+        userEmail: adminUser.email,
+        unit: adminUser.unit,
+        unitName: adminUser.unitName,
+        role: sysRole,
+        currentPath: pathname,
+      });
+    }, 30000);
+
+    return () => clearInterval(hbInterval);
+  }, [pathname, adminUser, isLoginPage]);
 
   // Verifikasi Sesi Admin Aktif Saat Membuka Halaman Admin
   useEffect(() => {

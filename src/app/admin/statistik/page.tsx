@@ -973,16 +973,6 @@ export default function AdminStatistikPage() {
       {/* 1. Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
-              {roleConfig.jurisdictionBadge}
-            </span>
-            {lastRefreshedTime && (
-              <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
-                • Pembaruan: {lastRefreshedTime}
-              </span>
-            )}
-          </div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
             {roleConfig.title}
           </h1>
@@ -1024,11 +1014,11 @@ export default function AdminStatistikPage() {
         </div>
       </div>
 
-      {/* 2. 4 Kartu Metrik KPI (Row 1) */}
+      {/* 2. 4 Kartu Metrik KPI (Row 1) - Tema Solid Oranye Bersih & Stroke Rapi */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
         {/* Card 1: Total Laporan */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#2563EB] shrink-0 font-bold">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:border-orange-200 hover:shadow-md transition-all">
+          <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 shrink-0 font-bold">
             <BarChart3 className="w-6 h-6 stroke-[2.2]" />
           </div>
           <div>
@@ -1038,7 +1028,7 @@ export default function AdminStatistikPage() {
             <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
               {totalReportsCount}
             </p>
-            <p className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 mt-0.5">
+            <p className="text-[11px] text-orange-600 font-semibold flex items-center gap-1 mt-0.5">
               <span>{provincesData.filter((p) => p.count > 0).length} Wilayah</span>
               <span className="text-slate-400 font-normal">tercakup</span>
             </p>
@@ -1046,8 +1036,8 @@ export default function AdminStatistikPage() {
         </div>
 
         {/* Card 2: Tingkat Penyelesaian */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-full bg-[#D1FAE5] flex items-center justify-center text-[#059669] shrink-0 font-bold">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:border-orange-200 hover:shadow-md transition-all">
+          <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 shrink-0 font-bold">
             <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
           </div>
           <div>
@@ -1057,7 +1047,7 @@ export default function AdminStatistikPage() {
             <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
               {resolutionRate}%
             </p>
-            <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
+            <p className="text-[11px] text-orange-600 font-semibold flex items-center gap-1 mt-0.5">
               <span>{selesaiReports} selesai</span>
               <span className="text-slate-400 font-normal">
                 dari {totalReportsCount} kasus
@@ -1067,8 +1057,8 @@ export default function AdminStatistikPage() {
         </div>
 
         {/* Card 3: Rata-rata Waktu Tanggap */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-full bg-[#FEF3C7] flex items-center justify-center text-[#D97706] shrink-0 font-bold">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:border-orange-200 hover:shadow-md transition-all">
+          <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 shrink-0 font-bold">
             <Clock className="w-6 h-6 stroke-[2.5]" />
           </div>
           <div>
@@ -1081,16 +1071,16 @@ export default function AdminStatistikPage() {
                 <span className="text-xs font-normal text-slate-400"> menit</span>
               )}
             </p>
-            <p className="text-[11px] text-amber-600 font-semibold flex items-center gap-1 mt-0.5">
-              {roleConfig.responseTime !== "-" && <TrendingUp className="w-3 h-3 text-amber-500" />}
+            <p className="text-[11px] text-orange-600 font-semibold flex items-center gap-1 mt-0.5">
+              {roleConfig.responseTime !== "-" && <TrendingUp className="w-3 h-3 text-orange-500" />}
               <span>{roleConfig.responseComparison}</span>
             </p>
           </div>
         </div>
 
         {/* Card 4: Metrik Khusus Satuan */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-full bg-[#FEE2E2] flex items-center justify-center text-[#EF4444] shrink-0 font-bold">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:border-orange-200 hover:shadow-md transition-all">
+          <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 shrink-0 font-bold">
             <Shield className="w-6 h-6 stroke-[2.5]" />
           </div>
           <div>
@@ -1100,7 +1090,7 @@ export default function AdminStatistikPage() {
             <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight mt-0.5">
               {roleConfig.fourthMetricValue}
             </p>
-            <p className="text-[11px] text-rose-600 font-semibold mt-0.5">
+            <p className="text-[11px] text-orange-600 font-semibold mt-0.5">
               {roleConfig.fourthMetricSub}
             </p>
           </div>
@@ -1110,7 +1100,7 @@ export default function AdminStatistikPage() {
       {/* 3. Grid: Kinerja Instansi & Pipeline Status */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 items-start">
         {/* Kolom Kiri: Beban Kerja per Satuan (7 cols) */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-100 p-6 shadow-[0_2px_16px_rgba(0,0,0,0.02)] space-y-5">
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-[0_2px_16px_rgba(0,0,0,0.02)] space-y-5">
           <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
             <div>
               <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
@@ -1120,7 +1110,7 @@ export default function AdminStatistikPage() {
                 {roleConfig.agencySectionSub}
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
+            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200">
               {agencyListDynamic.length} Divisi / Sektor
             </span>
           </div>
@@ -1133,21 +1123,21 @@ export default function AdminStatistikPage() {
                     <span className="font-bold text-slate-800">
                       {agency.name}
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold border border-slate-200">
                       {agency.badge}
                     </span>
                   </div>
                   <span className="text-slate-500 font-medium">
                     <strong className="text-slate-800">{agency.count}</strong>{" "}
                     kasus ({agency.pct}%) ·{" "}
-                    <span className="text-emerald-600 font-bold">
+                    <span className="text-orange-600 font-bold">
                       {agency.resolved} tuntas ({agency.resolvePct}%)
                     </span>
                   </span>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden flex">
+                <div className="w-full bg-slate-50 border border-slate-200 rounded-full h-2.5 overflow-hidden flex">
                   <div
-                    className={`bg-linear-to-r ${agency.gradient} h-full transition-all duration-500 rounded-full`}
+                    className="bg-orange-500 h-full transition-all duration-500 rounded-full"
                     style={{ width: `${agency.count > 0 ? Math.min(100, Math.max(agency.pct, 4)) : 0}%` }}
                   />
                 </div>
@@ -1155,10 +1145,10 @@ export default function AdminStatistikPage() {
             ))}
           </div>
 
-          <div className="p-4 bg-[#F8FAFC] rounded-xl border border-slate-100 text-xs text-slate-500 leading-relaxed mt-4 flex items-start gap-3">
-            <Building2 className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+          <div className="p-4 bg-orange-50/30 rounded-xl border border-orange-100 text-xs text-slate-600 leading-relaxed mt-4 flex items-start gap-3">
+            <Building2 className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
             <p>
-              <strong className="text-slate-700 font-semibold">
+              <strong className="text-slate-800 font-semibold">
                 Sinergi Koordinasi Komando Terpadu:
               </strong>{" "}
               Seluruh data laporan dan panggilan darurat terfilter otomatis
@@ -1170,7 +1160,7 @@ export default function AdminStatistikPage() {
         </div>
 
         {/* Kolom Kanan: Pipeline Alur Laporan (5 cols) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-100 p-6 shadow-[0_2px_16px_rgba(0,0,0,0.02)] space-y-4">
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 shadow-[0_2px_16px_rgba(0,0,0,0.02)] space-y-4">
           <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
             <div>
               <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
@@ -1180,68 +1170,68 @@ export default function AdminStatistikPage() {
                 Distribusi progres insiden dari masuk hingga tuntas
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
+            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200">
               Total {totalReportsCount}
             </span>
           </div>
 
           <div className="space-y-3 pt-1 font-sans">
             {/* Step 1 */}
-            <div className="p-3.5 rounded-xl border border-blue-200/80 bg-[#EFF6FF] flex items-center justify-between shadow-2xs">
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50/20 transition-all flex items-center justify-between shadow-2xs">
               <div>
-                <span className="text-[11px] font-extrabold uppercase text-[#2563EB] tracking-wider block">
+                <span className="text-[11px] font-extrabold uppercase text-slate-800 tracking-wider block">
                   1. Masuk / Diterima
                 </span>
                 <span className="text-xs text-slate-500 font-medium">
                   Menunggu verifikasi lapangan
                 </span>
               </div>
-              <span className="text-xl font-extrabold text-[#2563EB] tabular-nums">
+              <span className="text-xl font-extrabold text-orange-600 tabular-nums">
                 {diterimaReports}
               </span>
             </div>
 
             {/* Step 2 */}
-            <div className="p-3.5 rounded-xl border border-purple-200/80 bg-[#FAF5FF] flex items-center justify-between shadow-2xs">
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50/20 transition-all flex items-center justify-between shadow-2xs">
               <div>
-                <span className="text-[11px] font-extrabold uppercase text-[#9333EA] tracking-wider block">
+                <span className="text-[11px] font-extrabold uppercase text-slate-800 tracking-wider block">
                   2. Diverifikasi Posko
                 </span>
                 <span className="text-xs text-slate-500 font-medium">
                   Tervalidasi & siap pengerahan armada
                 </span>
               </div>
-              <span className="text-xl font-extrabold text-[#9333EA] tabular-nums">
+              <span className="text-xl font-extrabold text-orange-600 tabular-nums">
                 {diverifikasiReports}
               </span>
             </div>
 
             {/* Step 3 */}
-            <div className="p-3.5 rounded-xl border border-amber-200/80 bg-[#FFF7ED] flex items-center justify-between shadow-2xs">
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50/20 transition-all flex items-center justify-between shadow-2xs">
               <div>
-                <span className="text-[11px] font-extrabold uppercase text-[#EA580C] tracking-wider block">
+                <span className="text-[11px] font-extrabold uppercase text-slate-800 tracking-wider block">
                   3. Dalam Penanganan Lapangan
                 </span>
                 <span className="text-xs text-slate-500 font-medium">
                   Regu dan armada sedang beroperasi
                 </span>
               </div>
-              <span className="text-xl font-extrabold text-[#EA580C] tabular-nums">
+              <span className="text-xl font-extrabold text-orange-600 tabular-nums">
                 {ditindaklanjutiReports}
               </span>
             </div>
 
             {/* Step 4 */}
-            <div className="p-3.5 rounded-xl border border-emerald-200/80 bg-[#ECFDF5] flex items-center justify-between shadow-2xs">
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50/20 transition-all flex items-center justify-between shadow-2xs">
               <div>
-                <span className="text-[11px] font-extrabold uppercase text-[#059669] tracking-wider block">
+                <span className="text-[11px] font-extrabold uppercase text-slate-800 tracking-wider block">
                   4. Selesai Ditangani
                 </span>
                 <span className="text-xs text-slate-500 font-medium">
                   Insiden teratasi dan ditutup aman
                 </span>
               </div>
-              <span className="text-xl font-extrabold text-[#059669] tabular-nums">
+              <span className="text-xl font-extrabold text-orange-600 tabular-nums">
                 {selesaiReports}
               </span>
             </div>
@@ -1252,7 +1242,7 @@ export default function AdminStatistikPage() {
       {/* 4. Grid: Sebaran Wilayah & Tipe Kejadian (Grid 6 : 6) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 items-start">
         {/* Sebaran Wilayah */}
-        <div className="lg:col-span-6 bg-white rounded-2xl border border-slate-100 p-6 shadow-[0_2px_16px_rgba(0,0,0,0.02)] space-y-4">
+        <div className="lg:col-span-6 bg-white rounded-2xl border border-slate-200 p-6 shadow-[0_2px_16px_rgba(0,0,0,0.02)] space-y-4">
           <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
             <div>
               <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
@@ -1262,7 +1252,7 @@ export default function AdminStatistikPage() {
                 Konsentrasi laporan kejadian pada area yurisdiksi operasional
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
+            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200">
               {provincesData.length} Daerah
             </span>
           </div>
@@ -1271,10 +1261,10 @@ export default function AdminStatistikPage() {
             {provincesData.map((prov, idx) => (
               <div
                 key={idx}
-                className="p-3.5 rounded-xl border border-slate-100 bg-[#F8FAFC] hover:bg-slate-100/70 transition-colors flex items-center justify-between text-xs"
+                className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-orange-200 transition-colors flex items-center justify-between text-xs"
               >
                 <span className="font-bold text-slate-800">{prov.name}</span>
-                <span className="font-extrabold text-blue-600 bg-blue-50 border border-blue-200/60 px-2 py-0.5 rounded-md tabular-nums">
+                <span className="font-extrabold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-md tabular-nums">
                   {prov.count} lap ({prov.pct}%)
                 </span>
               </div>
@@ -1283,7 +1273,7 @@ export default function AdminStatistikPage() {
         </div>
 
         {/* Distribusi Tipe Kejadian */}
-        <div className="lg:col-span-6 bg-white rounded-2xl border border-slate-100 p-6 shadow-[0_2px_16px_rgba(0,0,0,0.02)] space-y-4">
+        <div className="lg:col-span-6 bg-white rounded-2xl border border-slate-200 p-6 shadow-[0_2px_16px_rgba(0,0,0,0.02)] space-y-4">
           <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
             <div>
               <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
@@ -1293,7 +1283,7 @@ export default function AdminStatistikPage() {
                 Kategori kedaruratan yang ditangani oleh instansi Anda
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
+            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200">
               {disastersData.length} Kategori
             </span>
           </div>
@@ -1305,18 +1295,18 @@ export default function AdminStatistikPage() {
                 <div key={idx} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <Icon className={`w-3.5 h-3.5 ${d.color}`} />
+                      <Icon className="w-3.5 h-3.5 text-orange-600" />
                       <span className="font-bold text-slate-800">
                         {d.label}
                       </span>
                     </div>
-                    <span className="font-extrabold text-slate-700 tabular-nums">
+                    <span className="font-extrabold text-orange-600 tabular-nums">
                       {d.count} kasus ({d.pct}%)
                     </span>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-slate-50 border border-slate-200 rounded-full h-2 overflow-hidden">
                     <div
-                      className={`${d.barColor} h-full transition-all duration-500 rounded-full`}
+                      className="bg-orange-500 h-full transition-all duration-500 rounded-full"
                       style={{ width: `${d.count > 0 ? Math.min(100, Math.max(d.pct, 4)) : 0}%` }}
                     />
                   </div>

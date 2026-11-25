@@ -47,3 +47,6 @@ prd,agent.design.md/
 # local active sessions cache
 .system_active_sessions.json
 
+
+# SigapBumi local real-time analytics store
+.sigapbumi-analytics.json

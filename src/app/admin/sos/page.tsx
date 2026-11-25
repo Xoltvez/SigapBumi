@@ -1159,43 +1159,43 @@ export default function AdminSosPage() {
         </div>
       )}
 
-      {/* Lightbox Modal: Foto Otentik Kamera dengan Stempel Real-Time */}
+      {/* Lightbox Modal: Foto Otentik Kamera (Auto-fit tanpa border hitam berlebih & bersih tanpa stempel text) */}
       {previewPhotoUrl && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6"
           onClick={() => setPreviewPhotoUrl(null)}
         >
           <div
-            className="bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            className="bg-slate-900 border border-slate-700/80 rounded-2xl w-fit max-w-[92vw] max-h-[92vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between text-white">
+            <div className="px-4 py-2.5 border-b border-slate-800 flex items-center justify-between text-white shrink-0">
               <div className="flex items-center gap-2">
                 <Camera className="w-4 h-4 text-emerald-400" />
-                <span className="text-sm font-bold">Bukti Kamera Asli & Stempel Real-Time</span>
+                <span className="text-xs sm:text-sm font-bold">Bukti Kamera Asli</span>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewPhotoUrl(null)}
                 className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                title="Tutup"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-2 sm:p-4 bg-black flex items-center justify-center overflow-auto max-h-[calc(90vh-100px)]">
+            <div className="flex items-center justify-center overflow-auto max-h-[calc(92vh-90px)] bg-slate-950">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewPhotoUrl}
                 alt="Bukti Foto Kamera Riil"
-                className="max-w-full max-h-[75vh] object-contain rounded-lg"
+                className="w-auto h-auto max-w-[90vw] max-h-[calc(92vh-100px)] object-contain block"
               />
             </div>
-            <div className="px-4 py-2.5 bg-slate-900/90 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
-              <span>Stempel lokasi & timestamp dibuat langsung saat pengambilan gambar oleh perangkat warga.</span>
+            <div className="px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setPreviewPhotoUrl(null)}
-                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold cursor-pointer"
+                className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold cursor-pointer transition-colors"
               >
                 Tutup
               </button>

@@ -5,16 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Calendar,
   ChevronDown,
-  Bell,
   Volume2,
   VolumeX,
   Search,
   Menu,
   X,
-  Trash2,
 } from "lucide-react";
-import { useAdmin } from "@/components/layout/AdminShell";
-import { clearAllLocalReportsAndCaches } from "@/lib/services/reports";
 
 interface AdminTopbarProps {
   isSidebarCollapsed?: boolean;
@@ -39,7 +35,6 @@ export function AdminTopbar({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
-  const { adminUser, logout } = useAdmin();
 
   // Sinkronkan searchTerm saat URL query berubah
   useEffect(() => {
@@ -74,7 +69,6 @@ export function AdminTopbar({
   };
 
   const [formattedDate, setFormattedDate] = useState("1 Nov 2026");
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -206,55 +200,6 @@ export function AdminTopbar({
               ? "Polri"
               : "Pemerintahan"}
           </span>
-        </div>
-
-        {/* Admin Profile Pill */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-            className="flex items-center gap-2.5 p-1 pr-2.5 rounded-full hover:bg-slate-200/50 transition-colors"
-          >
-            <div className="w-8 h-8 rounded-full bg-[#1E293B] text-white font-bold flex items-center justify-center text-xs shadow-xs">
-              A
-            </div>
-            <span className="text-xs font-semibold text-slate-800 hidden sm:inline">
-              {adminUser?.name?.split(" ")[0] || "Admin"}
-            </span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-          </button>
-
-          {/* Profile Dropdown */}
-          {isProfileMenuOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-50 text-xs">
-              <div className="px-3.5 py-2 border-b border-slate-100">
-                <p className="font-bold text-slate-800">{adminUser?.name || "Administrator"}</p>
-                <p className="text-[11px] text-slate-400 truncate">{adminUser?.email || "admin@sigapbumi.id"}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsProfileMenuOpen(false);
-                  clearAllLocalReportsAndCaches();
-                  window.location.reload();
-                }}
-                className="w-full text-left px-3.5 py-2 text-rose-600 hover:bg-rose-50 font-medium transition-colors flex items-center gap-2 border-b border-slate-100"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                <span>Hapus Semua Cache</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsProfileMenuOpen(false);
-                  logout();
-                }}
-                className="w-full text-left px-3.5 py-2 text-slate-600 hover:bg-slate-50 font-medium transition-colors"
-              >
-                Keluar Sesi
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </header>
