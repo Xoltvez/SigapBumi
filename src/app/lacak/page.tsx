@@ -27,6 +27,7 @@ import {
   Shield,
   Phone,
   Share2,
+  Navigation,
 } from "lucide-react";
 import { TimelineStatus, type TimelineStep } from "@/components/laporan/TimelineStatus";
 import type { DisasterType, ReportStatus, SosAssistanceType } from "@/types";
@@ -605,17 +606,34 @@ function LacakContent() {
               activeReport.tracking_code?.toUpperCase().startsWith("SOS-") ||
               activeReport.title?.toUpperCase().includes("SOS")
             );
+            const coordMatch = activeReport.location?.match(/\((-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\)/);
+            const resolvedLat = activeReport.lat ?? (coordMatch ? parseFloat(coordMatch[1]) : undefined);
+            const resolvedLng = activeReport.lng ?? (coordMatch ? parseFloat(coordMatch[2]) : undefined);
+            const petaHref =
+              resolvedLat !== undefined && resolvedLng !== undefined && !isNaN(resolvedLat) && !isNaN(resolvedLng)
+                ? `/peta?kode=${encodeURIComponent(activeReport.tracking_code)}&lat=${resolvedLat}&lng=${resolvedLng}`
+                : `/peta?kode=${encodeURIComponent(activeReport.tracking_code)}`;
 
             return (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-bg p-4 rounded-md border border-line text-sm">
-                <div className="space-y-1">
-                  <span className="text-xs font-semibold text-ink-muted">
-                    Lokasi Kejadian
-                  </span>
-                  <p className="font-medium text-ink flex items-start gap-1.5">
-                    <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                    <span>{activeReport.location}</span>
-                  </p>
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold text-ink-muted">
+                      Lokasi Kejadian
+                    </span>
+                    <p className="font-medium text-ink flex items-start gap-1.5">
+                      <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>{activeReport.location}</span>
+                    </p>
+                  </div>
+                  <Link
+                    href={petaHref}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-bold transition-all shadow-2xs hover:shadow-xs"
+                    title="Buka titik kejadian ini langsung di Peta Bencana"
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                    <span>Lihat di Peta Bencana</span>
+                  </Link>
                 </div>
 
                 {isSosReport ? (
@@ -749,15 +767,19 @@ function LacakContent() {
           {/* Action Footer */}
           <div className="pt-4 border-t border-line flex flex-wrap items-center justify-between gap-3">
             <Link
-              href={
-                activeReport.lat && activeReport.lng
-                  ? `/peta?kode=${encodeURIComponent(activeReport.tracking_code)}&lat=${activeReport.lat}&lng=${activeReport.lng}`
-                  : `/peta?kode=${encodeURIComponent(activeReport.tracking_code)}`
-              }
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-hover"
+              href={(() => {
+                const coordMatch = activeReport.location?.match(/\((-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\)/);
+                const resolvedLat = activeReport.lat ?? (coordMatch ? parseFloat(coordMatch[1]) : undefined);
+                const resolvedLng = activeReport.lng ?? (coordMatch ? parseFloat(coordMatch[2]) : undefined);
+                return resolvedLat !== undefined && resolvedLng !== undefined && !isNaN(resolvedLat) && !isNaN(resolvedLng)
+                  ? `/peta?kode=${encodeURIComponent(activeReport.tracking_code)}&lat=${resolvedLat}&lng=${resolvedLng}`
+                  : `/peta?kode=${encodeURIComponent(activeReport.tracking_code)}`;
+              })()}
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md bg-orange-50 hover:bg-orange-100 text-[#EA580C] border border-orange-200/80 text-xs font-bold transition-all shadow-2xs min-h-[44px]"
             >
-              <span>Lihat Titik di Peta Bencana Publik</span>
-              <ExternalLink className="w-4 h-4" />
+              <Navigation className="w-4 h-4" />
+              <span>Lihat Titik di Peta Bencana</span>
+              <ExternalLink className="w-3.5 h-3.5" />
             </Link>
 
             <div className="flex flex-wrap items-center gap-2">
