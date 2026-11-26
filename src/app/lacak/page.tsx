@@ -765,40 +765,13 @@ function LacakContent() {
           </div>
 
           {/* Action Footer */}
-          <div className="pt-4 border-t border-line flex flex-wrap items-center justify-between gap-3">
+          <div className="pt-4 border-t border-line flex items-center justify-end">
             <Link
-              href={(() => {
-                const coordMatch = activeReport.location?.match(/\((-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\)/);
-                const resolvedLat = activeReport.lat ?? (coordMatch ? parseFloat(coordMatch[1]) : undefined);
-                const resolvedLng = activeReport.lng ?? (coordMatch ? parseFloat(coordMatch[2]) : undefined);
-                return resolvedLat !== undefined && resolvedLng !== undefined && !isNaN(resolvedLat) && !isNaN(resolvedLng)
-                  ? `/peta?kode=${encodeURIComponent(activeReport.tracking_code)}&lat=${resolvedLat}&lng=${resolvedLng}`
-                  : `/peta?kode=${encodeURIComponent(activeReport.tracking_code)}`;
-              })()}
-              className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md bg-orange-50 hover:bg-orange-100 text-[#EA580C] border border-orange-200/80 text-xs font-bold transition-all shadow-2xs min-h-[44px]"
+              href="/lapor"
+              className="inline-flex items-center justify-center h-10 px-4 rounded-md bg-surface border border-line text-xs font-semibold text-ink hover:bg-bg transition-colors min-h-[44px]"
             >
-              <Navigation className="w-4 h-4" />
-              <span>Lihat Titik di Peta Bencana</span>
-              <ExternalLink className="w-3.5 h-3.5" />
+              Kirim Laporan Baru
             </Link>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsShareModalOpen(true)}
-                className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md bg-[#EA580C] hover:bg-[#c2410c] text-white text-xs font-bold transition-all shadow-sm min-h-[44px]"
-              >
-                <Share2 className="w-4 h-4" />
-                <span>Bagikan Tautan Laporan</span>
-              </button>
-
-              <Link
-                href="/lapor"
-                className="inline-flex items-center justify-center h-10 px-4 rounded-md bg-surface border border-line text-xs font-semibold text-ink hover:bg-bg transition-colors min-h-[44px]"
-              >
-                Kirim Laporan Baru
-              </Link>
-            </div>
           </div>
         </section>
       ) : hasSearched ? (
