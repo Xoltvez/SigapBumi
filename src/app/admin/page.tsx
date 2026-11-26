@@ -24,8 +24,9 @@ import {
   DEFAULT_MOCK_REPORTS,
   removeEmojis,
   parseReportTimestamp,
+  extractPhotoFromDescription,
 } from "@/lib/services/reports";
-import { fetchLiveSosAlerts, getCachedLiveSosAlerts } from "@/lib/services/sos";
+import { fetchLiveSosAlerts, getCachedLiveSosAlerts, type LiveSosItem } from "@/lib/services/sos";
 import { supabase } from "@/lib/supabase/client";
 
 interface AdminReportItem {
@@ -56,7 +57,15 @@ interface SosAlertItem {
 
 const INITIAL_SOS_ALERTS: SosAlertItem[] = [];
 
-function formatAdminReports(live: any[]): AdminReportItem[] {
+function formatAdminReports(live: any[], liveSos: LiveSosItem[] = []): AdminReportItem[] {
+  const sosPhotoMap = new Map<string, string>();
+  (liveSos || []).forEach((s) => {
+    const photo = s.photo_url || extractPhotoFromDescription(s.note);
+    if (!photo) return;
+    if (s.id) sosPhotoMap.set(s.id, photo);
+    if (s.tracking_code) sosPhotoMap.set(s.tracking_code.toUpperCase(), photo);
+  });
+
   const formatted: AdminReportItem[] = (live || []).map((r) => {
     const isSos = Boolean(
       r.tracking_code?.toUpperCase().startsWith("SOS-") ||
@@ -79,6 +88,12 @@ function formatAdminReports(live: any[]): AdminReportItem[] {
       }
     }
 
+    const resolvedPhoto =
+      r.image_url ||
+      extractPhotoFromDescription(r.description) ||
+      sosPhotoMap.get(r.id) ||
+      (r.tracking_code ? sosPhotoMap.get(String(r.tracking_code).toUpperCase()) : undefined);
+
     return {
       id: r.id,
       tracking_code: r.tracking_code,
@@ -91,7 +106,7 @@ function formatAdminReports(live: any[]): AdminReportItem[] {
       status: r.status,
       priority: pLabel,
       confirmation_count: r.confirmation_count,
-      image_url: r.image_url,
+      image_url: resolvedPhoto,
     };
   });
 
@@ -108,7 +123,8 @@ export default function AdminRingkasanPage() {
   const { activeUnit, activeUnitName, adminUser, setActiveSosCount, setIsLiveConnected } = useAdmin();
   const [reports, setReports] = useState<AdminReportItem[]>(() => {
     const cached = getCachedLiveReports();
-    return cached && cached.length > 0 ? formatAdminReports(cached) : [];
+    const cachedSos = getCachedLiveSosAlerts();
+    return cached && cached.length > 0 ? formatAdminReports(cached, cachedSos || []) : [];
   });
   const [sosAlerts, setSosAlerts] = useState<SosAlertItem[]>(() => {
     const cachedSos = getCachedLiveSosAlerts();
@@ -190,9 +206,44 @@ export default function AdminRingkasanPage() {
         ]);
 
         if (isMounted) {
-          const formatted = formatAdminReports(live || []);
+          const formatted = formatAdminReports(live || [], liveSos || []);
           setReports(formatted);
           setIsLiveConnected(true);
+
+          // Hydrate foto untuk laporan terbaru yang belum terisi (karena mode lean tidak mengambil report_media/description)
+          const missingPhotoIds = formatted
+            .slice(0, 12)
+            .filter((r) => !r.image_url && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r.id))
+            .map((r) => r.id);
+
+          if (missingPhotoIds.length > 0) {
+            supabase
+              .from("reports")
+              .select("id, description, report_media(media_url)")
+              .in("id", missingPhotoIds)
+              .then(({ data: mediaRows }) => {
+                if (!isMounted || !mediaRows || mediaRows.length === 0) return;
+                const photoById = new Map<string, string>();
+                mediaRows.forEach((row: any) => {
+                  const mediaUrl =
+                    Array.isArray(row.report_media) && row.report_media.length > 0
+                      ? row.report_media[0]?.media_url
+                      : undefined;
+                  const descPhoto = extractPhotoFromDescription(row.description);
+                  const found = mediaUrl || descPhoto;
+                  if (found) photoById.set(row.id, found);
+                });
+                if (photoById.size > 0) {
+                  setReports((prev) =>
+                    prev.map((item) =>
+                      !item.image_url && photoById.has(item.id)
+                        ? { ...item, image_url: photoById.get(item.id) }
+                        : item
+                    )
+                  );
+                }
+              });
+          }
 
           const cleanSos = (liveSos || []).filter(
             (s) =>
