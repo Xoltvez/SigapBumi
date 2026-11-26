@@ -588,7 +588,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <main
             className={`flex-1 ${
               pathname === "/admin/peta"
-                ? "p-0 md:p-6 lg:p-8 overflow-hidden md:overflow-y-auto relative md:static flex flex-col md:block h-full md:h-auto bg-[#F8FAFC] text-slate-800"
+                ? "p-0 overflow-hidden relative flex flex-col h-full bg-[#F8FAFC] text-slate-800"
                 : "overflow-y-auto p-3.5 sm:p-5 md:p-6 lg:p-8 pb-20 md:pb-8 bg-[#F8FAFC] text-slate-800"
             }`}
           >

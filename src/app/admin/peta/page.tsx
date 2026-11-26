@@ -1163,29 +1163,26 @@ function AdminPetaContent() {
       {/* ============================================================== */}
       {/* 2. TAMPILAN DESKTOP (MD KE ATAS): FULLSCREEN TACTICAL MAP DENGAN FLOATING LAYER */}
       {/* ============================================================== */}
-      <div className="hidden md:block w-full max-w-[1400px] mx-auto font-sans pb-8 select-none">
+      <div className="hidden md:block w-full h-full relative overflow-hidden font-sans select-none">
         {actionNotice && (
-          <div className="mb-3 p-3 px-4 bg-emerald-50 border border-emerald-200/80 rounded-xl text-emerald-700 text-xs font-semibold flex items-center gap-2 shadow-2xs animate-fade-in">
+          <div className="absolute top-3.5 left-1/2 -translate-x-1/2 z-[600] p-2.5 px-4 bg-emerald-50/95 backdrop-blur-md border border-emerald-200/90 rounded-xl text-emerald-700 text-xs font-semibold flex items-center gap-2 shadow-lg animate-fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <span>{actionNotice}</span>
           </div>
         )}
 
-        {/* Tactical Map Container Berlayer */}
-        <div className="w-full bg-white rounded-2xl border border-slate-200/80 p-2 sm:p-2.5 shadow-[0_4px_24px_rgba(0,0,0,0.04)] relative overflow-hidden">
-          <div className="w-full h-[calc(100vh-8.5rem)] min-h-[640px] max-h-[880px] relative rounded-xl overflow-hidden border border-slate-100">
-            <DisasterMap
-              className="w-full h-full"
-              points={filteredPoints}
-              selectedPointId={selectedPointId}
-              onSelectPoint={(pt) => setSelectedPointId(pt.id)}
-              showLegend={false}
-              disablePopup={true}
-              routeCoords={activeRoute?.coordinates || null}
-              isLiveNavigating={isLiveNavigating}
-              userLocationCoords={userLocation ? [userLocation.lat, userLocation.lng] : null}
-              mapLayer={mapLayer}
-            />
+        <DisasterMap
+          className="w-full h-full !rounded-none !border-0 !shadow-none"
+          points={filteredPoints}
+          selectedPointId={selectedPointId}
+          onSelectPoint={(pt) => setSelectedPointId(pt.id)}
+          showLegend={false}
+          disablePopup={true}
+          routeCoords={activeRoute?.coordinates || null}
+          isLiveNavigating={isLiveNavigating}
+          userLocationCoords={userLocation ? [userLocation.lat, userLocation.lng] : null}
+          mapLayer={mapLayer}
+        />
 
             {/* ============================================================== */}
             {/* FLOATING LAYER ATAS: MINI KPI & FILTER TAKTIS (BERSIH)        */}
@@ -1361,18 +1358,6 @@ function AdminPetaContent() {
                 </div>
               </div>
             )}
-            <DisasterMap
-              className="w-full h-full"
-              points={filteredPoints}
-              selectedPointId={selectedPointId}
-              onSelectPoint={(pt) => setSelectedPointId(pt.id)}
-              showLegend={false}
-              disablePopup={true}
-              routeCoords={activeRoute?.coordinates || null}
-              isLiveNavigating={isLiveNavigating}
-              userLocationCoords={userLocation ? [userLocation.lat, userLocation.lng] : null}
-              mapLayer={mapLayer}
-            />
 
             {/* ============================================================== */}
             {/* HUD NAVIGASI TAKTIS PUSDALOPS SIGAPBUMI (DESKTOP)              */}
@@ -1709,41 +1694,35 @@ function AdminPetaContent() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Quick Legend Bar under Map */}
-          <div className="pt-3 px-1 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
-                Legenda Peta:
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                <span>Banjir</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                <span>Longsor</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                <span>Kebakaran</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <span>Gempa</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
-                <span>Panggilan SOS</span>
-              </span>
-            </div>
-
-            <span className="font-semibold text-slate-600">
-              {filteredPoints.length} titik aktif
+        {/* Floating Compact Legend Pill Desktop (Bottom Right) */}
+        {!isLiveNavigating && (
+          <div className="absolute bottom-4 right-4 z-20 hidden lg:flex items-center gap-3 px-3 py-1.5 bg-white/95 backdrop-blur-md rounded-xl border border-slate-200/90 shadow-sm text-[11px] text-slate-600">
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span>Banjir</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span>Longsor</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <span>Kebakaran</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Gempa</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
+              <span>SOS</span>
+            </span>
+            <span className="h-3.5 w-px bg-slate-200" />
+            <span className="font-bold text-slate-700">
+              {filteredPoints.length} titik
             </span>
           </div>
-        </div>
+        )}
       </div>
     </>
   );
