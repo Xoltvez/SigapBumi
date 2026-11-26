@@ -28,10 +28,22 @@ import {
   Phone,
   Share2,
   Navigation,
+  ArrowLeft,
+  ChevronRight,
+  CheckCircle2,
 } from "lucide-react";
 import { TimelineStatus, type TimelineStep } from "@/components/laporan/TimelineStatus";
 import type { DisasterType, ReportStatus, SosAssistanceType } from "@/types";
-import { fetchReportDetail, vouchReportLive, cleanReportDescription, extractPhotoFromDescription } from "@/lib/services/reports";
+import {
+  fetchReportDetail,
+  fetchLiveReports,
+  getCachedLiveReports,
+  parseReportTimestamp,
+  vouchReportLive,
+  cleanReportDescription,
+  extractPhotoFromDescription,
+  type LiveReportItem,
+} from "@/lib/services/reports";
 import { supabase } from "@/lib/supabase/client";
 import DisasterIcon, { getDisasterLabel } from "@/components/common/DisasterIcon";
 
@@ -174,12 +186,25 @@ function LacakContent() {
   const searchParams = useSearchParams();
   const urlKode = searchParams.get("kode") || searchParams.get("code") || "";
 
-  const [searchInput, setSearchInput] = useState(urlKode || "SB-2026-8F3K");
-  const [activeReport, setActiveReport] = useState<ReportDetail | null>(
-    urlKode ? null : SAMPLE_REPORTS["SB-2026-8F3K"]
-  );
-  const [hasSearched, setHasSearched] = useState(true);
+  const [searchInput, setSearchInput] = useState(urlKode || "");
+  const [activeReport, setActiveReport] = useState<ReportDetail | null>(null);
+  const [hasSearched, setHasSearched] = useState(Boolean(urlKode));
   const [isLoading, setIsLoading] = useState(false);
+  const [unfinishedReports, setUnfinishedReports] = useState<LiveReportItem[]>(() => {
+    const cached = getCachedLiveReports();
+    if (!cached || cached.length === 0) return [];
+    return cached
+      .filter((r) => r.status !== "selesai" && r.status !== "ditolak")
+      .sort(
+        (a, b) =>
+          parseReportTimestamp(b.raw_created_at || b.created_at) -
+          parseReportTimestamp(a.raw_created_at || a.created_at)
+      );
+  });
+  const [isLoadingList, setIsLoadingList] = useState(() => {
+    const cached = getCachedLiveReports();
+    return !cached || cached.length === 0;
+  });
   const [copied, setCopied] = useState(false);
   const [isVouched, setIsVouched] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -276,6 +301,55 @@ function LacakContent() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const loadUnfinishedReports = async () => {
+      try {
+        const live = await fetchLiveReports(false, { lean: true });
+        if (!isMounted) return;
+        const activeOnly = (live || [])
+          .filter((r) => r.status !== "selesai" && r.status !== "ditolak")
+          .sort(
+            (a, b) =>
+              parseReportTimestamp(b.raw_created_at || b.created_at) -
+              parseReportTimestamp(a.raw_created_at || a.created_at)
+          );
+        setUnfinishedReports(activeOnly);
+      } catch (err) {
+        console.warn("Gagal memuat daftar laporan aktif:", err);
+      } finally {
+        if (isMounted) setIsLoadingList(false);
+      }
+    };
+
+    loadUnfinishedReports();
+
+    const handleSyncList = () => {
+      loadUnfinishedReports();
+    };
+
+    window.addEventListener("sigapbumi:report-updated", handleSyncList);
+    window.addEventListener("sigapbumi:sos-created", handleSyncList);
+    window.addEventListener("sigapbumi:sos-updated", handleSyncList);
+    window.addEventListener("storage", handleSyncList);
+
+    const listChannel = supabase
+      .channel("lacak_active_list_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, handleSyncList)
+      .on("postgres_changes", { event: "*", schema: "public", table: "sos_alerts" }, handleSyncList)
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("sigapbumi:report-updated", handleSyncList);
+      window.removeEventListener("sigapbumi:sos-created", handleSyncList);
+      window.removeEventListener("sigapbumi:sos-updated", handleSyncList);
+      window.removeEventListener("storage", handleSyncList);
+      supabase.removeChannel(listChannel);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!urlKode) return;
     const timer = setTimeout(() => {
       setSearchInput(urlKode);
@@ -350,12 +424,26 @@ function LacakContent() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!searchInput.trim()) {
+      setActiveReport(null);
+      setHasSearched(false);
+      return;
+    }
     performSearch(searchInput);
   };
 
-  const selectPreset = (code: string) => {
-    setSearchInput(code);
-    performSearch(code);
+  const handleSelectFromList = (item: LiveReportItem) => {
+    setSearchInput(item.tracking_code);
+    performSearch(item.tracking_code);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleBackToList = () => {
+    setActiveReport(null);
+    setHasSearched(false);
+    setSearchInput("");
   };
 
   const copyCode = (code: string) => {
@@ -491,49 +579,9 @@ function LacakContent() {
             {isLoading ? "Mencari..." : "Lacak"}
           </button>
         </form>
-
-        {/* Demo Preset Codes */}
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-xs">
-          <span className="text-ink-muted">Contoh kode demo:</span>
-          <button
-            type="button"
-            onClick={() => selectPreset("SB-2026-8F3K")}
-            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
-          >
-            SB-2026-8F3K (Banjir)
-          </button>
-          <button
-            type="button"
-            onClick={() => selectPreset("SB-2026-4K9W")}
-            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
-          >
-            SB-2026-4K9W (Longsor)
-          </button>
-          <button
-            type="button"
-            onClick={() => selectPreset("SB-2026-2X7M")}
-            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
-          >
-            SB-2026-2X7M (Kebakaran)
-          </button>
-          <button
-            type="button"
-            onClick={() => selectPreset("LPR-8C3P5V")}
-            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
-          >
-            LPR-8C3P5V (Gempa)
-          </button>
-          <button
-            type="button"
-            onClick={() => selectPreset("LPR-2D7N4X")}
-            className="px-2.5 py-1 rounded border border-line bg-surface hover:border-primary font-mono text-ink text-[11px] min-h-[32px]"
-          >
-            LPR-2D7N4X (Citarum)
-          </button>
-        </div>
       </section>
 
-      {/* Result Section */}
+      {/* Result Section / Active Reports List */}
       {isLoading ? (
         <section className="bg-surface border border-line rounded-lg p-10 text-center shadow-card animate-pulse space-y-3">
           <Radio className="w-8 h-8 text-primary mx-auto animate-spin" />
@@ -541,7 +589,17 @@ function LacakContent() {
           <p className="text-xs text-ink-muted">Mengambil data status dan catatan tindak lanjut terkini</p>
         </section>
       ) : hasSearched && activeReport ? (
-        <section className="bg-surface border border-line rounded-lg p-6 md:p-8 shadow-card space-y-6">
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={handleBackToList}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-ink-soft hover:text-primary transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Kembali ke Daftar Laporan Bencana Aktif ({unfinishedReports.length})</span>
+          </button>
+
+          <section className="bg-surface border border-line rounded-lg p-6 md:p-8 shadow-card space-y-6">
           {/* Top Info Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-line">
             <div>
@@ -774,6 +832,7 @@ function LacakContent() {
             </Link>
           </div>
         </section>
+        </div>
       ) : hasSearched ? (
         // Empty Search Result State
         <section className="bg-surface border border-line rounded-lg p-10 text-center shadow-card max-w-lg mx-auto">
@@ -783,18 +842,133 @@ function LacakContent() {
           <h2 className="text-lg font-bold text-ink mb-1">
             Kode Tracking Tidak Ditemukan
           </h2>
-          <p className="text-sm text-ink-soft mb-6 leading-relaxed">
-            Tidak ada laporan bencana dengan kode <strong>&quot;{searchInput}&quot;</strong> di sistem. Pastikan format kode sudah benar (contoh: <code>SB-2026-8F3K</code> atau <code>LPR-8F3K2Q</code>) atau pilih salah satu kode contoh di atas.
+          <p className="text-xs text-ink-soft mb-5 leading-relaxed">
+            Pastikan kode tracking yang Anda masukkan sudah benar (contoh: <span className="font-mono font-semibold text-ink">LPR-...</span> atau <span className="font-mono font-semibold text-ink">SOS-...</span>).
           </p>
           <button
             type="button"
-            onClick={() => selectPreset("SB-2026-8F3K")}
-            className="h-11 px-5 rounded-md bg-ink text-white font-semibold text-sm hover:bg-ink-soft transition-colors min-h-[44px]"
+            onClick={handleBackToList}
+            className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-bold transition-colors cursor-pointer"
           >
-            Tampilkan Contoh Laporan
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Lihat Daftar Laporan Bencana Aktif</span>
           </button>
         </section>
-      ) : null}
+      ) : (
+        /* Daftar Seluruh Laporan Bencana Aktif (Belum Selesai) untuk Transparansi Publik */
+        <section className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-line">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
+                <h2 className="text-base md:text-lg font-bold text-ink">
+                  Laporan Bencana Aktif (Belum Selesai)
+                </h2>
+                <span className="text-[11px] font-bold bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-full">
+                  {unfinishedReports.length} Kejadian
+                </span>
+              </div>
+              <p className="text-xs text-ink-soft mt-0.5">
+                Klik salah satu kejadian di bawah untuk melihat rincian kondisi, foto bukti, dan timeline penanganan petugas.
+              </p>
+            </div>
+          </div>
+
+          {isLoadingList ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((n) => (
+                <div
+                  key={n}
+                  className="bg-surface border border-line rounded-xl p-4 sm:p-5 shadow-2xs animate-pulse space-y-2.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="h-5 w-24 bg-slate-200 rounded" />
+                    <div className="h-5 w-28 bg-slate-100 rounded-full" />
+                  </div>
+                  <div className="h-5 w-2/3 bg-slate-200 rounded" />
+                  <div className="h-4 w-1/2 bg-slate-100 rounded" />
+                </div>
+              ))}
+            </div>
+          ) : unfinishedReports.length === 0 ? (
+            <div className="bg-surface border border-line rounded-xl p-10 text-center shadow-card space-y-2">
+              <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+              <h3 className="text-sm font-bold text-ink">
+                Tidak Ada Laporan Bencana Aktif Saat Ini
+              </h3>
+              <p className="text-xs text-ink-soft max-w-md mx-auto">
+                Seluruh laporan bencana telah selesai ditangani. Anda tetap dapat memasukkan kode tracking di atas untuk mengecek riwayat laporan yang sudah selesai.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {unfinishedReports.map((item) => {
+                const isSos = Boolean(
+                  item.tracking_code?.toUpperCase().startsWith("SOS-") ||
+                    item.title?.toUpperCase().includes("SOS")
+                );
+
+                return (
+                  <button
+                    key={item.id || item.tracking_code}
+                    type="button"
+                    onClick={() => handleSelectFromList(item)}
+                    className="w-full text-left bg-surface border border-line hover:border-primary/60 rounded-xl p-4 sm:p-5 shadow-2xs hover:shadow-card transition-all group cursor-pointer flex items-center justify-between gap-4"
+                  >
+                    <div className="min-w-0 flex-1 space-y-2">
+                      {/* Baris Badge: SOS, Kode Tracking, Status */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {isSos && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping" />
+                            <span>SOS Darurat</span>
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 rounded bg-orange-50 text-primary border border-orange-200/70 font-mono text-[11px] font-bold">
+                          {item.tracking_code}
+                        </span>
+                        {getStatusBadge(item.status)}
+                      </div>
+
+                      {/* Judul Kejadian */}
+                      <h3 className="text-sm sm:text-base font-bold text-ink group-hover:text-primary transition-colors line-clamp-2">
+                        {item.title}
+                      </h3>
+
+                      {/* Metadata: Lokasi, Jenis Bencana, Waktu, Konfirmasi */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-ink-soft">
+                        <span className="inline-flex items-center gap-1 min-w-0 max-w-full">
+                          <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <span className="truncate">{item.address}</span>
+                        </span>
+                        {!isSos && (
+                          <span className="inline-flex items-center gap-1 font-medium text-ink">
+                            <DisasterIcon type={item.disaster_type} size={15} />
+                            <span>{getDisasterLabel(item.disaster_type)}</span>
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 text-ink-muted">
+                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                          <span>{item.created_at}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-orange-600 font-semibold">
+                          <ThumbsUp className="w-3.5 h-3.5 shrink-0" />
+                          <span>{item.confirmation_count ?? 0} Konfirmasi</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 flex items-center gap-1 text-xs font-bold text-primary opacity-80 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
+                      <span className="hidden sm:inline">Lihat Detail</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
       </div>
 
       {/* Lightbox Modal Fullscreen Image Preview */}
