@@ -190,17 +190,18 @@ function LacakContent() {
   const [activeReport, setActiveReport] = useState<ReportDetail | null>(null);
   const [hasSearched, setHasSearched] = useState(Boolean(urlKode));
   const [isLoading, setIsLoading] = useState(false);
-  const [unfinishedReports, setUnfinishedReports] = useState<LiveReportItem[]>(() => {
+  const [allReports, setAllReports] = useState<LiveReportItem[]>(() => {
     const cached = getCachedLiveReports();
     if (!cached || cached.length === 0) return [];
     return cached
-      .filter((r) => r.status !== "selesai" && r.status !== "ditolak")
+      .filter((r) => r.status !== "ditolak")
       .sort(
         (a, b) =>
           parseReportTimestamp(b.raw_created_at || b.created_at) -
           parseReportTimestamp(a.raw_created_at || a.created_at)
       );
   });
+  const [listFilter, setListFilter] = useState<"belum_selesai" | "selesai" | "semua">("belum_selesai");
   const [isLoadingList, setIsLoadingList] = useState(() => {
     const cached = getCachedLiveReports();
     return !cached || cached.length === 0;
@@ -303,29 +304,29 @@ function LacakContent() {
   useEffect(() => {
     let isMounted = true;
 
-    const loadUnfinishedReports = async () => {
+    const loadAllReports = async () => {
       try {
         const live = await fetchLiveReports(false, { lean: true });
         if (!isMounted) return;
-        const activeOnly = (live || [])
-          .filter((r) => r.status !== "selesai" && r.status !== "ditolak")
+        const validReports = (live || [])
+          .filter((r) => r.status !== "ditolak")
           .sort(
             (a, b) =>
               parseReportTimestamp(b.raw_created_at || b.created_at) -
               parseReportTimestamp(a.raw_created_at || a.created_at)
           );
-        setUnfinishedReports(activeOnly);
+        setAllReports(validReports);
       } catch (err) {
-        console.warn("Gagal memuat daftar laporan aktif:", err);
+        console.warn("Gagal memuat daftar laporan:", err);
       } finally {
         if (isMounted) setIsLoadingList(false);
       }
     };
 
-    loadUnfinishedReports();
+    loadAllReports();
 
     const handleSyncList = () => {
-      loadUnfinishedReports();
+      loadAllReports();
     };
 
     window.addEventListener("sigapbumi:report-updated", handleSyncList);
@@ -445,6 +446,15 @@ function LacakContent() {
     setHasSearched(false);
     setSearchInput("");
   };
+
+  const unfinishedCount = allReports.filter((r) => r.status !== "selesai").length;
+  const finishedCount = allReports.filter((r) => r.status === "selesai").length;
+  const displayedReports =
+    listFilter === "belum_selesai"
+      ? allReports.filter((r) => r.status !== "selesai")
+      : listFilter === "selesai"
+      ? allReports.filter((r) => r.status === "selesai")
+      : allReports;
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -596,7 +606,7 @@ function LacakContent() {
             className="inline-flex items-center gap-1.5 text-xs font-bold text-ink-soft hover:text-primary transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Kembali ke Daftar Laporan Bencana Aktif ({unfinishedReports.length})</span>
+            <span>Kembali ke Daftar Laporan Bencana ({allReports.length})</span>
           </button>
 
           <section className="bg-surface border border-line rounded-lg p-6 md:p-8 shadow-card space-y-6">
@@ -851,26 +861,92 @@ function LacakContent() {
             className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-bold transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Lihat Daftar Laporan Bencana Aktif</span>
+            <span>Lihat Daftar Laporan Bencana</span>
           </button>
         </section>
       ) : (
-        /* Daftar Seluruh Laporan Bencana Aktif (Belum Selesai) untuk Transparansi Publik */
+        /* Daftar Laporan Bencana untuk Transparansi Publik dengan Filter Status */
         <section className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-line">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-3 border-b border-line">
             <div>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
                 <h2 className="text-base md:text-lg font-bold text-ink">
-                  Laporan Bencana Aktif (Belum Selesai)
+                  Daftar Laporan Bencana
                 </h2>
                 <span className="text-[11px] font-bold bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-full">
-                  {unfinishedReports.length} Kejadian
+                  {displayedReports.length} Kejadian
                 </span>
               </div>
               <p className="text-xs text-ink-soft mt-0.5">
                 Klik salah satu kejadian di bawah untuk melihat rincian kondisi, foto bukti, dan timeline penanganan petugas.
               </p>
+            </div>
+
+            {/* Filter Pills: Belum Selesai / Selesai / Semua */}
+            <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+              <button
+                type="button"
+                onClick={() => setListFilter("belum_selesai")}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                  listFilter === "belum_selesai"
+                    ? "bg-primary text-white shadow-xs"
+                    : "bg-surface border border-line text-ink-soft hover:border-primary/50 hover:text-ink"
+                }`}
+              >
+                <span>Belum Selesai</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    listFilter === "belum_selesai"
+                      ? "bg-white/20 text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {unfinishedCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setListFilter("selesai")}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                  listFilter === "selesai"
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "bg-surface border border-line text-ink-soft hover:border-emerald-400 hover:text-ink"
+                }`}
+              >
+                <span>Selesai</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    listFilter === "selesai"
+                      ? "bg-white/20 text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {finishedCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setListFilter("semua")}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                  listFilter === "semua"
+                    ? "bg-slate-900 text-white shadow-xs"
+                    : "bg-surface border border-line text-ink-soft hover:border-slate-400 hover:text-ink"
+                }`}
+              >
+                <span>Semua</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    listFilter === "semua"
+                      ? "bg-white/20 text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {allReports.length}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -890,19 +966,25 @@ function LacakContent() {
                 </div>
               ))}
             </div>
-          ) : unfinishedReports.length === 0 ? (
+          ) : displayedReports.length === 0 ? (
             <div className="bg-surface border border-line rounded-xl p-10 text-center shadow-card space-y-2">
               <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
               <h3 className="text-sm font-bold text-ink">
-                Tidak Ada Laporan Bencana Aktif Saat Ini
+                {listFilter === "belum_selesai"
+                  ? "Tidak Ada Laporan Bencana Aktif Saat Ini"
+                  : listFilter === "selesai"
+                  ? "Belum Ada Laporan yang Selesai Ditangani"
+                  : "Belum Ada Data Laporan Bencana"}
               </h3>
               <p className="text-xs text-ink-soft max-w-md mx-auto">
-                Seluruh laporan bencana telah selesai ditangani. Anda tetap dapat memasukkan kode tracking di atas untuk mengecek riwayat laporan yang sudah selesai.
+                {listFilter === "belum_selesai"
+                  ? "Seluruh laporan bencana telah selesai ditangani. Anda dapat melihat riwayatnya pada filter Selesai atau Semua."
+                  : "Data laporan bencana warga akan muncul secara otomatis di sini secara real-time."}
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {unfinishedReports.map((item) => {
+              {displayedReports.map((item) => {
                 const isSos = Boolean(
                   item.tracking_code?.toUpperCase().startsWith("SOS-") ||
                     item.title?.toUpperCase().includes("SOS")
