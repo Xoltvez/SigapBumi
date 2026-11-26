@@ -30,28 +30,28 @@ export function ScrollReveal({ children }: { children: React.ReactNode }) {
       if (intro.length > 0) {
         gsap.fromTo(
           intro,
-          { opacity: 0, y: 24 },
-          { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: "power3.out", clearProps: "transform" }
+          { opacity: 0, y: 18 },
+          { opacity: 1, y: 0, duration: 0.42, stagger: 0.06, ease: "power3.out", clearProps: "transform,opacity" }
         );
       }
 
       const scrollItems = root.querySelectorAll<HTMLElement>("[data-reveal='up'], [data-reveal='pop']");
       if (scrollItems.length === 0) return;
-      gsap.set(scrollItems, { opacity: 0, y: 28 });
-      gsap.set(root.querySelectorAll("[data-reveal='pop']"), { scale: 0.94 });
+      gsap.set(scrollItems, { opacity: 0, y: 18 });
+      gsap.set(root.querySelectorAll("[data-reveal='pop']"), { scale: 0.96 });
 
       ScrollTrigger.batch(scrollItems, {
-        start: "top 90%",
+        start: "top 92%",
         once: true,
         onEnter: (batch) =>
           gsap.to(batch, {
             opacity: 1,
             y: 0,
             scale: 1,
-            duration: 0.55,
-            stagger: 0.08,
-            ease: "power2.out",
-            clearProps: "transform",
+            duration: 0.42,
+            stagger: 0.06,
+            ease: "power3.out",
+            clearProps: "transform,opacity",
           }),
       });
 
