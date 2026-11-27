@@ -42,6 +42,9 @@ import {
   CornerUpLeft,
   CornerUpRight,
   RotateCcw,
+  Sun,
+  Moon,
+  Satellite,
 } from "lucide-react";
 import type { MapPoint } from "@/components/peta/DisasterMap";
 import type { DisasterType, ReportStatus } from "@/types";
@@ -624,7 +627,7 @@ function AdminPetaContent() {
               }`}
               title="Terang (OpenStreetMap)"
             >
-              ☀️
+              <Sun className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
@@ -636,7 +639,7 @@ function AdminPetaContent() {
               }`}
               title="Mode Malam Taktis (Dark Canvas)"
             >
-              🌙
+              <Moon className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
@@ -648,7 +651,7 @@ function AdminPetaContent() {
               }`}
               title="Citra Satelit"
             >
-              🛰️
+              <Satellite className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
@@ -1484,7 +1487,7 @@ function AdminPetaContent() {
                   }`}
                   title="Gaya OpenStreetMap Terang"
                 >
-                  <span>☀️</span>
+                  <Sun className="w-3.5 h-3.5" />
                   <span>Terang</span>
                 </button>
                 <button
@@ -1497,7 +1500,7 @@ function AdminPetaContent() {
                   }`}
                   title="Gaya Mode Malam Taktis (Dark Canvas)"
                 >
-                  <span>🌙</span>
+                  <Moon className="w-3.5 h-3.5" />
                   <span>Malam</span>
                 </button>
                 <button
@@ -1510,7 +1513,7 @@ function AdminPetaContent() {
                   }`}
                   title="Citra Satelit Topografi"
                 >
-                  <span>🛰️</span>
+                  <Satellite className="w-3.5 h-3.5" />
                   <span>Satelit</span>
                 </button>
               </div>
@@ -1702,7 +1705,7 @@ function AdminPetaContent() {
             )}
         {/* Floating Compact Legend Pill Desktop (Bottom Right) */}
         {!isLiveNavigating && (
-          <div className="absolute bottom-4 right-4 z-20 hidden lg:flex items-center gap-3 px-3 py-1.5 bg-white/95 backdrop-blur-md rounded-xl border border-slate-200/90 shadow-sm text-[11px] text-slate-600">
+          <div className="absolute bottom-9 right-4 z-20 hidden lg:flex items-center gap-3 px-3 py-1.5 bg-white/95 backdrop-blur-md rounded-xl border border-slate-200/90 shadow-sm text-[11px] text-slate-600">
             <span className="inline-flex items-center gap-1.5 font-medium">
               <span className="w-2 h-2 rounded-full bg-blue-500" />
               <span>Banjir</span>
