@@ -100,12 +100,13 @@ function PetaContent() {
   // Tinggi sheet saat diciutkan (minimized peek height yang presisi tanpa ruang kosong di bawah)
   const collapsedHeight = selectedPoint ? 88 : 58;
 
-  // Tinggi sheet saat dibuka (kompak dan presisi membungkus isi filter tanpa ruang kosong agar peta terlihat leluasa)
+  // Tinggi sheet saat dibuka (kompak dan presisi membungkus isi detail atau filter tanpa ruang kosong)
   const getExpandedHeight = useCallback(() => {
-    if (typeof window === "undefined") return selectedPoint ? 370 : 275;
-    return selectedPoint
-      ? Math.min(370, window.innerHeight * 0.5)
-      : Math.min(275, window.innerHeight * 0.38);
+    if (typeof window === "undefined") return selectedPoint ? 215 : 275;
+    if (selectedPoint) {
+      return Math.min(selectedPoint.tracking_code ? 215 : 175, window.innerHeight * 0.34);
+    }
+    return Math.min(275, window.innerHeight * 0.38);
   }, [selectedPoint]);
 
   // Animasi GSAP pembukaan & penutupan Mobile Bottom Sheet
@@ -842,8 +843,8 @@ function PetaContent() {
               isMobileSheetOpen ? "block" : "hidden"
             }`}
           >
-            {selectedPoint && (
-              <div className="space-y-2 pb-2 border-b border-slate-100">
+            {selectedPoint ? (
+              <div className="space-y-2 pb-1">
                 <a
                   href={`https://www.google.com/maps?q=${selectedPoint.lat},${selectedPoint.lng}`}
                   target="_blank"
@@ -864,9 +865,8 @@ function PetaContent() {
                   </Link>
                 )}
               </div>
-            )}
-
-            {/* Panel Filter Geospasial Mobile */}
+            ) : (
+            /* Panel Filter Geospasial Mobile (hanya tampil saat tidak sedang melihat detail kejadian) */
             <div className="space-y-2.5">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                 Saring Kategori &amp; Wilayah
@@ -949,6 +949,7 @@ function PetaContent() {
                 </span>
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>
