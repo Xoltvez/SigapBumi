@@ -587,9 +587,9 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
         <div>
           <Link
             href="/admin/laporan"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-text hover:underline mb-2"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-orange-50/80 hover:border-orange-300 text-xs font-bold text-slate-700 hover:text-orange-700 shadow-2xs transition-all mb-2.5 active:scale-[0.98]"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
             <span>Kembali ke Daftar Laporan</span>
           </Link>
           <div className="flex flex-wrap items-center gap-2.5">

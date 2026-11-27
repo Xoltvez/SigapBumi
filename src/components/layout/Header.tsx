@@ -20,11 +20,16 @@ import {
   getFirstName,
   UserSession,
 } from "@/lib/auth";
+import { fetchLiveReports, getCachedLiveReports } from "@/lib/services/reports";
+import { supabase } from "@/lib/supabase/client";
+
+const NOTIF_READ_STORAGE_KEY = "sigapbumi_notif_read_keys";
 
 export function Header() {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const firstName = currentUser ? getFirstName(currentUser.full_name) : "";
@@ -36,6 +41,73 @@ export function Header() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Hitung badge notifikasi realtime (laporan masuk & update status yang belum dibaca)
+  useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
+    let isMounted = true;
+
+    const computeUnread = (items: Array<{ id: string; status: string }>) => {
+      let readSet = new Set<string>();
+      try {
+        const raw = localStorage.getItem(NOTIF_READ_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) readSet = new Set(parsed);
+        }
+      } catch {}
+      const count = items.slice(0, 40).filter((r) => !readSet.has(`${r.id}:${r.status}`)).length;
+      if (isMounted) setUnreadNotifCount(count);
+    };
+
+    const syncNotifBadge = async (forceRefresh = false) => {
+      const cached = !forceRefresh ? getCachedLiveReports() : null;
+      if (cached) {
+        computeUnread(cached);
+        return;
+      }
+      try {
+        const live = await fetchLiveReports(forceRefresh, { lean: true });
+        computeUnread(live || []);
+      } catch {}
+    };
+
+    syncNotifBadge(false);
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleSync = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => syncNotifBadge(true), 400);
+    };
+    const handleReadSync = () => {
+      const cached = getCachedLiveReports();
+      if (cached) computeUnread(cached);
+      else syncNotifBadge(false);
+    };
+
+    window.addEventListener("sigapbumi:sos-created", scheduleSync);
+    window.addEventListener("sigapbumi:sos-updated", scheduleSync);
+    window.addEventListener("sigapbumi:report-updated", scheduleSync);
+    window.addEventListener("sigapbumi:notif-read", handleReadSync);
+    window.addEventListener("storage", handleReadSync);
+
+    const channel = supabase
+      .channel(`header_notif_badge_${Math.random().toString(36).slice(2, 8)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, scheduleSync)
+      .on("postgres_changes", { event: "*", schema: "public", table: "sos_alerts" }, scheduleSync)
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("sigapbumi:sos-created", scheduleSync);
+      window.removeEventListener("sigapbumi:sos-updated", scheduleSync);
+      window.removeEventListener("sigapbumi:report-updated", scheduleSync);
+      window.removeEventListener("sigapbumi:notif-read", handleReadSync);
+      window.removeEventListener("storage", handleReadSync);
+      supabase.removeChannel(channel);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -132,13 +204,18 @@ export function Header() {
           <Link
             href="/notifikasi"
             aria-label="Notifikasi"
-            className={`w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors focus-visible:outline-primary ${
+            className={`relative w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors focus-visible:outline-primary ${
               isNotifActive
-                ? "text-primary"
+                ? "text-primary bg-primary-soft/50"
                 : "text-ink-soft hover:text-primary hover:bg-bg"
             }`}
           >
             <Bell className="w-4 h-4 md:w-5 md:h-5" />
+            {unreadNotifCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[9px] font-extrabold flex items-center justify-center ring-2 ring-surface">
+                {unreadNotifCount > 9 ? "9+" : unreadNotifCount}
+              </span>
+            )}
           </Link>
 
           {currentUser ? (

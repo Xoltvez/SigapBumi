@@ -610,9 +610,9 @@ function LacakContent() {
           <button
             type="button"
             onClick={handleBackToList}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-ink-soft hover:text-primary transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200/90 bg-white hover:bg-orange-50/80 hover:border-orange-300 text-xs font-bold text-slate-700 hover:text-orange-700 shadow-2xs transition-all cursor-pointer active:scale-[0.98]"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
             <span>Kembali ke Daftar Laporan Bencana ({allReports.length})</span>
           </button>
 
