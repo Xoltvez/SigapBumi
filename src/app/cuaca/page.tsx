@@ -223,9 +223,9 @@ export default function CuacaPage() {
         </div>
 
         {/* Tombol Refresh Live */}
-        <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+        <div className="flex items-center justify-between md:justify-end gap-2.5 w-full md:w-auto shrink-0 pt-1 md:pt-0">
           {lastUpdated && (
-            <span className="text-[11px] text-ink-muted hidden sm:inline">
+            <span className="text-[11px] text-ink-muted">
               Pembaruan: {lastUpdated} WIB
             </span>
           )}
@@ -233,7 +233,7 @@ export default function CuacaPage() {
             type="button"
             onClick={() => fetchBmkgData(true)}
             disabled={isRefreshing}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-line bg-surface hover:bg-slate-50 text-ink font-semibold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-60"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-line bg-surface hover:bg-slate-50 text-ink font-semibold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-60 ml-auto md:ml-0"
             title="Muat data terbaru langsung dari server BMKG"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-primary ${isRefreshing ? "animate-spin text-primary" : ""}`} />
@@ -369,17 +369,19 @@ export default function CuacaPage() {
 
                 {/* Visual Peta Shakemap BMKG */}
                 <div className="lg:col-span-5 bg-slate-900 rounded-xl overflow-hidden border border-slate-800 flex flex-col justify-between">
-                  <div className="p-3 border-b border-slate-800 flex items-center justify-between text-white text-xs">
+                  <div className="px-3.5 py-2.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-white text-xs">
                     <span className="font-bold flex items-center gap-1.5">
-                      <Eye className="w-3.5 h-3.5 text-amber-400" />
+                      <Eye className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                       <span>Peta Shakemap Resmi BMKG</span>
                     </span>
-                    <span className="text-[10px] text-slate-400">Peta Guncangan MMI</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold">
+                      Peta Guncangan MMI
+                    </span>
                   </div>
 
                   <div
                     onClick={() => setIsShakemapOpen(true)}
-                    className="relative aspect-video max-h-48 w-full bg-black flex items-center justify-center cursor-pointer group"
+                    className="relative w-full bg-white p-2 flex items-center justify-center cursor-pointer group"
                     title="Klik untuk memperbesar Shakemap"
                   >
                     {gempaTerkini.Shakemap ? (
@@ -387,27 +389,28 @@ export default function CuacaPage() {
                       <img
                         src={`https://data.bmkg.go.id/DataMKG/TEWS/${gempaTerkini.Shakemap}`}
                         alt="Peta Shakemap Gempa BMKG"
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-auto max-h-64 object-contain rounded-lg group-hover:scale-[1.02] transition-transform duration-300"
                       />
                     ) : (
-                      <p className="text-xs text-slate-400">Peta visual belum tersedia</p>
+                      <p className="text-xs text-slate-500 py-8">Peta visual belum tersedia</p>
                     )}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                      <span className="bg-black/80 text-white text-xs px-3 py-1.5 rounded-xl font-bold backdrop-blur-xs flex items-center gap-1.5">
+                    <div className="absolute inset-0 bg-slate-950/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <span className="bg-slate-900/90 text-white text-xs px-3 py-1.5 rounded-xl font-bold backdrop-blur-xs flex items-center gap-1.5">
                         <Eye className="w-4 h-4 text-amber-400" />
                         Perbesar Shakemap
                       </span>
                     </div>
                   </div>
 
-                  <div className="p-2.5 bg-slate-950 text-right">
+                  <div className="px-3.5 py-2.5 bg-slate-950 flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-slate-400">Ketuk peta untuk perbesar</span>
                     <a
                       href="https://inatews.bmkg.go.id"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[11px] font-bold text-amber-400 hover:text-amber-300 inline-flex items-center gap-1"
                     >
-                      <span>Buka InaTEWS BMKG Selengkapnya</span>
+                      <span>Buka InaTEWS BMKG</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>

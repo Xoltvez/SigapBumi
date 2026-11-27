@@ -97,16 +97,16 @@ function PetaContent() {
   const touchCurrentY = useRef<number>(0);
   const isDragging = useRef<boolean>(false);
 
-  // Tinggi sheet saat diciutkan (minimized peek height yang presisi tanpa ruang kosong di bawah)
-  const collapsedHeight = selectedPoint ? 88 : 58;
+  // Tinggi sheet saat diciutkan (minimized peek height yang presisi tanpa terlalu menempel ke navbar bawah)
+  const collapsedHeight = selectedPoint ? 94 : 76;
 
-  // Tinggi sheet saat dibuka (kompak dan presisi membungkus isi detail atau filter tanpa ruang kosong)
+  // Tinggi sheet saat dibuka (kompak dan memberi jarak lega di atas navbar bawah)
   const getExpandedHeight = useCallback(() => {
-    if (typeof window === "undefined") return selectedPoint ? 215 : 275;
+    if (typeof window === "undefined") return selectedPoint ? 225 : 315;
     if (selectedPoint) {
-      return Math.min(selectedPoint.tracking_code ? 215 : 175, window.innerHeight * 0.34);
+      return Math.min(selectedPoint.tracking_code ? 225 : 185, window.innerHeight * 0.36);
     }
-    return Math.min(275, window.innerHeight * 0.38);
+    return Math.min(315, window.innerHeight * 0.44);
   }, [selectedPoint]);
 
   // Animasi GSAP pembukaan & penutupan Mobile Bottom Sheet
@@ -839,7 +839,7 @@ function PetaContent() {
             onTouchStart={handleContentTouchStart}
             onTouchMove={handleContentTouchMove}
             onTouchEnd={handleContentTouchEnd}
-            className={`mobile-sheet-content flex-1 overflow-y-auto px-4 pt-3 pb-3.5 space-y-3 touch-pan-y ${
+            className={`mobile-sheet-content flex-1 overflow-y-auto px-4 pt-3 pb-7 space-y-3 touch-pan-y ${
               isMobileSheetOpen ? "block" : "hidden"
             }`}
           >

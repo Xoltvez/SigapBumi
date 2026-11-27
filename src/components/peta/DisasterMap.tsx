@@ -307,10 +307,24 @@ export default function DisasterMap({
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    // Indonesia archipelago default view dengan animasi mulus (anti-glitch)
+    // Baca koordinat terakhir user agar saat awal masuk langsung mengarah ke area lokasi terkini (zoom 7)
+    let initialCenter: [number, number] = [-6.9, 108.5];
+    let initialZoom = 7;
+    try {
+      const cached = localStorage.getItem("sigapbumi_user_last_coords");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && isValidCoord(parsed.lat, parsed.lng)) {
+          initialCenter = [Number(parsed.lat), Number(parsed.lng)];
+          initialZoom = 7;
+        }
+      }
+    } catch {}
+
+    // Indonesia / lokasi terkini default view dengan animasi mulus (anti-glitch)
     const map = L.map(mapContainerRef.current, {
-      center: [-2.5, 118.0],
-      zoom: 5,
+      center: initialCenter,
+      zoom: initialZoom,
       zoomControl: false,
       fadeAnimation: true,
       zoomAnimation: true,
@@ -411,7 +425,7 @@ export default function DisasterMap({
       renderUserLocation(-6.3276, 108.3249, false, false);
     }
 
-    // Deteksi otomatis GPS riil di background saat peta pertama kali dibuka
+    // Deteksi otomatis GPS riil saat peta pertama kali dibuka dan langsung arahkan view jika tidak ada titik terpilih
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -423,6 +437,9 @@ export default function DisasterMap({
             );
           } catch { }
           renderUserLocation(latitude, longitude, false, false);
+          if (!selectedPointId && mapInstanceRef.current) {
+            safeNavigateMap(mapInstanceRef.current, latitude, longitude, 7, true);
+          }
         },
         () => { },
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
