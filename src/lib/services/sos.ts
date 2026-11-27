@@ -508,8 +508,15 @@ export async function updateSosLocation(
 
 let cachedLiveSosAlerts: LiveSosItem[] | null = null;
 let cachedLiveSosAlertsTime = 0;
+let cachedLiveSosAlertsLean: boolean | null = null;
 let inFlightSosPromise: Promise<LiveSosItem[]> | null = null;
-const SOS_CACHE_TTL_MS = 30000; // Cache in-memory 30 detik
+const SOS_CACHE_TTL_MS = 60000; // Cache in-memory 60 detik untuk menekan egress database
+const sosPhotoMemoryCache = new Map<string, string>();
+
+export function hasCachedSosPhoto(idOrCode?: string): boolean {
+  if (!idOrCode) return false;
+  return sosPhotoMemoryCache.has(idOrCode) || sosPhotoMemoryCache.has(idOrCode.toUpperCase());
+}
 
 export function getCachedLiveSosAlerts(): LiveSosItem[] | null {
   return cachedLiveSosAlerts;
@@ -518,15 +525,27 @@ export function getCachedLiveSosAlerts(): LiveSosItem[] | null {
 export function invalidateLiveSosCache(): void {
   cachedLiveSosAlerts = null;
   cachedLiveSosAlertsTime = 0;
+  cachedLiveSosAlertsLean = null;
   inFlightSosPromise = null;
 }
 
 /**
- * Mengambil daftar panggilan SOS live dari Supabase dan sinkron dengan mock/cache
+ * Mengambil daftar panggilan SOS live dari Supabase dan sinkron dengan mock/cache.
+ * Default `{ lean: true }` agar tidak mengunduh base64 foto berulang kali di background/peta/badge.
  */
-export async function fetchLiveSosAlerts(forceRefresh = false): Promise<LiveSosItem[]> {
-  // SWR: Jika data cache memori masih segar (< 30 detik) dan tidak dipaksa refresh, kembalikan seketika (0ms)
-  if (!forceRefresh && cachedLiveSosAlerts && Date.now() - cachedLiveSosAlertsTime < SOS_CACHE_TTL_MS) {
+export async function fetchLiveSosAlerts(
+  forceRefresh = false,
+  options?: { lean?: boolean }
+): Promise<LiveSosItem[]> {
+  const isLean = options?.lean !== false;
+
+  // SWR: Jika data cache memori masih segar (< 60 detik) dan memenuhi mode yang diminta, kembalikan seketika (0ms)
+  if (
+    !forceRefresh &&
+    cachedLiveSosAlerts &&
+    Date.now() - cachedLiveSosAlertsTime < SOS_CACHE_TTL_MS &&
+    (isLean || cachedLiveSosAlertsLean === false)
+  ) {
     return cachedLiveSosAlerts;
   }
 
@@ -546,7 +565,7 @@ export async function fetchLiveSosAlerts(forceRefresh = false): Promise<LiveSosI
 
       if (typeof window !== "undefined") {
         try {
-          const apiRes = await fetch("/api/sos", { cache: "no-store" });
+          const apiRes = await fetch(`/api/sos${isLean ? "?lean=1" : ""}`, { cache: "no-store" });
           if (apiRes.ok) {
             const apiJson = await apiRes.json();
             if (apiJson?.success) {
@@ -561,11 +580,15 @@ export async function fetchLiveSosAlerts(forceRefresh = false): Promise<LiveSosI
         const [sosRes, repRes] = await Promise.all([
           supabase
             .from("sos_alerts")
-            .select("*")
+            .select(isLean ? "id, assistance_type, status, location, created_at, acknowledged_by" : "*")
             .order("created_at", { ascending: false }),
           supabase
             .from("reports")
-            .select("*, report_media(*)")
+            .select(
+              isLean
+                ? "id, tracking_code, disaster_type, title, address, location, status, confirmation_count, created_at"
+                : "*, report_media(*)"
+            )
             .or("tracking_code.ilike.SOS-%,title.ilike.%SOS%")
             .order("created_at", { ascending: false }),
         ]);
@@ -784,15 +807,30 @@ export async function fetchLiveSosAlerts(forceRefresh = false): Promise<LiveSosI
   }
 
     const deletedIds = getDeletedSosIds();
-    const finalSos = deduplicated.filter(
-      (item) =>
-        !deletedIds.has(item.id) &&
-        !Array.from(deletedIds).some((delId) => item.note && item.note.includes(delId))
-    );
+    const finalSos = deduplicated
+      .filter(
+        (item) =>
+          !deletedIds.has(item.id) &&
+          !Array.from(deletedIds).some((delId) => item.note && item.note.includes(delId))
+      )
+      .map((item) => {
+        if (item.photo_url) {
+          sosPhotoMemoryCache.set(item.id, item.photo_url);
+          if (item.tracking_code) {
+            sosPhotoMemoryCache.set(item.tracking_code.toUpperCase(), item.photo_url);
+          }
+          return item;
+        }
+        const memPhoto =
+          sosPhotoMemoryCache.get(item.id) ||
+          (item.tracking_code ? sosPhotoMemoryCache.get(item.tracking_code.toUpperCase()) : undefined);
+        return memPhoto ? { ...item, photo_url: memPhoto } : item;
+      });
 
     // Simpan ke cache in-memory untuk akses instan berikutnya
     cachedLiveSosAlerts = finalSos;
     cachedLiveSosAlertsTime = Date.now();
+    cachedLiveSosAlertsLean = isLean;
 
     return finalSos;
   })();

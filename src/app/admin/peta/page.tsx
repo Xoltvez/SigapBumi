@@ -349,7 +349,7 @@ function AdminPetaContent() {
     try {
       const [liveReports, liveSos] = await Promise.all([
         fetchLiveReports(forceRefresh, { lean: true }),
-        fetchLiveSosAlerts(forceRefresh),
+        fetchLiveSosAlerts(forceRefresh, { lean: true }),
       ]);
 
       if (liveReports && liveReports.length > 0) {
@@ -393,8 +393,13 @@ function AdminPetaContent() {
   useEffect(() => {
     loadData();
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const handleSync = () => {
-      loadData();
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        loadData();
+      }, 800);
     };
 
     if (typeof window !== "undefined") {
@@ -414,6 +419,7 @@ function AdminPetaContent() {
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:sos-created", handleSync);
         window.removeEventListener("sigapbumi:sos-updated", handleSync);

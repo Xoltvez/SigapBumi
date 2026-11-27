@@ -124,7 +124,10 @@ export default function AdminSosPage() {
   const loadData = useCallback(async (isSilent = false, forceRefresh = false) => {
     if (!isSilent && !getCachedLiveSosAlerts()) setIsLoading(true);
     try {
-      const live = await fetchLiveSosAlerts(forceRefresh);
+      // Pada sinkronisasi latar belakang (isSilent), gunakan mode lean dulu agar tidak mengunduh ulang base64 foto yang sama.
+      // Jika ada panggilan baru yang fotonya belum ada di cache sesi, ambil full sekali saja.
+      const useLean = isSilent && !forceRefresh;
+      const live = await fetchLiveSosAlerts(forceRefresh, { lean: useLean });
       const mappedLive: DisplaySosItem[] = (live || []).map((e, index) => {
         let type: SosAssistanceType = e.assistance_type || "damkar";
         let title = "Bantuan Darurat";
@@ -206,7 +209,16 @@ export default function AdminSosPage() {
   useEffect(() => {
     loadData(false);
 
-    const handleLocalUpdate = () => loadData(true, true);
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleSync = (force = false) => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        loadData(true, force);
+      }, 600);
+    };
+
+    const handleLocalUpdate = () => scheduleSync(true);
     if (typeof window !== "undefined") {
       window.addEventListener("sigapbumi:sos-created", handleLocalUpdate);
       window.addEventListener("sigapbumi:sos-updated", handleLocalUpdate);
@@ -223,31 +235,33 @@ export default function AdminSosPage() {
         "postgres_changes",
         { event: "*", schema: "public", table: "sos_alerts" },
         () => {
-          loadData(true);
+          scheduleSync(false);
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "reports" },
         () => {
-          loadData(true);
+          scheduleSync(false);
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "report_status_logs" },
         () => {
-          loadData(true);
+          scheduleSync(false);
         }
       )
       .subscribe();
 
-    // Polling cadangan berkala setiap 2 menit (120 detik)
+    // Polling cadangan berkala setiap 2 menit (hanya saat tab aktif, mode lean agar hemat egress)
     const pollTimer = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       loadData(true);
     }, 2 * 60 * 1000);
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:sos-created", handleLocalUpdate);
         window.removeEventListener("sigapbumi:sos-updated", handleLocalUpdate);

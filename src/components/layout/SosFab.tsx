@@ -464,6 +464,7 @@ export function SosFab() {
     }
 
     const pollTimer = setInterval(async () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       try {
         const { data: sos } = await supabase
           .from("sos_alerts")
@@ -486,7 +487,7 @@ export function SosFab() {
         if (rep?.status === "ditindaklanjuti") setSosStatus("ditangani");
         else if (rep?.status === "selesai" || rep?.status === "ditolak") setSosStatus("selesai");
       } catch {}
-    }, 3000);
+    }, 30000);
 
     return () => {
       clearInterval(pollTimer);

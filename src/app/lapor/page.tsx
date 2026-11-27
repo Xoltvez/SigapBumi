@@ -62,10 +62,10 @@ function generateReportUUID(): string {
 }
 
 /**
- * Perkecil foto (maks 1280px sisi terpanjang, JPEG 0.8) agar ringan disimpan
- * sebagai data URL di localStorage maupun kolom report_media.media_url.
+ * Perkecil foto (maks 960px sisi terpanjang, WebP 0.68 / fallback JPEG) agar sangat ringan (~60-110 KB)
+ * dan hemat bandwidth/egress database.
  */
-function compressImageDataUrl(dataUrl: string, maxSide = 1280, quality = 0.8): Promise<string> {
+function compressImageDataUrl(dataUrl: string, maxSide = 960, quality = 0.68): Promise<string> {
   return new Promise((resolve) => {
     const img = new window.Image();
     img.onload = () => {
@@ -76,7 +76,13 @@ function compressImageDataUrl(dataUrl: string, maxSide = 1280, quality = 0.8): P
       const ctx = canvas.getContext("2d");
       if (!ctx) return resolve(dataUrl);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", quality));
+      let out = canvas.toDataURL("image/webp", quality);
+      if (!out.startsWith("data:image/webp")) {
+        out = canvas.toDataURL("image/jpeg", quality);
+      } else if (out.length > 160000) {
+        out = canvas.toDataURL("image/webp", 0.54);
+      }
+      resolve(out);
     };
     img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;

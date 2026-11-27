@@ -166,7 +166,7 @@ export default function AdminStatistikPage() {
     try {
       const [liveRep, liveSos] = await Promise.all([
         fetchLiveReports(forceRefresh, { lean: true }),
-        fetchLiveSosAlerts(forceRefresh),
+        fetchLiveSosAlerts(forceRefresh, { lean: true }),
       ]);
       setReports(liveRep || []);
       setSosAlerts(liveSos || []);
@@ -186,8 +186,13 @@ export default function AdminStatistikPage() {
   useEffect(() => {
     loadData(false);
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const handleSync = () => {
-      loadData(true);
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        loadData(true);
+      }, 800);
     };
 
     if (typeof window !== "undefined") {
@@ -215,6 +220,7 @@ export default function AdminStatistikPage() {
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:sos-created", handleSync);
         window.removeEventListener("sigapbumi:sos-updated", handleSync);

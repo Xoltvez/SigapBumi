@@ -633,8 +633,19 @@ export function inferRegionFromAddress(address?: string): { province?: string; r
 
 let cachedLiveReports: LiveReportItem[] | null = null;
 let cachedLiveReportsTime = 0;
+let cachedLiveReportsLean: boolean | null = null;
 let inFlightLiveReportsPromise: Promise<LiveReportItem[]> | null = null;
-const CACHE_TTL_MS = 30000; // Cache in-memory 30 detik untuk navigasi antar tab instan (< 50ms)
+const CACHE_TTL_MS = 60000; // Cache in-memory 60 detik untuk menekan egress database
+
+const detailMediaCache = new Map<
+  string,
+  {
+    image_url?: string;
+    description: string;
+    phone_number?: string;
+    reporter_name?: string;
+  }
+>();
 
 export function getCachedLiveReports(): LiveReportItem[] | null {
   return cachedLiveReports;
@@ -643,21 +654,27 @@ export function getCachedLiveReports(): LiveReportItem[] | null {
 export function invalidateLiveReportsCache(): void {
   cachedLiveReports = null;
   cachedLiveReportsTime = 0;
+  cachedLiveReportsLean = null;
   inFlightLiveReportsPromise = null;
 }
 
 /**
  * Mengambil daftar laporan: menggabungkan data Supabase live, local cache perangkat, dan data demo.
- * Gunakan `{ lean: true }` untuk daftar/tabel/dashboard/peta agar tidak mengunduh base64 foto (5 KB vs 3.7 MB).
+ * Default `{ lean: true }` agar daftar/tabel/dashboard/peta tidak mengunduh base64 foto (hemat egress >95%).
  */
 export async function fetchLiveReports(
   forceRefresh = false,
   options?: { lean?: boolean }
 ): Promise<LiveReportItem[]> {
-  const isLean = Boolean(options?.lean);
+  const isLean = options?.lean !== false;
 
-  // SWR: Jika data cache memori masih segar dan tidak dipaksa refresh, kembalikan seketika (0ms)
-  if (!forceRefresh && cachedLiveReports && Date.now() - cachedLiveReportsTime < CACHE_TTL_MS) {
+  // SWR: Jika data cache memori masih segar dan mencukupi mode yang diminta, kembalikan seketika (0ms)
+  if (
+    !forceRefresh &&
+    cachedLiveReports &&
+    Date.now() - cachedLiveReportsTime < CACHE_TTL_MS &&
+    (isLean || cachedLiveReportsLean === false)
+  ) {
     return cachedLiveReports;
   }
 
@@ -773,7 +790,7 @@ export async function fetchLiveReports(
     // Hanya panggil endpoint /api/reports sebagai fallback jika Supabase kosong atau koneksi gagal
     if (liveItems.length === 0 && typeof window !== "undefined") {
       try {
-        const apiRes = await fetch("/api/reports", { cache: "no-store" });
+        const apiRes = await fetch(`/api/reports${isLean ? "?lean=1" : ""}`, { cache: "no-store" });
         if (apiRes.ok) {
           const apiJson = await apiRes.json();
           if (apiJson.success && Array.isArray(apiJson.reports)) {
@@ -938,6 +955,7 @@ export async function fetchLiveReports(
     // Simpan ke cache in-memory untuk akses instan berikutnya
     cachedLiveReports = allReports;
     cachedLiveReportsTime = Date.now();
+    cachedLiveReportsLean = isLean;
 
     return allReports;
   })();
@@ -986,46 +1004,56 @@ export function reportsToMapPoints(reports: LiveReportItem[]): MapPoint[] {
 /**
  * Mengambil detail laporan spesifik berdasarkan kode pelacakan
  */
-export async function fetchReportDetail(trackingCode: string): Promise<LiveReportItem | null> {
+export async function fetchReportDetail(
+  trackingCode: string,
+  options?: { skipMedia?: boolean }
+): Promise<LiveReportItem | null> {
   const code = trackingCode.trim().toUpperCase();
+  const cachedStatic = detailMediaCache.get(code);
+  const skipMedia = Boolean(options?.skipMedia || cachedStatic);
 
   // 1. Coba ambil dari database Supabase
   try {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(code);
+    const selectColumns = skipMedia
+      ? "id, tracking_code, disaster_type, title, address, location, status, confirmation_count, priority_score, reporter_id, created_at, updated_at, report_status_logs(*)"
+      : "*, report_status_logs(*), report_media(*)";
     let query = supabase
       .from("reports")
-      .select("*, report_status_logs(*), report_media(*)");
+      .select(selectColumns);
     if (isUuid) {
       query = query.or(`id.eq.${code},tracking_code.eq.${code}`);
     } else {
       query = query.or(`tracking_code.eq.${code},tracking_code.ilike.${code}`);
     }
-    const { data, error } = await query.maybeSingle();
+    const { data: rawData, error } = await query.maybeSingle();
+    const data = rawData as any;
 
     if (!error && data) {
       // Sinkronkan status & fallback foto dari tabel sos_alerts
       let sosFallbackNote: string | undefined;
       try {
+        const sosSelectCols = skipMedia ? "status" : "status, note";
         let { data: sosAlert } = await supabase
           .from("sos_alerts")
-          .select("status, note")
+          .select(sosSelectCols)
           .eq("id", data.id)
           .maybeSingle();
-        if (!sosAlert && data.tracking_code) {
+        if (!sosAlert && data.tracking_code && !skipMedia) {
           const { data: sosByCode } = await supabase
             .from("sos_alerts")
-            .select("status, note")
+            .select(sosSelectCols)
             .ilike("note", `%${data.tracking_code}%`)
             .maybeSingle();
           sosAlert = sosByCode;
         }
         if (sosAlert) {
-          sosFallbackNote = sosAlert.note || undefined;
-          if (sosAlert.status === "ditangani" && data.status === "diterima") {
+          sosFallbackNote = (sosAlert as any).note || undefined;
+          if ((sosAlert as any).status === "ditangani" && data.status === "diterima") {
             data.status = "ditindaklanjuti";
-          } else if (sosAlert.status === "selesai" && data.status !== "selesai") {
+          } else if ((sosAlert as any).status === "selesai" && data.status !== "selesai") {
             data.status = "selesai";
-          } else if (sosAlert.status === "palsu" && data.status !== "ditolak") {
+          } else if ((sosAlert as any).status === "palsu" && data.status !== "ditolak") {
             data.status = "ditolak";
           }
         }
@@ -1077,6 +1105,7 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         }
       }
       const imageUrl =
+        cachedStatic?.image_url ||
         mediaPhoto ||
         extractPhotoFromDescription(data.description) ||
         data.image_url ||
@@ -1085,11 +1114,39 @@ export async function fetchReportDetail(trackingCode: string): Promise<LiveRepor
         undefined;
 
       // Ekstraksi kontak & nama pelapor jika ada
-      const phoneNumber = data.reporter_phone || extractPhoneFromDescription(data.description) || data.phone_number || undefined;
-      const reporterName = (data as any).reporter_name || extractReporterNameFromDescription(data.description) || undefined;
+      const phoneNumber =
+        cachedStatic?.phone_number ||
+        data.reporter_phone ||
+        extractPhoneFromDescription(data.description) ||
+        data.phone_number ||
+        undefined;
+      const reporterName =
+        cachedStatic?.reporter_name ||
+        (data as any).reporter_name ||
+        extractReporterNameFromDescription(data.description) ||
+        undefined;
 
       // Bersihkan deskripsi dari string base64 / tag foto / metadata teknis
-      const cleanDescription = cleanReportDescription(data.description);
+      const cleanDescription =
+        skipMedia && cachedStatic
+          ? cachedStatic.description
+          : cleanReportDescription(data.description);
+
+      // Simpan snapshot media/deskripsi ke cache sesi agar polling/realtime berikutnya tidak mengunduh ulang base64
+      if (!skipMedia) {
+        const snapshot = {
+          image_url: imageUrl,
+          description: cleanDescription,
+          phone_number: phoneNumber,
+          reporter_name: reporterName,
+        };
+        if (data.tracking_code) {
+          detailMediaCache.set(String(data.tracking_code).toUpperCase(), snapshot);
+        }
+        if (data.id) {
+          detailMediaCache.set(String(data.id).toUpperCase(), snapshot);
+        }
+      }
 
       const logs = (data.report_status_logs || []) as Array<{
         status: ReportStatus;

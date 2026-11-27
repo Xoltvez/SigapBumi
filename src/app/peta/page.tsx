@@ -437,8 +437,8 @@ function PetaContent() {
     async function loadData() {
       try {
         const [liveReports, liveSos] = await Promise.all([
-          fetchLiveReports(),
-          fetchLiveSosAlerts(),
+          fetchLiveReports(false, { lean: true }),
+          fetchLiveSosAlerts(false, { lean: true }),
         ]);
 
         const reportPoints = (liveReports && liveReports.length > 0)
@@ -512,8 +512,13 @@ function PetaContent() {
 
     loadData();
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const handleSync = () => {
-      loadData();
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        loadData();
+      }, 800);
     };
 
     if (typeof window !== "undefined") {
@@ -534,6 +539,7 @@ function PetaContent() {
 
     return () => {
       isMounted = false;
+      if (debounceTimer) clearTimeout(debounceTimer);
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:sos-created", handleSync);
         window.removeEventListener("sigapbumi:sos-updated", handleSync);

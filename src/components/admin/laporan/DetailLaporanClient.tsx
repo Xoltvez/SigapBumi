@@ -212,9 +212,9 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
       if (!isSilent && !report) setIsLoading(true);
       setIsLoadingDetail(true);
       try {
-        // 1. Langsung fetch detail 1 baris spesifik (tanpa mengunduh 3.7MB seluruh tabel reports!)
+        // 1. Langsung fetch detail 1 baris spesifik (skipMedia saat silent refresh agar tidak mengunduh ulang base64)
         const lookupKey = initialCached?.tracking_code || reportId;
-        let detail = await fetchReportDetail(lookupKey);
+        let detail = await fetchReportDetail(lookupKey, { skipMedia: isSilent });
         let found: LiveReportItem | undefined = initialCached || detail || undefined;
 
         // 2. Fallback hanya jika tidak ada di cache maupun query detail langsung
@@ -222,7 +222,7 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
           const live = await fetchLiveReports(false, { lean: true });
           found = live.find((r) => r.id === reportId || r.tracking_code === reportId);
           if (found && !detail) {
-            detail = await fetchReportDetail(found.tracking_code);
+            detail = await fetchReportDetail(found.tracking_code, { skipMedia: isSilent });
           }
         }
 
@@ -366,8 +366,9 @@ export default function DetailLaporanClient({ reportId }: { reportId: string }) 
       )
       .subscribe();
 
-    // Polling interval berkala 2 menit (fallback silent sync)
+    // Polling interval berkala 2 menit (fallback silent sync, hanya saat tab aktif)
     const pollTimer = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       loadDetail(true);
     }, 2 * 60 * 1000);
 

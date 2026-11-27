@@ -56,6 +56,7 @@ interface SosAlertItem {
 }
 
 const INITIAL_SOS_ALERTS: SosAlertItem[] = [];
+const hydratedPhotoCache = new Map<string, string | null>();
 
 function formatAdminReports(live: any[], liveSos: LiveSosItem[] = []): AdminReportItem[] {
   const sosPhotoMap = new Map<string, string>();
@@ -206,14 +207,25 @@ export default function AdminRingkasanPage() {
         ]);
 
         if (isMounted) {
-          const formatted = formatAdminReports(live || [], liveSos || []);
+          const formatted = formatAdminReports(live || [], liveSos || []).map((item) => {
+            if (!item.image_url && hydratedPhotoCache.has(item.id)) {
+              const cachedPhoto = hydratedPhotoCache.get(item.id);
+              return cachedPhoto ? { ...item, image_url: cachedPhoto } : item;
+            }
+            return item;
+          });
           setReports(formatted);
           setIsLiveConnected(true);
 
-          // Hydrate foto untuk laporan terbaru yang belum terisi (karena mode lean tidak mengambil report_media/description)
+          // Hydrate foto hanya untuk laporan terbaru yang belum pernah dicek di sesi ini
           const missingPhotoIds = formatted
-            .slice(0, 12)
-            .filter((r) => !r.image_url && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r.id))
+            .slice(0, 6)
+            .filter(
+              (r) =>
+                !r.image_url &&
+                !hydratedPhotoCache.has(r.id) &&
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r.id)
+            )
             .map((r) => r.id);
 
           if (missingPhotoIds.length > 0) {
@@ -222,15 +234,17 @@ export default function AdminRingkasanPage() {
               .select("id, description, report_media(media_url)")
               .in("id", missingPhotoIds)
               .then(({ data: mediaRows }) => {
-                if (!isMounted || !mediaRows || mediaRows.length === 0) return;
+                if (!isMounted) return;
                 const photoById = new Map<string, string>();
-                mediaRows.forEach((row: any) => {
+                missingPhotoIds.forEach((id) => hydratedPhotoCache.set(id, null));
+                (mediaRows || []).forEach((row: any) => {
                   const mediaUrl =
                     Array.isArray(row.report_media) && row.report_media.length > 0
                       ? row.report_media[0]?.media_url
                       : undefined;
                   const descPhoto = extractPhotoFromDescription(row.description);
-                  const found = mediaUrl || descPhoto;
+                  const found = mediaUrl || descPhoto || null;
+                  hydratedPhotoCache.set(row.id, found);
                   if (found) photoById.set(row.id, found);
                 });
                 if (photoById.size > 0) {
@@ -284,8 +298,13 @@ export default function AdminRingkasanPage() {
 
     loadData();
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const handleSync = () => {
-      loadData();
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        loadData();
+      }, 800);
     };
 
     if (typeof window !== "undefined") {
@@ -306,6 +325,7 @@ export default function AdminRingkasanPage() {
 
     return () => {
       isMounted = false;
+      if (debounceTimer) clearTimeout(debounceTimer);
       if (typeof window !== "undefined") {
         window.removeEventListener("sigapbumi:sos-created", handleSync);
         window.removeEventListener("sigapbumi:sos-updated", handleSync);

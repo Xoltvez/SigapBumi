@@ -33,7 +33,7 @@ export default function StatistikPage() {
   useEffect(() => {
     async function loadLiveData() {
       try {
-        const live = await fetchLiveReports();
+        const live = await fetchLiveReports(false, { lean: true });
         setReports(live || []);
       } catch (err) {
         console.warn("Gagal memuat data live statistik:", err);

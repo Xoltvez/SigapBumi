@@ -105,7 +105,7 @@ export default function HomePage() {
     let isMounted = true;
     const loadReports = async () => {
       try {
-        const data = await fetchLiveReports();
+        const data = await fetchLiveReports(false, { lean: true });
         if (isMounted && data) {
           setLiveReports(data);
         }

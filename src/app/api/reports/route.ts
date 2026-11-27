@@ -70,11 +70,15 @@ export async function GET(request: Request) {
     }
 
     // 2. Ambil seluruh laporan untuk dashboard admin dan peta situasi
+    const isLean = searchParams.get("lean") !== "0";
     let remoteReports: any[] = [];
     if (supabase) {
+      const selectCols = isLean
+        ? "id, tracking_code, disaster_type, title, address, location, status, priority_score, confirmation_count, created_at, updated_at, reporter_id"
+        : "*, report_media(*)";
       const { data, error } = await supabase
         .from("reports")
-        .select("*, report_media(*)")
+        .select(selectCols)
         .order("created_at", { ascending: false });
 
       if (!error && data) {

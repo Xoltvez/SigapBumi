@@ -254,8 +254,8 @@ function LacakContent() {
     }
 
     try {
-      // 1. Coba ambil dari Supabase atau local cache via service
-      const liveData = await fetchReportDetail(cleanCode);
+      // 1. Coba ambil dari Supabase atau local cache via service (skipMedia saat silent refresh agar hemat egress)
+      const liveData = await fetchReportDetail(cleanCode, { skipMedia: isSilent });
       if (liveData) {
         const imageUrl = liveData.image_url || extractPhotoFromDescription(liveData.description);
         const cleanDesc = cleanReportDescription(liveData.description);
@@ -325,8 +325,13 @@ function LacakContent() {
 
     loadAllReports();
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const handleSyncList = () => {
-      loadAllReports();
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        loadAllReports();
+      }, 800);
     };
 
     window.addEventListener("sigapbumi:report-updated", handleSyncList);
@@ -342,6 +347,7 @@ function LacakContent() {
 
     return () => {
       isMounted = false;
+      if (debounceTimer) clearTimeout(debounceTimer);
       window.removeEventListener("sigapbumi:report-updated", handleSyncList);
       window.removeEventListener("sigapbumi:sos-created", handleSyncList);
       window.removeEventListener("sigapbumi:sos-updated", handleSyncList);
@@ -364,8 +370,13 @@ function LacakContent() {
     if (!activeReport?.tracking_code) return;
     const currentCode = activeReport.tracking_code;
 
+    let detailDebounce: ReturnType<typeof setTimeout> | null = null;
     const handleUpdate = () => {
-      performSearch(currentCode, true);
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (detailDebounce) clearTimeout(detailDebounce);
+      detailDebounce = setTimeout(() => {
+        performSearch(currentCode, true);
+      }, 600);
     };
 
     window.addEventListener("sigapbumi:report-updated", handleUpdate);
@@ -381,9 +392,7 @@ function LacakContent() {
           schema: "public",
           table: "reports",
         },
-        () => {
-          performSearch(currentCode, true);
-        }
+        handleUpdate
       )
       .on(
         "postgres_changes",
@@ -392,9 +401,7 @@ function LacakContent() {
           schema: "public",
           table: "report_status_logs",
         },
-        () => {
-          performSearch(currentCode, true);
-        }
+        handleUpdate
       )
       .on(
         "postgres_changes",
@@ -403,19 +410,19 @@ function LacakContent() {
           schema: "public",
           table: "sos_alerts",
         },
-        () => {
-          performSearch(currentCode, true);
-        }
+        handleUpdate
       )
       .subscribe();
 
-    // Polling interval berkala 4 detik di background secara senyap (tanpa menampilkan spinner loading)
+    // Polling cadangan berkala setiap 60 detik (hanya saat tab aktif) — sinkron utama mengandalkan Realtime
     const pollTimer = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       performSearch(currentCode, true);
-    }, 4000);
+    }, 60000);
 
     return () => {
       clearInterval(pollTimer);
+      if (detailDebounce) clearTimeout(detailDebounce);
       window.removeEventListener("sigapbumi:report-updated", handleUpdate);
       window.removeEventListener("sigapbumi:sos-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);

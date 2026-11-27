@@ -429,8 +429,9 @@ function LaporanContent() {
       )
       .subscribe();
 
-    // Polling cadangan berkala setiap 2 menit (120 detik) untuk efisiensi jaringan & kenyamanan baca
+    // Polling cadangan berkala setiap 2 menit (120 detik), hanya jika tab sedang aktif
     const pollInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       loadData(true, true);
     }, 2 * 60 * 1000);
 
