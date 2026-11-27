@@ -124,10 +124,15 @@ export default function AdminSosPage() {
   const loadData = useCallback(async (isSilent = false, forceRefresh = false) => {
     if (!isSilent && !getCachedLiveSosAlerts()) setIsLoading(true);
     try {
-      // Pada sinkronisasi latar belakang (isSilent), gunakan mode lean dulu agar tidak mengunduh ulang base64 foto yang sama.
-      // Jika ada panggilan baru yang fotonya belum ada di cache sesi, ambil full sekali saja.
       const useLean = isSilent && !forceRefresh;
-      const live = await fetchLiveSosAlerts(forceRefresh, { lean: useLean });
+      let live = await fetchLiveSosAlerts(forceRefresh, { lean: useLean });
+      if (
+        useLean &&
+        !isFirstLoadRef.current &&
+        (live || []).some((item) => item && item.id && !knownIdsRef.current.has(item.id))
+      ) {
+        live = await fetchLiveSosAlerts(true, { lean: false });
+      }
       const mappedLive: DisplaySosItem[] = (live || []).map((e, index) => {
         let type: SosAssistanceType = e.assistance_type || "damkar";
         let title = "Bantuan Darurat";

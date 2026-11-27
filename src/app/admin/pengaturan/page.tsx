@@ -193,7 +193,7 @@ export default function AdminPengaturanPage() {
   const handleExportCsv = async () => {
     setIsExportingCsv(true);
     try {
-      const reports = await fetchLiveReports(false, { lean: true });
+      const reports = await fetchLiveReports(false, { lean: false });
       if (!reports || reports.length === 0) {
         alert("Belum ada data laporan untuk diexport.");
         setIsExportingCsv(false);
